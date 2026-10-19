@@ -7,7 +7,7 @@ Start with [Start here](../../START-HERE.md) and [your first dataset](../../docs
 
 **Source folders:** each source's script pair lives in one of four folders under `sql/`, based on whether the source API enforces a rate limit and whether the script is still current:
 
-- `sql/rate_limited/` — the source API caps how many requests you can make in a given window. Some operators set the limit themselves, so it differs between deployments; for `company_dns` the built-in defaults are 200 requests a minute with a burst of 20 (standard) and 5 a minute with a burst of 1 (strictest). A burst larger than the allowance gets HTTP `429` even when the average is low. Run these deliberately: run one statement at a time and wait 15 seconds or more before each statement that calls the endpoint, cache the raw table straight away (`CACHE TABLE`, which these scripts do for you), prefer a registered API key over an anonymous one where the source offers it, and expect the `CACHE TABLE` guidance in "Known limitations" below to matter more here than elsewhere. Every `_select.sql` here keeps its queries commented out: run them one at a time after the cache test the file describes.
+- `sql/rate_limited/` — the source API caps how many requests you can make in a given window. Some operators set the limit themselves, so it differs between deployments. For `company_dns` it depends on whether you identify yourself: Callers that identify themselves (a User-Agent of the form `app_name user@domain.tld`) get 6,000 requests a minute (100 a second) with a burst of 600, per address. Callers that do not (no User-Agent, a library default, or a name with no contact) get 600 a minute with a burst of 60, a limit raised for the event; the service default is 5 a minute with a burst of 1. A burst larger than the allowance gets HTTP `429` even when the average is low. Run these deliberately: send an identifying `User-Agent`, run one statement at a time, cache the raw table straight away (`CACHE TABLE`, which these scripts do for you), and if you cannot identify yourself wait 15 seconds or more before each statement that calls the endpoint. Prefer a registered API key over an anonymous one where the source offers it, and expect the `CACHE TABLE` guidance in "Known limitations" below to matter more here than elsewhere. Every `_select.sql` here keeps its queries commented out: run them one at a time after the cache test the file describes.
 - `sql/non_rate_limited/` — no documented limit, or an informal one (e.g. a fair-use policy) with no hard cap observed in testing. Still be a reasonable citizen of a shared free resource, but you don't need to plan around exhausting a quota.
 - `sql/known_to_fail/` — one source (Singapore's PM2.5 API) that hit a blocking issue during testing. Kept as a documented, reproducible example rather than deleted; not part of the main sequence below. See `sql/known_to_fail/README.md` and its `ISSUE.md`.
 
@@ -21,20 +21,22 @@ Start with [Start here](../../START-HERE.md) and [your first dataset](../../docs
 
 The fastest way to see this package's whole pattern — register, cache, flatten, verify — working on a real, live source, before reading anything else. This uses `company_dns` (`sql/rate_limited/12_company_dns_create.sql` / `_select.sql`), a SIC industry-classification hierarchy, loaded from both of its API versions side by side.
 
-**It is rate limited.** The service operator sets the limits (defaults: 200 a minute with a burst of 20, or 5 a minute with a burst of 1). Treat it as the strictest tier unless you know otherwise: run **one statement at a time** and wait **15 seconds or more** before each statement marked "calls the endpoint" in the script. The script caches each raw table right after creating it, which is what keeps every later query from calling the service again. If a statement fails with a `429`, wait 60 seconds and retry that one statement.
+**It is rate limited, and the limit depends on whether you identify yourself.** Callers that identify themselves (a User-Agent of the form `app_name user@domain.tld`) get 6,000 requests a minute (100 a second) with a burst of 600, per address. Callers that do not (no User-Agent, a library default, or a name with no contact) get 600 a minute with a burst of 60, a limit raised for the event; the service default is 5 a minute with a burst of 1. Send an identifying User-Agent and you can work at a normal pace, one statement at a time. Without one, wait **15 seconds or more** before each statement marked "calls the endpoint" in the script. The script caches each raw table right after creating it, which is what keeps every later query from calling the service again. If a statement fails with a `429`, wait 60 seconds and retry that one statement.
 
-1. Set your user-agent. The create scripts carry a `YOUR_APP_NAME YOUR_CONTACT_EMAIL` placeholder: replace it by hand, or put `ZETARIS_USER_AGENT="<app name> <contact email>"` in `.env.local` and let `scripts/run_sql.py` fill it in.
+1. Set your user-agent, in the form `app_name user@domain.tld` (for example `zetaris dev@zetaris.com`). `company_dns` V4 requires it: a bare app name, a library default or no User-Agent at all gets the strict limit. The create scripts carry a `YOUR_APP_NAME YOUR_CONTACT_EMAIL` placeholder: replace it by hand, or put `ZETARIS_USER_AGENT="app_name user@domain.tld"` in `.env.local` and let `scripts/run_sql.py` fill it in (it refuses a value that doesn't name a contact e-mail).
 2. Open `12_company_dns_create.sql` and run its steps in the Zetaris **SQL Editor**, one statement at a time:
 
    | Step | Statement | Calls the endpoint? |
    |---|---|---|
    | 0 | `CREATE LIGHTNING DATABASE COMPANY_DNS` | no |
    | 1 | `CREATE LIGHTNING REST TABLE sic_codes_raw` (V3, production) | yes |
-   | 2 | `CACHE TABLE company_dns.sic_codes_raw` | yes — wait 15 s first |
-   | 3 | `CREATE LIGHTNING REST TABLE sic_codes_v4_raw` (V4, staging) | yes — wait 15 s first |
-   | 4 | `CACHE TABLE company_dns.sic_codes_v4_raw` | yes — wait 15 s first |
+   | 2 | `CACHE TABLE company_dns.sic_codes_raw` | yes |
+   | 3 | `CREATE LIGHTNING REST TABLE sic_codes_v4_raw` (V4, production) | yes |
+   | 4 | `CACHE TABLE company_dns.sic_codes_v4_raw` | yes |
    | 5 | `CREATE SCHEMASTORE CONTAINER company_dns` | no |
    | 6-9 | four `CREATE SCHEMASTORE VIEW` statements | no (they read the cached tables) |
+
+   Without an identifying User-Agent, wait 15 seconds or more before each step that calls the endpoint. **Hosts:** `company_dns` V4 is now served by `https://company-dns.mediumroast.io` and V3 is deprecated. The staging host (`company-dns-staging.mediumroast.io`) is retired: do not use it. The `/V3.0` path still answered on the production host when checked (2026-10-19), which is why step 1 still works, but expect it to go away.
 
    Steps 1-2 and 3-4 are two copies of one pattern — register the raw response, cache it, flatten it with `LATERAL VIEW explode(...)` — for two response shapes: V3 returns a dynamic-key object that needs the `from_json(to_json(...))` coercion (section 7), V4 returns a plain array.
 3. Verify it worked, timing the first query. About a second means the view reads the cached copy; much longer means it called the service again, so stop and check the cache step:
@@ -70,7 +72,7 @@ Suggested order, from simpler verified patterns to higher-risk shapes:
 
 | Order | Script | Why here |
 |---|---|---|
-| 1 | `rate_limited/12_company_dns_create.sql` | Already walked through above (Fast Start) — confirms your environment works before trying anything new. Rate limited: go slowly. |
+| 1 | `rate_limited/12_company_dns_create.sql` | Already walked through above (Fast Start) — confirms your environment works before trying anything new. Rate limited: send an identifying User-Agent. |
 | 2 | `rate_limited/01_edgar_company_facts_create.sql` | Live-tested and working — confirms the baseline array-of-structs pattern end to end. |
 | 3 | `rate_limited/08_statcan_wds_create.sql` | Simplest shape investigated (flat array-of-structs, one level, GET-only) — good smoke test if something else is failing. |
 | 4 | `non_rate_limited/02_pokeapi_create.sql` | Array-of-structs with one extra level of nested struct — tests whether two-level dot-access through an exploded field works. |
@@ -80,7 +82,7 @@ Suggested order, from simpler verified patterns to higher-risk shapes:
 | 8 | `non_rate_limited/07_eurostat_create.sql` | Metadata path confirmed working; JSON-stat format needs the dynamic-key coercion technique (see "Understanding JSON response shapes" below) to decode actual values. |
 | 9 | `non_rate_limited/09_abs_data_api_create.sql` | Higher risk: SDMX-JSON with doubly-compound dynamic keys — same risk class as Eurostat, likely drop candidate. |
 | 10 | `rate_limited/13_company_dns_eu_nace_create.sql` | Same flat-array shape as `company_dns` V4, one view; a different classification system (EU NACE). Rate limited. |
-| 11 | `rate_limited/14_company_dns_japan_create.sql` | Same shape again (Japan, 1,460 classes). Rate limited — leave a few minutes after 12 and 13, since they call the same service. |
+| 11 | `rate_limited/14_company_dns_japan_create.sql` | Same shape again (Japan, 1,460 classes). Rate limited, same service as 12 and 13. |
 
 **Excluded:** Singapore PM2.5 registration returned HTTP 502. See the [issue write-up](sql/known_to_fail/ISSUE.md).
 
@@ -189,9 +191,9 @@ This can surface two different ways depending on *which* statement hits the cold
 
 ### A rate-limited source returns `429`, even though I am sending very few queries
 
-The operator of a service like `company_dns` sets its limits, so they differ between deployments. The built-in defaults are 200 requests a minute with a burst of 20 (standard) and 5 a minute with a burst of 1 (strictest). A burst larger than the allowance gets `429` even when the average rate is low, so a handful of requests close together can trip the strict tier. Two things multiply the request count behind one statement: a Lightning REST table re-fetches on every query (next entry), and Zetaris can retry a failing fetch on a few pooled connections.
+The operator of a service like `company_dns` sets its limits, so they differ between deployments. For `company_dns` the allowance depends on whether you identify yourself: Callers that identify themselves (a User-Agent of the form `app_name user@domain.tld`) get 6,000 requests a minute (100 a second) with a burst of 600, per address. Callers that do not (no User-Agent, a library default, or a name with no contact) get 600 a minute with a burst of 60, a limit raised for the event; the service default is 5 a minute with a burst of 1. A burst larger than the allowance gets `429` even when the average rate is low, so a handful of requests close together can trip the strict tier. Two things multiply the request count behind one statement: a Lightning REST table re-fetches on every query (next entry), and Zetaris can retry a failing fetch on a few pooled connections.
 
-**Fix:** run the create script one statement at a time, with 15 seconds or more before each statement it marks "calls the endpoint"; cache the raw table straight away (`CACHE TABLE`) so later queries read the cached copy; after a `429`, wait 60 seconds and retry that one statement rather than re-running the script. Time the first query after the cache step: about a second means it read the cache. If you are not sure which tier you are on, assume the strictest.
+**Fix:** send an identifying User-Agent (`app_name user@domain.tld`), which alone lifts the allowance from 600 to 6,000 a minute; run the create script one statement at a time; if you cannot identify yourself, wait 15 seconds or more before each statement it marks "calls the endpoint"; cache the raw table straight away (`CACHE TABLE`) so later queries read the cached copy; after a `429`, wait 60 seconds and retry that one statement rather than re-running the script. Time the first query after the cache step: about a second means it read the cache. If you are unsure which tier you are on, check which User-Agent your script actually sent: a vague one puts you on the strict tier.
 
 ### `WHERE division_desc LIKE '%Manufacturing%'` returns nothing against the V4 `company_dns` data
 

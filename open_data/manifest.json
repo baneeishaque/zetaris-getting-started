@@ -8,7 +8,7 @@
       "script": "open_data/rest_apis/sql/rate_limited/12_company_dns_create.sql",
       "status": "verified",
       "requires": [],
-      "summary": "US SIC hierarchy (1,005 codes) from the company_dns V3 and V4 services, as four views (V3/V4 data x V3/V4 column names). Rate limited"
+      "summary": "US SIC hierarchy (1,005 codes) from the company_dns V3 (deprecated) and V4 services, as four views (V3/V4 data x V3/V4 column names). Rate limited; send a User-Agent as app_name user@domain.tld"
     },
     {
       "id": "company_dns_eu_nace",
@@ -16,7 +16,7 @@
       "script": "open_data/rest_apis/sql/rate_limited/13_company_dns_eu_nace_create.sql",
       "status": "verified",
       "requires": [],
-      "summary": "EU NACE classification hierarchy (615 classes) from company_dns V4 staging. Rate limited; CC BY 4.0"
+      "summary": "EU NACE classification hierarchy (615 classes) from the company_dns V4 service. Rate limited; needs a User-Agent as app_name user@domain.tld; CC BY 4.0"
     },
     {
       "id": "company_dns_japan",
@@ -24,7 +24,7 @@
       "script": "open_data/rest_apis/sql/rate_limited/14_company_dns_japan_create.sql",
       "status": "verified",
       "requires": [],
-      "summary": "Japan industry classification hierarchy (1,460 classes) from company_dns V4 staging. Rate limited; CC BY 4.0"
+      "summary": "Japan industry classification hierarchy (1,460 classes) from the company_dns V4 service. Rate limited; needs a User-Agent as app_name user@domain.tld; CC BY 4.0"
     },
     {
       "id": "company_dns_legacy",

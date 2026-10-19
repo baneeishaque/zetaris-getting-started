@@ -116,21 +116,21 @@ A catalog of REST sources registered with `CREATE LIGHTNING REST TABLE`. Each en
 
 - **What it is:** the same US SIC (1987 revision) hierarchy as source 10, loaded from both versions of the `company_dns` API side by side, as four schemastore views: V3 data and V4 data, each under V3 and V4 column names. V3 returns a dynamic-key object; V4 returns a flat array and renamed the hierarchy levels (V4 `division_desc` is the 2-digit level that V3 calls the major group).
 - **License:** the service itself is Apache 2.0. Its SIC data traces back to SEC's own public SIC list — query live, don't bulk-redistribute the extracted data.
-- **Access:** V3 at `https://company-dns.mediumroast.io` and V4 at `https://company-dns-staging.mediumroast.io`; no key or signup. Also self-hostable via Docker at `http://localhost:8000`. **Rate limited:** the operator sets the limits, so they differ between deployments; the built-in defaults are 200 requests a minute with a burst of 20 (standard) and 5 a minute with a burst of 1 (strictest). A burst larger than the allowance gets `429` even when the average is low, so spread requests out and cache. The script caches both raw tables for you; see its header and `HOWTO.md` section 0 for the pacing.
+- **Access:** `https://company-dns.mediumroast.io` now serves V4; V3 is deprecated (its `/V3.0` path still answered when checked, 2026-10-19, and may go away). The staging host `company-dns-staging.mediumroast.io` is retired. No key or signup, but send a User-Agent of the form `app_name user@domain.tld` (for example `zetaris dev@zetaris.com`): without it you get the strict rate limit. Also self-hostable via Docker at `http://localhost:8000`. **Rate limited:** the operator sets the limits, so they can differ between deployments. Callers that identify themselves (a User-Agent of the form `app_name user@domain.tld`) get 6,000 requests a minute (100 a second) with a burst of 600, per address. Callers that do not (no User-Agent, a library default, or a name with no contact) get 600 a minute with a burst of 60, a limit raised for the event; the service default is 5 a minute with a burst of 1. A burst larger than the allowance gets `429` even when the average is low, so spread requests out and cache. The script caches both raw tables for you; see its header and `HOWTO.md` section 0.
 - **Docs:** interactive API reference at `/docs` on the hosted instance; OpenAPI spec at `/openapi.json`.
 
 ## 13. company_dns — EU NACE hierarchy — license: open (CC BY 4.0) — rate limited
 
 - **What it is:** the EU's NACE industry classification (615 classes under 21 sections, 88 divisions and 272 groups), served by the `company_dns` V4 API at `/V4.0/eu/sic/class/%25`. Same flat-array shape as source 12's V4 endpoint, one view (`company_dns_eu.nace_table`). The counts match NACE Rev. 2, but the response does not state its revision.
 - **License:** CC BY 4.0 — [Eurostat copyright notice](https://ec.europa.eu/eurostat/help/copyright-notice). Attribution required: credit Eurostat when you reuse it. The `company_dns` service itself is Apache 2.0.
-- **Access:** `https://company-dns-staging.mediumroast.io`; no key or signup. Rate limited, same operator-set tiers as source 12 (and the same service, so leave a few minutes between running scripts 12, 13 and 14).
+- **Access:** `https://company-dns.mediumroast.io` (the staging host is retired); no key or signup, but a User-Agent of the form `app_name user@domain.tld` is required for the full allowance. Rate limited, same tiers as source 12 (and the same service).
 - **Docs:** as source 12.
 
 ## 14. company_dns — Japan industry classification — license: open (CC BY 4.0) — rate limited
 
 - **What it is:** Japan's industry classification (1,460 classes under 20 sections, 99 divisions and 530 groups), served by the `company_dns` V4 API at `/V4.0/japan/sic/industry_group/%25` (the response is class level). Same flat-array shape, one view (`company_dns_japan.japan_table`). Ids are consistent, but some descriptions are shared by more than one id, so group by id, not description. The counts match the 2013 (13th) revision, but the response does not state its revision.
 - **License:** CC BY 4.0 — [e-Stat terms of use](https://www.e-stat.go.jp/en/terms-of-use). Attribution required: credit the source when you reuse it. The `company_dns` service itself is Apache 2.0.
-- **Access:** `https://company-dns-staging.mediumroast.io`; no key or signup. Rate limited, same operator-set tiers as source 12. The response is about 420 KB, the largest of the three.
+- **Access:** `https://company-dns.mediumroast.io` (the staging host is retired); no key or signup, but a User-Agent of the form `app_name user@domain.tld` is required for the full allowance. Rate limited, same tiers as source 12. The response is about 420 KB, the largest of the three.
 - **Docs:** as source 12.
 
 ---
