@@ -17,7 +17,7 @@ A catalog of REST sources registered with `CREATE LIGHTNING REST TABLE`. Each en
 | 3 | Open Food Facts (live API) | Product/nutrition | Open, with a condition (ODbL) | Rate limited | Verified | `sql/rate_limited/03_open_food_facts_live_create.sql` |
 | 4 | Singapore data.gov.sg — PM2.5 real-time | Environment | Open (SODL v1.0) | Rate limited | Known to fail | `sql/known_to_fail/04_singapore_pm25_create.sql` |
 | 5 | NASA NeoWs (`/neo/browse`) | Astronomy | Open (public domain) | Rate limited | Verified | `sql/rate_limited/05_nasa_neows_create.sql` |
-| 6 | NASA DONKI (CME) | Space weather | Open (public domain) | Rate limited | Unverified | `sql/rate_limited/06_nasa_donki_create.sql` |
+| 6 | NASA DONKI (CME) | Space weather | Open (public domain) | Rate limited | Known to fail | `sql/known_to_fail/06_nasa_donki_create.sql` |
 | 7 | Eurostat REST API | Statistics | Open, with a condition | Not rate limited | Verified | `sql/non_rate_limited/07_eurostat_create.sql` |
 | 8 | Statistics Canada WDS | Statistics | Open (StatCan Open Licence) | Rate limited | Verified | `sql/rate_limited/08_statcan_wds_create.sql` |
 | 9 | Australian ABS Data API | Statistics | Open (CC-BY 3.0 AU) | Not rate limited | Verified | `sql/non_rate_limited/09_abs_data_api_create.sql` |
@@ -67,13 +67,13 @@ A catalog of REST sources registered with `CREATE LIGHTNING REST TABLE`. Each en
 - **Access:** `DEMO_KEY` needs no signup (30 requests/hour, 50/day per IP). A free `api.data.gov` key raises this to 1,000/hour. NeoWs and DONKI share the `DEMO_KEY` quota.
 - **Docs:** [api.nasa.gov](https://api.nasa.gov/)
 
-## 6. NASA DONKI (Space Weather) — license: open (public domain) — unverified
+## 6. NASA DONKI (Space Weather) — license: open (public domain) — known to fail
 
 - **What it is:** Coronal Mass Ejection (CME) space-weather events, queryable by date range.
 - **Licence:** same NASA public-domain basis as NeoWs.
 - **Access:** the same `api.data.gov` key and shared `DEMO_KEY` quota as NeoWs.
 - **Docs:** [api.nasa.gov](https://api.nasa.gov/) (DONKI section)
-- **Unverified:** the response is a top-level JSON array. Live registration of that shape has not been confirmed; see the create script's caveats.
+- **Known to fail:** another developer could not get this working in Zetaris, so the scripts were moved to `sql/known_to_fail/`. The call fails with HTTP 503 from NASA's API gateway ("upstream connect error ... remote connection failure"); plain `curl` gets the same 503 while NeoWs works with the same key, so the failure is on NASA's side and may be transient. It does not test the top-level-array question this source was meant to answer. See `sql/known_to_fail/ISSUE-06-nasa-donki.md`.
 
 ## 7. Eurostat REST API — license: open, with a condition
 
