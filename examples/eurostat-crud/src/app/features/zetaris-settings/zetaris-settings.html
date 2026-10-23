@@ -1,0 +1,114 @@
+<div class="page-header">
+  <div>
+    <h1>Zetaris connection</h1>
+    <p>
+      The app reads the Poland total unemployment series from the Zetaris
+      <code>eurostat.une_rt_m_pl_series_table</code> view. Add a Zetaris API key for this
+      browser tab.
+    </p>
+  </div>
+  <div class="page-actions">
+    <a class="button" routerLink="/series">Back to saved series</a>
+  </div>
+</div>
+
+@if (configured()) {
+  <div class="alert success" role="status">
+    A Zetaris API key is saved for this tab. It is kept in sessionStorage and is not written to
+    localStorage or source control.
+  </div>
+} @else {
+  <div class="alert warning" role="status">
+    No Zetaris API key is configured. Series pages cannot load data until you add one.
+  </div>
+}
+
+<form class="card stack" [formGroup]="form" (ngSubmit)="save()" novalidate>
+  <div class="form-grid">
+    <div class="field full">
+      <label for="zetaris-base-path">REST base path</label>
+      <input
+        id="zetaris-base-path"
+        type="text"
+        formControlName="basePath"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="/zetaris-api"
+      />
+      <p class="small muted">
+        Use <code>/zetaris-api</code> with <code>npm start</code>. The dev proxy forwards it to
+        <code>ZETARIS_REST_URL</code> and avoids the Zetaris CORS restriction.
+      </p>
+      @if (form.controls.basePath.touched && form.controls.basePath.invalid) {
+        <p class="field-error">Enter a path beginning with / or an absolute http(s) URL.</p>
+      }
+    </div>
+
+    <div class="field">
+      <label for="zetaris-org-id">Organisation ID</label>
+      <input
+        id="zetaris-org-id"
+        type="text"
+        formControlName="orgId"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <p class="small muted">Usually <code>1</code>.</p>
+      @if (form.controls.orgId.touched && form.controls.orgId.invalid) {
+        <p class="field-error">Enter the Zetaris organisation ID.</p>
+      }
+    </div>
+
+    <div class="field">
+      <label for="zetaris-api-key">API key</label>
+      <input
+        id="zetaris-api-key"
+        type="password"
+        formControlName="apiKey"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="Paste the Zetaris API key"
+      />
+      <p class="small muted">
+        Leave blank when editing to keep the key already saved for this tab. The key is never
+        committed.
+      </p>
+    </div>
+  </div>
+
+  @if (error(); as message) {
+    <div class="alert error" role="alert">{{ message }}</div>
+  }
+
+  @if (message(); as message) {
+    <div class="alert success" role="status">{{ message }}</div>
+  }
+
+  <div class="form-actions">
+    <button class="button primary" type="submit" [disabled]="saving()">Save connection</button>
+    <button class="button" type="button" (click)="test()" [disabled]="testing()">
+      {{ testing() ? 'Testing…' : 'Test connection' }}
+    </button>
+    @if (configured()) {
+      <button class="button ghost" type="button" (click)="disconnect()">Disconnect</button>
+    }
+  </div>
+</form>
+
+<section class="card stack">
+  <h2>How the request works</h2>
+  <p>
+    The app sends SQL to Zetaris at <code>/sql-editor/sqls/run</code> with the API key in the
+    <code>Authorization</code> header. It queries the series view for observations and the metadata
+    view for the dataset label, source, and update timestamp.
+  </p>
+  <ul class="plain-list">
+    <li>The API key is held in memory and sessionStorage for this tab only.</li>
+    <li>Saved series remain in localStorage; they contain filters and notes, never the API key.</li>
+    <li>
+      The dev proxy is required locally because Zetaris does not send CORS headers. A production
+      deployment needs a same-origin reverse proxy.
+    </li>
+    <li>This is a local demonstration, not a pattern for publishing a Zetaris key in a public app.</li>
+  </ul>
+</section>

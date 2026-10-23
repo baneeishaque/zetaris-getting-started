@@ -1,0 +1,134 @@
+@if (store.loadWarning(); as warning) {
+  <div class="alert warning" role="status">{{ warning }}</div>
+}
+
+@if (series(); as record) {
+  <div class="detail-header">
+    <div class="detail-title-row">
+      <div>
+        <div class="series-meta">
+          <span class="badge accent">{{ geoLabel(record) }}</span>
+          <span class="badge">{{ sexLabel(record) }}</span>
+          <span class="badge">{{ record.filters.geo }} · {{ record.filters.sex }}</span>
+        </div>
+        <h1>{{ record.name }}</h1>
+      </div>
+      <div class="page-actions">
+        <a class="button" [routerLink]="['/series', record.id, 'edit']">Edit</a>
+        <button class="button danger" type="button" (click)="confirmingDelete.set(true)">
+          Delete
+        </button>
+      </div>
+    </div>
+
+    @if (record.note) {
+      <p class="detail-note">{{ record.note }}</p>
+    }
+
+    <div class="source-line">
+      <span>Created {{ formatTimestamp(record.createdAt) }}</span>
+      <span>Updated {{ formatTimestamp(record.updatedAt) }}</span>
+      <span>Monthly · seasonally adjusted · total age</span>
+    </div>
+  </div>
+
+  @if (confirmingDelete()) {
+    <div class="confirm-box" role="alert">
+      <span>Delete “{{ record.name }}” from this browser?</span>
+      <button class="button danger" type="button" (click)="deleteSeries()">Delete series</button>
+      <button class="button ghost" type="button" (click)="confirmingDelete.set(false)">
+        Cancel
+      </button>
+    </div>
+  }
+
+  @if (deleteError(); as message) {
+    <div class="alert error" role="alert">{{ message }}</div>
+  }
+
+  @if (loading()) {
+    <div class="card loading" role="status">
+      <span class="spinner" aria-hidden="true"></span>
+      Loading Zetaris observations…
+    </div>
+  } @else if (error(); as message) {
+    <div class="alert error" role="alert">
+      <p>{{ message }}</p>
+      <div class="inline-actions">
+        <button class="button" type="button" (click)="load()">Retry</button>
+        <a class="button" routerLink="/settings">Zetaris connection</a>
+      </div>
+    </div>
+  } @else if (data(); as seriesData) {
+    <div class="stack">
+      <section class="card stack chart-card">
+        <div class="chart-header">
+          <div>
+            <h2>Unemployment rate</h2>
+            <p class="muted small">
+              Percent of active population, seasonally adjusted.
+              @if (latestObservation(); as latest) {
+                Latest {{ latest.period }}: {{ formatRate(latest.rate) }}%.
+              }
+            </p>
+          </div>
+          @if (hasMore()) {
+            <button class="button" type="button" (click)="toggleShowAll()">
+              {{ showAll() ? 'Show latest 24' : 'Show all observations' }}
+            </button>
+          }
+        </div>
+        <app-rate-chart [observations]="visibleObservations()" />
+      </section>
+
+      <section class="card stack">
+        <div class="chart-header">
+          <div>
+            <h2>Observations</h2>
+            <p class="muted small">
+              Showing {{ visibleObservations().length }} of
+              {{ seriesData.observations.length }} observations, newest first.
+            </p>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Period</th>
+                <th class="numeric" scope="col">Rate (%)</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (observation of tableObservations(); track observation.period) {
+                <tr>
+                  <td>{{ observation.period }}</td>
+                  <td class="numeric">{{ formatRate(observation.rate) }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="2">No observations returned.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="source-line">
+          <span>{{ seriesData.datasetLabel }}</span>
+          <span>Source: {{ seriesData.source }} via Zetaris</span>
+          @if (seriesData.updated) {
+            <span>Dataset updated {{ formatTimestamp(seriesData.updated) }}</span>
+          }
+          <span>View: eurostat.une_rt_m_pl_series_table</span>
+        </div>
+      </section>
+    </div>
+  }
+} @else if (error(); as message) {
+  <div class="alert error" role="alert">
+    <p>{{ message }}</p>
+    <a routerLink="/series">Return to saved series</a>
+  </div>
+}

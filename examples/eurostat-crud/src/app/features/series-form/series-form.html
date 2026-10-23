@@ -1,0 +1,86 @@
+@if (store.loadWarning(); as warning) {
+  <div class="alert warning" role="status">{{ warning }}</div>
+}
+
+<div class="page-header">
+  <div>
+    <h1>{{ editing() ? 'Edit series' : 'New series' }}</h1>
+    <p>
+      Save a name and note for the Zetaris series. The current registration exposes Poland, total
+      sex, monthly, seasonally adjusted, total-age unemployment rates.
+    </p>
+  </div>
+  <div class="page-actions">
+    <a class="button" routerLink="/series">Back to saved series</a>
+  </div>
+</div>
+
+@if (notFound()) {
+  <div class="alert error" role="alert">
+    This saved series no longer exists.
+    <a routerLink="/series">Return to saved series</a>.
+  </div>
+} @else {
+  <form class="card stack" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="form-grid">
+      <div class="field full">
+        <label for="series-name">Name</label>
+        <input
+          id="series-name"
+          type="text"
+          formControlName="name"
+          maxlength="80"
+          autocomplete="off"
+          placeholder="e.g. Poland — total unemployment"
+        />
+        @if (form.controls.name.touched && form.controls.name.invalid) {
+          <p class="field-error">Enter a name between 1 and 80 characters.</p>
+        }
+      </div>
+
+      <div class="field">
+        <label for="series-geo">Country</label>
+        <select id="series-geo" formControlName="geo">
+          @for (geo of geoOptions; track geo) {
+            <option [value]="geo">{{ geoLabels[geo] }} ({{ geo }})</option>
+          }
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="series-sex">Sex</label>
+        <select id="series-sex" formControlName="sex">
+          @for (sex of sexOptions; track sex) {
+            <option [value]="sex">{{ sexLabels[sex] }} ({{ sex }})</option>
+          }
+        </select>
+      </div>
+
+      <div class="field full">
+        <label for="series-note">Note <span class="muted small">(optional)</span></label>
+        <textarea
+          id="series-note"
+          formControlName="note"
+          maxlength="2000"
+          rows="5"
+          placeholder="Why are you tracking this series?"
+        ></textarea>
+        <p class="small muted">{{ form.controls.note.value.length }} / 2,000 characters</p>
+        @if (form.controls.note.touched && form.controls.note.invalid) {
+          <p class="field-error">Keep the note to 2,000 characters or fewer.</p>
+        }
+      </div>
+    </div>
+
+    @if (submitError(); as error) {
+      <div class="alert error" role="alert">{{ error }}</div>
+    }
+
+    <div class="form-actions">
+      <button class="button primary" type="submit" [disabled]="saving()">
+        {{ editing() ? 'Save changes' : 'Create series' }}
+      </button>
+      <button class="button ghost" type="button" (click)="cancel()">Cancel</button>
+    </div>
+  </form>
+}

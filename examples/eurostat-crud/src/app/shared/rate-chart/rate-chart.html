@@ -1,0 +1,61 @@
+@if (hasData()) {
+  <div class="chart-wrap">
+    <svg
+      viewBox="0 0 640 260"
+      role="img"
+      aria-labelledby="rate-chart-title"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <title id="rate-chart-title">{{ ariaLabel() }}</title>
+
+      @for (ratio of gridLines; track ratio) {
+        <line
+          class="chart-grid"
+          [attr.x1]="plotLeft"
+          [attr.x2]="plotRight"
+          [attr.y1]="plotTop + ratio * plotHeight"
+          [attr.y2]="plotTop + ratio * plotHeight"
+        />
+      }
+
+      <line
+        class="chart-axis"
+        [attr.x1]="plotLeft"
+        [attr.x2]="plotRight"
+        [attr.y1]="plotBottom"
+        [attr.y2]="plotBottom"
+      />
+      <line
+        class="chart-axis"
+        [attr.x1]="plotLeft"
+        [attr.x2]="plotLeft"
+        [attr.y1]="plotTop"
+        [attr.y2]="plotBottom"
+      />
+
+      <path class="chart-area" [attr.d]="areaPath()" />
+      <path class="chart-line" [attr.d]="linePath()" />
+
+      @for (point of points(); track point.period) {
+        <circle class="chart-dot" [attr.cx]="point.x" [attr.cy]="point.y" r="2.5">
+          <title>{{ point.period }}: {{ point.rate.toFixed(1) }}%</title>
+        </circle>
+      }
+
+      <text class="chart-label" [attr.x]="plotLeft" [attr.y]="maxY() - 5" text-anchor="start">
+        {{ maxRate().toFixed(1) }}%
+      </text>
+      <text class="chart-label" [attr.x]="plotLeft" [attr.y]="minY() + 12" text-anchor="start">
+        {{ minRate().toFixed(1) }}%
+      </text>
+      <text class="chart-label" [attr.x]="plotLeft" [attr.y]="plotBottom + 20" text-anchor="start">
+        {{ firstPeriod() }}
+      </text>
+      <text class="chart-label" [attr.x]="plotRight" [attr.y]="plotBottom + 20" text-anchor="end">
+        {{ lastPeriod() }}
+      </text>
+    </svg>
+  </div>
+} @else {
+  <p class="muted">No observations to chart.</p>
+}

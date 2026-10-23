@@ -1,0 +1,57 @@
+<div class="app-shell">
+  <header class="app-header">
+    <a class="brand" routerLink="/series" aria-label="Zetaris Eurostat CRUD home">
+      <span class="brand-mark" aria-hidden="true">ZET</span>
+      <span class="brand-copy">
+        <strong>Eurostat CRUD</strong>
+        <small>Zetaris unemployment explorer</small>
+      </span>
+    </a>
+
+    <nav class="app-nav" aria-label="Primary">
+      <a
+        routerLink="/series"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Saved series
+      </a>
+      <a routerLink="/series/new" routerLinkActive="active">New series</a>
+      <a routerLink="/settings" routerLinkActive="active">Connection</a>
+    </nav>
+  </header>
+
+  @if (!connection.configured()) {
+    <div class="connection-banner" role="status">
+      <span>Zetaris is not configured for this tab.</span>
+      <a routerLink="/settings">Add an API key</a>
+    </div>
+  }
+
+  <main class="app-main">
+    <router-outlet />
+  </main>
+
+  <footer class="app-footer">
+    <p>
+      Source:
+      <a
+        href="https://ec.europa.eu/eurostat/databrowser/view/une_rt_m/default/table"
+        target="_blank"
+        rel="noopener noreferrer"
+        >Eurostat, une_rt_m</a
+      >
+      (unemployment rate, monthly), served through Zetaris. Reuse is subject to the
+      <a
+        href="https://ec.europa.eu/eurostat/en/help/copyright-notice"
+        target="_blank"
+        rel="noopener noreferrer"
+        >Eurostat copyright notice</a
+      >.
+    </p>
+    <p>
+      Saved series stay in this browser's localStorage. The Zetaris API key stays in sessionStorage
+      for this tab.
+    </p>
+  </footer>
+</div>

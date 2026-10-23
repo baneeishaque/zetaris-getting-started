@@ -1,0 +1,55 @@
+@if (store.loadWarning(); as warning) {
+  <div class="alert warning" role="status">{{ warning }}</div>
+}
+
+<div class="page-header">
+  <div>
+    <h1>Saved series</h1>
+    <p>
+      Save a note, then open it to query the latest unemployment-rate observations from Zetaris.
+      Records are stored only in this browser.
+    </p>
+  </div>
+  <div class="page-actions">
+    <a class="button primary" routerLink="/series/new">New series</a>
+  </div>
+</div>
+
+@if (store.series().length === 0) {
+  <section class="empty-state">
+    <h2>No saved series yet</h2>
+    <p>
+      Zetaris currently provides the Poland total series. Create a saved series, then open it to
+      query the unemployment-rate observations.
+    </p>
+    <a class="button primary" routerLink="/series/new">Create your first series</a>
+  </section>
+} @else {
+  <div class="series-grid">
+    @for (record of store.series(); track record.id) {
+      <article class="series-card">
+        <div class="series-card-main">
+          <div>
+            <h2>
+              <a [routerLink]="['/series', record.id]">{{ record.name }}</a>
+            </h2>
+            <div class="series-meta">
+              <span class="badge accent">{{ geoLabel(record.filters.geo) }}</span>
+              <span class="badge">{{ sexLabel(record.filters.sex) }}</span>
+            </div>
+          </div>
+          <span class="badge">{{ record.filters.geo }} · {{ record.filters.sex }}</span>
+        </div>
+
+        @if (record.note) {
+          <p class="series-note">{{ record.note }}</p>
+        }
+
+        <div class="series-meta small muted">
+          <span>Updated {{ formatTimestamp(record.updatedAt) }}</span>
+          <a [routerLink]="['/series', record.id, 'edit']">Edit</a>
+        </div>
+      </article>
+    }
+  </div>
+}
