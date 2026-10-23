@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:fragment="layout(pageTitle, content)">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="${pageTitle} + ' · Eurostat CRUD'">Eurostat CRUD</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<header class="site-header">
+  <nav class="container">
+    <a class="brand" th:href="@{/}">Eurostat CRUD</a>
+    <a th:href="@{/series}">Series</a>
+    <a th:href="@{/notes}">Notes</a>
+  </nav>
+</header>
+<main class="container">
+  <div class="alert alert-success" th:if="${message}" th:text="${message}"></div>
+  <div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+  <div th:replace="${content}"></div>
+</main>
+<footer class="site-footer">
+  <div class="container">
+    <span>Reads Eurostat through the Zetaris Lightning JDBC interface.</span>
+    <span>Notes are in memory and reset when the app restarts.</span>
+  </div>
+</footer>
+</body>
+</html>

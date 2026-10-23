@@ -1,0 +1,7 @@
+app:
+  demo:
+    seed-notes: false
+  zetaris:
+    url: ${ZETARIS_JDBC_URL:jdbc:zetaris:lightning@localhost:10000}
+    username: ${ZETARIS_USERNAME:test}
+    password: ${ZETARIS_PASSWORD:test}

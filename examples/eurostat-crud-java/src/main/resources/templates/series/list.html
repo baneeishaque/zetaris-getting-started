@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::title}, ~{::section})}">
+<head>
+  <title>Series</title>
+</head>
+<body>
+<section>
+  <div class="page-head">
+    <div>
+      <h1>Eurostat series</h1>
+      <p class="lede">Monthly unemployment rate for Poland, read-only over Zetaris JDBC.</p>
+    </div>
+    <a class="button" th:href="@{/notes/new}">Add note</a>
+  </div>
+
+  <form class="filters" method="get" th:action="@{/series}">
+    <label for="year">Year</label>
+    <select id="year" name="year">
+      <option value="" th:selected="${year == null or year == ''}">All years</option>
+      <option th:each="y : ${years}" th:value="${y}" th:text="${y}" th:selected="${y == year}">2025</option>
+    </select>
+    <input type="hidden" name="size" th:value="${page.size}">
+    <button type="submit">Filter</button>
+    <a th:href="@{/series}">Reset</a>
+  </form>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2 th:text="${page.totalItems} + ' observations'">356 observations</h2>
+      <span class="muted" th:text="'Page ' + (${page.totalPages} == 0 ? 0 : ${page.page} + 1) + ' of ' + ${page.totalPages}">Page 1 of 15</span>
+    </div>
+    <table>
+      <thead>
+      <tr><th>Period</th><th class="num">Unemployment rate</th><th></th></tr>
+      </thead>
+      <tbody>
+      <tr th:each="s : ${page.items}">
+        <td th:text="${s.period}">2025-07</td>
+        <td class="num" th:text="${#numbers.formatDecimal(s.unemploymentRatePct, 1, 1)} + '%'">—</td>
+        <td class="actions">
+          <a th:href="@{/series/{period}(period=${s.period})}">Open</a>
+          <a th:href="@{/notes/new(period=${s.period})}">Add note</a>
+        </td>
+      </tr>
+      <tr th:if="${#lists.isEmpty(page.items)}">
+        <td colspan="3" class="muted">No observations match this filter.</td>
+      </tr>
+      </tbody>
+    </table>
+    <div class="pager">
+      <a class="button secondary"
+         th:if="${page.hasPrevious}"
+         th:href="@{/series(page=${page.page - 1}, size=${page.size}, year=${year})}">Previous</a>
+      <a class="button secondary"
+         th:if="${page.hasNext}"
+         th:href="@{/series(page=${page.page + 1}, size=${page.size}, year=${year})}">Next</a>
+    </div>
+  </section>
+</section>
+</body>
+</html>

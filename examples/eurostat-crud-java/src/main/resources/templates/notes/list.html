@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::title}, ~{::section})}">
+<head>
+  <title>Notes</title>
+</head>
+<body>
+<section>
+  <div class="page-head">
+    <div>
+      <h1>Notes</h1>
+      <p class="lede">App-owned notes about Eurostat periods. They live in memory and reset on restart.</p>
+    </div>
+    <a class="button" th:href="@{/notes/new}">New note</a>
+  </div>
+
+  <div th:if="${#lists.isEmpty(notes)}" class="panel empty">
+    <p>No notes yet.</p>
+    <a class="button" th:href="@{/notes/new}">Create the first note</a>
+  </div>
+
+  <div class="note-grid" th:unless="${#lists.isEmpty(notes)}">
+    <article class="note card" th:each="n : ${notes}">
+      <div class="note-head">
+        <a th:href="@{/series/{period}(period=${n.period})}" th:text="${n.period}">2025-07</a>
+        <span class="tag" th:if="${n.tag}" th:text="${n.tag}">latest</span>
+        <span class="badge" th:if="${n.pinned}">Pinned</span>
+      </div>
+      <p th:text="${n.noteText}">...</p>
+      <div class="note-meta">
+        <span th:if="${n.rating}" th:text="'Rating ' + ${n.rating} + '/5'">Rating 5/5</span>
+        <span th:text="'Updated ' + ${n.updatedAtDisplay}">Updated —</span>
+      </div>
+      <div class="note-actions">
+        <a class="button secondary" th:href="@{/notes/{id}/edit(id=${n.id})}">Edit</a>
+        <form method="post" th:action="@{/notes/{id}/delete(id=${n.id})}"
+              onsubmit="return confirm('Delete this note?');">
+          <button type="submit" class="danger">Delete</button>
+        </form>
+      </div>
+    </article>
+  </div>
+</section>
+</body>
+</html>

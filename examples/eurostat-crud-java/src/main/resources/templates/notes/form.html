@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::title}, ~{::section})}">
+<head>
+  <title>Note form</title>
+</head>
+<body>
+<section>
+  <p><a th:href="@{/notes}">← Back to notes</a></p>
+  <h1 th:text="${isEdit} ? 'Edit note' : 'New note'">New note</h1>
+  <p class="lede">The period must match an existing Eurostat observation. One note per period.</p>
+
+  <form class="form panel" method="post" th:action="@{${formAction}}" th:object="${form}">
+    <div class="field">
+      <label for="period">Period</label>
+      <input id="period" type="text" th:field="*{period}" placeholder="2025-07" autocomplete="off">
+      <p class="field-error" th:if="${#fields.hasErrors('period')}" th:errors="*{period}">Invalid period.</p>
+    </div>
+
+    <div class="field">
+      <label for="noteText">Note</label>
+      <textarea id="noteText" rows="6" th:field="*{noteText}" placeholder="What should a reader know about this observation?"></textarea>
+      <p class="field-error" th:if="${#fields.hasErrors('noteText')}" th:errors="*{noteText}">Note text is required.</p>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="tag">Tag</label>
+        <input id="tag" type="text" th:field="*{tag}" placeholder="latest" autocomplete="off">
+        <p class="field-error" th:if="${#fields.hasErrors('tag')}" th:errors="*{tag}">Invalid tag.</p>
+      </div>
+      <div class="field">
+        <label for="rating">Rating</label>
+        <select id="rating" th:field="*{rating}">
+          <option value="">No rating</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+        <p class="field-error" th:if="${#fields.hasErrors('rating')}" th:errors="*{rating}">Invalid rating.</p>
+      </div>
+    </div>
+
+    <label class="checkbox">
+      <input type="checkbox" th:field="*{pinned}">
+      Pin this note
+    </label>
+
+    <div class="form-actions">
+      <button type="submit" th:text="${isEdit} ? 'Save changes' : 'Create note'">Create note</button>
+      <a class="button secondary" th:href="@{/notes}">Cancel</a>
+    </div>
+  </form>
+</section>
+</body>
+</html>

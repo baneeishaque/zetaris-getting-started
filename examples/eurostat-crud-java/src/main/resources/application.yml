@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: eurostat-crud
+  thymeleaf:
+    cache: false
+
+server:
+  port: 8090
+  address: 127.0.0.1
+
+app:
+  zetaris:
+    url: ${ZETARIS_JDBC_URL:jdbc:zetaris:lightning@localhost:10000}
+    username: ${ZETARIS_USERNAME:}
+    password: ${ZETARIS_PASSWORD:}
+    driver-class-name: com.zetaris.lightning.jdbc.LightningDriver
+    query-timeout-seconds: 60
+  demo:
+    seed-notes: true

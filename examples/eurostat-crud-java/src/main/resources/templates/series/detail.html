@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::title}, ~{::section})}">
+<head>
+  <title>Series detail</title>
+</head>
+<body>
+<section>
+  <p><a th:href="@{/series}">← Back to series</a></p>
+  <div class="page-head">
+    <div>
+      <h1 th:text="'Period ' + ${series.period}">Period 2025-07</h1>
+      <p class="lede">Unemployment rate: <strong th:text="${#numbers.formatDecimal(series.unemploymentRatePct, 1, 1)} + '%'">—</strong></p>
+    </div>
+    <a class="button" th:href="@{/notes/new(period=${series.period})}">Add note</a>
+  </div>
+
+  <div class="split">
+    <section class="panel">
+      <div class="panel-head"><h2>Observation</h2></div>
+      <dl class="detail-list">
+        <dt>Period</dt><dd th:text="${series.period}">2025-07</dd>
+        <dt>Unemployment rate</dt><dd th:text="${#numbers.formatDecimal(series.unemploymentRatePct, 1, 1)} + '%'">—</dd>
+        <dt>Source</dt><dd>Eurostat <code>une_rt_m</code>, read through Zetaris JDBC</dd>
+      </dl>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>App note</h2></div>
+      <div th:if="${#lists.isEmpty(notes)}" class="empty">
+        <p>No note for this period yet.</p>
+        <a class="button" th:href="@{/notes/new(period=${series.period})}">Create the first note</a>
+      </div>
+      <article class="note" th:each="n : ${notes}">
+        <div class="note-head">
+          <span class="tag" th:if="${n.tag}" th:text="${n.tag}">latest</span>
+          <span class="badge" th:if="${n.pinned}">Pinned</span>
+        </div>
+        <p th:text="${n.noteText}">...</p>
+        <div class="note-meta">
+          <span th:text="'Updated ' + ${n.updatedAtDisplay}">Updated —</span>
+          <a th:href="@{/notes/{id}/edit(id=${n.id})}">Edit</a>
+        </div>
+      </article>
+    </section>
+  </div>
+</section>
+</body>
+</html>

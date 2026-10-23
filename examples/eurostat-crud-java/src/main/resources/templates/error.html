@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::title}, ~{::section})}">
+<head>
+  <title>Error</title>
+</head>
+<body>
+<section>
+  <p class="error-status" th:text="${status}">500</p>
+  <h1 th:text="${error} ?: 'Something went wrong'">Something went wrong</h1>
+  <p class="lede" th:text="${message} ?: 'The request could not be completed.'">The request could not be completed.</p>
+  <p><a class="button" th:href="@{/}">Back to dashboard</a></p>
+</section>
+</body>
+</html>

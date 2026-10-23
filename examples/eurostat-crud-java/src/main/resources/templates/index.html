@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::title}, ~{::section})}">
+<head>
+  <title>Dashboard</title>
+</head>
+<body>
+<section>
+  <h1>Eurostat unemployment, Poland</h1>
+  <p class="lede">A small CRUD demo: observations are read over JDBC from Zetaris; notes are owned by this app and kept in memory.</p>
+
+  <div class="stats">
+    <div class="stat">
+      <span class="stat-label">Observations</span>
+      <strong th:text="${summary.count}">356</strong>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Latest period</span>
+      <strong th:text="${summary.latestPeriod}">2025-07</strong>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Latest rate</span>
+      <strong th:text="${summary.latestRate != null ? #numbers.formatDecimal(summary.latestRate, 1, 1) + '%' : '—'}">—</strong>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Average rate</span>
+      <strong th:text="${#numbers.formatDecimal(summary.averageRate, 1, 1)} + '%'">—</strong>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Notes</span>
+      <strong th:text="${noteCount}">3</strong>
+    </div>
+  </div>
+
+  <div class="split">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Latest observations</h2>
+        <a th:href="@{/series}">View all</a>
+      </div>
+      <table>
+        <thead>
+        <tr><th>Period</th><th class="num">Rate</th><th></th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="s : ${latest}">
+          <td th:text="${s.period}">2025-07</td>
+          <td class="num" th:text="${#numbers.formatDecimal(s.unemploymentRatePct, 1, 1)} + '%'">—</td>
+          <td><a th:href="@{/series/{period}(period=${s.period})}">Open</a></td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(latest)}">
+          <td colspan="3" class="muted">No observations.</td>
+        </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Recent notes</h2>
+        <a th:href="@{/notes}">Manage</a>
+      </div>
+      <ul class="note-list">
+        <li th:each="n : ${notes}">
+          <div>
+            <a th:href="@{/series/{period}(period=${n.period})}" th:text="${n.period}">2025-07</a>
+            <span class="tag" th:if="${n.tag}" th:text="${n.tag}">latest</span>
+          </div>
+          <p th:text="${n.noteText}">...</p>
+        </li>
+        <li th:if="${#lists.isEmpty(notes)}" class="muted">No notes yet.</li>
+      </ul>
+    </section>
+  </div>
+</section>
+</body>
+</html>
