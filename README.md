@@ -31,6 +31,7 @@ The [GitHub Pages guide](website/README.md) describes how to preview and publish
 | [`open_data/manifest.json`](open_data/manifest.json) | Source/model IDs, status, and dependencies for `onboard.py` |
 | [`docs/guides/project-paths.md`](docs/guides/project-paths.md) | Optional project directions, including the [PUDL chart](examples/pudl-chart/README.md) and [EDGAR/PUDL/NOAA guide](docs/guides/create-edgar-pudl-noaa-usl.md) |
 | [`docs/guides/zetaris-lightning-sql-companion.md`](docs/guides/zetaris-lightning-sql-companion.md) | SQL reference: shapes, quoting, gotchas, and confirmed platform limitations — read alongside the Zetaris Kbase while writing your own SQL |
+| [`docs/data-sources/`](docs/data-sources/) | Verified data-source dossiers, starting with the Eurostat unemployment-rate dataset |
 | [`docs/plans/FUTURES.md`](docs/plans/FUTURES.md) | The full data-source roadmap, priority order, and status per category |
 | [`docs/plans/`](docs/plans/) | Active plans for in-progress or upcoming work; [`docs/plans/archive/`](docs/plans/archive/) holds completed or superseded plans and the original source-research manifest, kept as historical record |
 
@@ -49,6 +50,7 @@ docs/
   connections/     Route choices, Cursor/Codex/Claude Code prompts, and recipe command reference
   install/         Installation & configuration guide, plus its test record
   guides/          First dataset, project paths, readiness, recovery, and demo guidance
+  data-sources/    Verified data-source dossiers (Eurostat unemployment rate)
   plans/           Active roadmap and category plans (FUTURES.md, recipes/); archive/ for completed plans
 ```
 

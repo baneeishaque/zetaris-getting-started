@@ -78,9 +78,14 @@ A catalog of REST sources registered with `CREATE LIGHTNING REST TABLE`. Each en
 ## 7. Eurostat REST API — license: open, with a condition
 
 - **What it is:** EU statistics, including unemployment and HICP inflation, through a public SDMX/REST API.
-- **Licence:** commonly understood to align with CC-BY 4.0, but this has not been independently confirmed. Read Eurostat's policy before reuse.
+- **Licence:** Reuse of statistical data, metadata, publications, and other dissemination tools is authorised
+  for commercial and non-commercial purposes provided the source is acknowledged, under the European
+  Commission reuse policy (Decision 2011/833/EU). Editorial content is CC BY 4.0. Commercial reuse of data for
+  countries outside the EU, EFTA, and official EU acceding and candidate countries is not allowed. See the
+  [Eurostat license and attribution dossier](../../docs/data-sources/eurostat/license-and-attribution.md).
 - **Access:** no key, no registration, CORS-enabled.
 - **Docs:** [Eurostat API Statistics guide](https://wikis.ec.europa.eu/display/EUROSTATHELP/API+Statistics+-+data+query)
+- **Full dossier:** [`docs/data-sources/eurostat/README.md`](../../docs/data-sources/eurostat/README.md)
 
 ## 8. Statistics Canada Web Data Service (WDS) — license: open (StatCan Open Licence)
 

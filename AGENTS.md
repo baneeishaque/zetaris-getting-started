@@ -1,6 +1,8 @@
 # Agent instructions
 
-This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`. You are acting as a data engineer against a Zetaris instance.
+This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages
+(`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`.
+You are acting as a data engineer against a Zetaris instance.
 
 ## Connect first
 
