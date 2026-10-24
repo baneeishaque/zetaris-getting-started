@@ -1,0 +1,10 @@
+user:
+  text: why hang?
+assistant:
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: |-
+      It wasn’t deadlocked: Playwright was downloading Chromium 140 (173.7 MB). The log shows the download reached 100%, then Playwright was silently unpacking/installing while stdout was redirected to `scratch/.../playwright-install.log`; the 300s timeout/user abort hit before it finished. No Playwright process remains, and the Angular dev server is still running on `127.0.0.1:4200`.
+
+      Want me to retry with visible progress, or skip the browser smoke test and rely on the 21 passing Vitest tests plus the production build?

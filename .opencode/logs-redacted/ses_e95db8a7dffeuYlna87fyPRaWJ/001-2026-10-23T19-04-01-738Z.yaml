@@ -1,0 +1,1191 @@
+---
+user:
+  text: |-
+    on /home/ext_root/lab-data/zetaris-getting-started: Read AGENTS.md and follow it. Run python3 scripts/prefl ight.py and show me the 
+    result. Then connect over REST to the instance confi gured in .env.local and 
+    confi rm with SELECT 1 and SHOW LIGHTNING DATABASES. 
+    Goal: <for example: onboard pokeapi> 
+    Dry-run before creating anything and wait for my go-ahead.
+  time: 10/23/2026, 7:02:16.723 PM UTC
+assistant:
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    tool_calls:
+      - tool: read
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/AGENTS.md
+        result: |-
+          <path>/home/ext_root/lab-data/zetaris-getting-started/AGENTS.md</path>
+          <type>file</type>
+          <content>
+          1: # Agent instructions
+          2: 
+          3: This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`. You are acting as a data engineer against a Zetaris instance.
+          4: 
+          5: ## Connect first
+          6: 
+          7: The user's first prompt names a protocol (JDBC or REST) and a goal. Which instance you talk to is set in `.env.local` (`ZETARIS_REST_URL`, `ZETARIS_JDBC_URL` and the rest; local is the default), not in the prompt. Before running anything else, read the connection guide for your harness in `docs/connections/` (`claude-code-connection.md`, `codex-connection.md`, `cursor-connection.md`) for the settings table and troubleshooting, run the preflight below, and confirm the connection with `SELECT 1` and `SHOW LIGHTNING DATABASES`. Over REST, also call `GET /datasource/datasources`. Then work on the user's goal.
+          8: 
+          9: - **JDBC:** use `ZETARIS_JDBC_JAR` if set; otherwise ask the user for the full path to the driver JAR. Do not assume or search for it.
+          10: - **REST:** the key is `ZETARIS_API_KEY` in `.env.local`, created by the user in the Zetaris GUI. Never create, request, print, log or put it in a URL.
+          11: - **OpenAPI spec:** fetch it fresh from `/redoc/docs.yaml` using Basic auth (`ZETARIS_USERNAME` and `ZETARIS_PASSWORD` from `.env.local`), not the bearer key. See section 6.4 of the connection guide.
+          12: - **Finding `.env.local`:** it is the only env file; do not use `.env`. It is gitignored, so a git worktree has none. Every script in `scripts/` (Python and Deno) already looks in the repo root and then the top-level checkout. For your own shell commands, use the snippet in the preflight section.
+          13: 
+          14: ## Preflight check
+          15: 
+          16: Run this before any Zetaris work in a new session, and report what is missing. Do not install anything, create credentials, or start work until the user has seen the result. Ask before installing.
+          17: 
+          18: Run `python3 scripts/preflight.py` (add `--jdbc --jar <path>` for JDBC). It is read-only and covers the checklist below; the list is what it checks and why. Run SQL files with `python3 scripts/run_sql.py FILE` (`--dry-run` first, `--skip-exists` to re-run, `--channel jdbc` for JDBC); see `scripts/HOWTO.md`.
+          19: 
+          20: 1. **Credentials.** Find `.env.local` (see "Connect first"). Check that these names are set, without printing values: `ZETARIS_API_KEY` for REST, and `ZETARIS_USERNAME` / `ZETARIS_PASSWORD` for the OpenAPI spec and for JDBC. Also note `ZETARIS_JDBC_JAR` (driver path, JDBC only) and `ZETARIS_USER_AGENT` (needed by any create script containing the `YOUR_APP_NAME YOUR_CONTACT_EMAIL` placeholder).
+          21:    ```bash
+          22:    ENV="$(dirname "$(cd "$(git rev-parse --git-common-dir)" && pwd)")/.env.local"
+          23:    set -a; . "$ENV"; set +a
+          24:    for v in ZETARIS_API_KEY ZETARIS_USERNAME ZETARIS_PASSWORD; do [ -n "$(printenv "$v")" ] && echo "$v set" || echo "$v MISSING"; done
+          25:    ```
+          26: 2. **REST.** `GET /datasource/datasources` returns 200, and `SELECT 1` through `/sql-editor/sqls/run` returns `1`. A 401 means a bad key; a 400 means a bad `X-Org-ID` or a non-UUID `X-Request-ID`. If localhost fails with `Operation not permitted` before an HTTP response, treat it as a possible command-environment network restriction, not an API or credential failure. Request approved/elevated execution for the same read-only preflight and retry when available. If access is unavailable or denied, report the blocker and stop; do not change the endpoint or credentials to work around it.
+          27: 3. **JDBC** (only if the user wants JDBC):
+          28:    - **Endpoint:** `nc -z localhost 10000` succeeds.
+          29:    - **Java:** JDK 11 or later. On macOS `java` can be a stub that reports "Unable to locate a Java Runtime" even when a Homebrew JDK exists. Check `/usr/libexec/java_home`, then `/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home`, and export `JAVA_HOME`. If none exists, offer `brew install openjdk@17`. The `temurin` cask needs `sudo`, which the agent cannot enter.
+          30:    - **Python:** a venv (`.venv` is gitignored) with `jaydebeapi` importable.
+          31:    - **Driver JAR:** ask the user for the full path and confirm the file exists. Never assume a location.
+          32:    - **Query:** connect with `jdbc:zetaris:lightning@localhost:10000` and class `com.zetaris.lightning.jdbc.LightningDriver`, then run `SELECT 1`.
+          33: 4. **Instance state.** `SHOW DATASOURCES` does not list Lightning-registered sources (REST, file). Also run `SHOW LIGHTNING DATABASES`. For USL, run `SHOW NAMESPACES OR TABLES IN lightning.metastore`; an empty result is normal on a clean instance, but a failing `CREATE NAMESPACE` on a missing parent means `lightning.metastore` is not initialized (see the USL note under "Writing SQL").
+          34: 5. **Report** a short pass/fail list, and stop on any failure.
+          35: 
+          36: ## Writing SQL
+          37: 
+          38: - Zetaris Lightning SQL only. Not Spark SQL or Hive SQL, and never start a local Spark session.
+          39: - One statement per call, no trailing semicolon, qualified names (`<source>.<table>`). A `_create.sql` script holds many statements; `scripts/run_sql.py` splits and sends them for you.
+          40: - **USL:** `lightning.metastore` must exist before `CREATE NAMESPACE IF NOT EXISTS lightning.metastore.<name>` works; check with `SHOW NAMESPACES OR TABLES IN lightning.metastore` (on an uninitialized instance the statement fails with "parent namespace : metastore is not existing"). A multi-table `COMPILE USL` must be sent as one whole statement, so do not split it on `;`. It works over JDBC and REST that way. Use `SHOW DQ ALL INVALID TABLE <namespace.usl.table>` (the `TABLE` clause is required).
+          41: - Read `docs/guides/zetaris-lightning-sql-commands.md` for syntax and `docs/guides/zetaris-lightning-sql-companion.md` for confirmed gotchas and platform limitations before writing new SQL.
+          42: 
+          43: ## Running scripts
+          44: 
+          45: Use `scripts/onboard.py` to onboard sources and USL models with their dependencies, and `scripts/run_sql.py` to run any single `_create.sql` / `_select.sql` file or ad hoc SQL. Do not hand-roll a splitter. See `scripts/HOWTO.md` for options.
+          46: 
+          47: - **Dry-run first** (`--dry-run`) and show the user the statement list. Create scripts change the instance, so get a clear go-ahead before running one for real.
+          48: - **User-agent.** `ZETARIS_USER_AGENT` must be `app_name user@domain.tld`: an app name and a contact e-mail. `company_dns` V4 gives anything vaguer (a bare name, a library default, none) a very strict rate limit, and SEC EDGAR needs a real contact. Never send the `YOUR_APP_NAME YOUR_CONTACT_EMAIL` placeholder, and do not invent or reuse a contact email. If `ZETARIS_USER_AGENT` is not set, or is not in that form, ask the user which value to send, then pass it for the run or have them add it to `.env.local`. The runner refuses the placeholder and any value without a contact e-mail.
+          49: - **Re-runs.** `--skip-exists` skips "already exists" errors, so a script can be run again on an instance that already has some of its objects. Without it the run stops at the first duplicate.
+          50: - **JDBC.** `--channel jdbc` needs the driver JAR from `--jar` or `ZETARIS_JDBC_JAR`. Ask the user for the path; never assume one. The runner finds a Homebrew JDK and hops into `.venv` itself.
+          51: - **Order and dependencies.** The approach is: onboard the data sources first, then create and activate a USL over them. Every source and USL model, with the sources it `requires`, is declared once in `open_data/manifest.json`. Use `python3 scripts/onboard.py --list` to see them, `plan <id>...` to see the resolved order, and `run <id>... --dry-run` then `run <id>...` to onboard them with their dependencies first. Never work out the order by hand or from HOWTO prose. A `known_to_fail` source needs `--allow-known-to-fail`. When you add a create script, add it to the manifest (`onboard.py --check` validates it).
+          52: - **Teardown and restarts.** When the user asks to clean up or start over, confirm the scope first (instance objects, local setup such as `.venv`, any published viewer), then use `python3 scripts/onboard.py teardown <id>...`. Do not hand-write DROP statements. Show the plan (it also pulls in sources that `require` the target), wait for a go-ahead, then re-run with `--yes`. Do not pipe a script that changes the instance through a filter such as `grep` on its first run; a filter error hides the output while the statements still run. After it finishes, report what only the Zetaris Data Explorer can remove (REST and file tables, Lightning databases, containers) and say that a re-run needs `--skip-exists` if they are left. `--drop-namespace` also removes every USL in the namespace, so only use it when asked.
+          53: - **Verify after creating**, as in `open_data/rest_apis/HOWTO.md` section 2: compare Zetaris row counts with an independent check against the source API.
+          54: 
+          55: ## Safety
+          56: 
+          57: - Start read-only (`SHOW`, `DESCRIBE`, `SELECT`). Ask before anything that creates, drops, grants or writes.
+          58: - Keep passwords and keys out of prompts, logs, source files and commits.
+          59: - Do not call port 8889 on a local instance.
+          60: - Least privilege: an agent that only reads should run as a non-administrator user, with creating, updating and deleting left to administrators. If a statement is refused for lack of privilege, report it and ask for the right access; do not switch to an administrator login unless the user tells you to. See `docs/guides/permissions.md`.
+          61: - Sources under `known_to_fail/` are documented failures, and `rate_limited/` sources should be run deliberately, not repeatedly.
+          62: 
+          63: ## Adding or changing sources
+          64: 
+          65: Follow `CONTRIBUTING.md`: the `_create.sql` / `_select.sql` pattern, the `known_to_fail/` write-up format, and license verification. Source HOWTOs live in `open_data/*/HOWTO.md`.
+
+          (End of file - total 65 lines)
+          </content>
+    time: 10/23/2026, 7:02:16.746 PM UTC
+    response: I'll start by reading the AGENTS.md in that directory.
+    duration: 3.843s
+    duration_ms: 3843
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      I need to follow the instructions. Let me read the connection guide for my harness. I'm opencode — there's no opencode connection guide listed, but there are claude-code-connection.md, codex-connection.md, cursor-connection.md. Let me list docs/connections/.
+
+      Also need to run preflight.py. Let me first check the directory structure.
+    thinking_duration: 328ms
+    thinking_duration_ms: 328
+    tool_calls:
+      - tool: bash
+        args:
+          command: ls -la docs/connections/ 2>&1; echo "---"; ls scripts/ 2>&1
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          total 44
+          drwxrwxr-x 2 ext_root docker  4096 Oct 23 18:46 .
+          drwxrwxr-x 6 ext_root docker  4096 Oct 23 18:46 ..
+          -rw-rw-r-- 1 ext_root docker  1501 Oct 23 18:46 README.md
+          -rw-rw-r-- 1 ext_root docker  2726 Oct 23 18:46 claude-code-connection.md
+          -rw-rw-r-- 1 ext_root docker 14620 Oct 23 18:46 client-setup.md
+          -rw-rw-r-- 1 ext_root docker  3231 Oct 23 18:46 codex-connection.md
+          -rw-rw-r-- 1 ext_root docker  2768 Oct 23 18:46 cursor-connection.md
+          -rw-rw-r-- 1 ext_root docker  1810 Oct 23 18:46 lightning-recipe-reference.md
+          ---
+          HOWTO.md
+          check_zetaris.py
+          check_zetaris.ts
+          fetch_datagovsg.py
+          fetch_openfoodfacts.py
+          load_env.ts
+          onboard.py
+          ping_postgres.py
+          ping_postgres.ts
+          preflight.py
+          query_zetaris.py
+          query_zetaris.ts
+          requirements.txt
+          run_sql.py
+          zetaris_api.py
+          zetaris_api.ts
+          zetaris_sql.py
+      - tool: bash
+        args:
+          command: ls -a | head -40
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          .
+          ..
+          .env.example
+          .env.local
+          .git
+          .github
+          .gitignore
+          AGENTS.md
+          CLAUDE.md
+          CONTRIBUTING.md
+          LICENSE
+          README.md
+          START-HERE.md
+          deno.json
+          deno.lock
+          docs
+          examples
+          key.txt
+          open_data
+          scripts
+          website
+    time: 10/23/2026, 7:02:20.597 PM UTC
+    duration: 3.738s
+    duration_ms: 3738
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      No opencode connection guide. Let me read the README in docs/connections and one of the harness guides (they likely share the same settings table). Let me also check preflight.py briefly and run it.
+
+      Let me read docs/connections/README.md and codex-connection.md (generic-ish).
+    thinking_duration: 11ms
+    thinking_duration_ms: 11
+    tool_calls:
+      - tool: read
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/docs/connections/codex-connection.md
+        result: |-
+          <path>/home/ext_root/lab-data/zetaris-getting-started/docs/connections/README.md</path>
+          <type>file</type>
+          <content>
+          1: # Connect to Zetaris
+          2: 
+          3: [Get access first](../../START-HERE.md). You need the website URL, your account and query permission. Keep credentials private.
+          4: 
+          5: ## SQL Editor
+          6: 
+          7: Sign in and open the SQL Editor. This is the recommended beginner route and needs no additional client tools.
+          8: 
+          9: Run [your first SQL commands](lightning-recipe-reference.md) to confirm execution and query the supplied samples. Run one complete statement at a time and wait for the result.
+          10: 
+          11: ## Coding assistants
+          12: 
+          13: This is an optional alternative to SQL Editor.
+          14: 
+          15: Configure [client setup](client-setup.md), then follow [Cursor](cursor-connection.md), [Codex](codex-connection.md), or [Claude Code](claude-code-connection.md) for the starter prompt. JDBC needs Java, the matching driver JAR, endpoint and account.
+          16: 
+          17: Use the Zetaris driver; don't substitute a Hive/Spark driver or start a local Spark session. Direct REST uses an API key and the platform's OpenAPI specification; follow your assistant's guide.
+          18: 
+          19: ## HTTP helpers
+          20: 
+          21: This is another optional route. You need Python or Deno, the UI URL, numeric organisation ID, and an account or token.
+          22: 
+          23: Follow [client scripts](../../scripts/HOWTO.md) for `.env.local`, authentication and the connection check. The helpers use UI proxy routes; the raw API URL is not a substitute.
+          24: 
+          25: ## Next step
+          26: 
+          27: Once connected, [run your first SQL commands](lightning-recipe-reference.md). Use the [full reference](../guides/zetaris-lightning-sql-commands.md) later for additional commands and their prerequisites.
+
+          (End of file - total 27 lines)
+          </content>
+      - tool: read
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/docs/connections/codex-connection.md
+        result: |-
+          <path>/home/ext_root/lab-data/zetaris-getting-started/docs/connections/codex-connection.md</path>
+          <type>file</type>
+          <content>
+          1: # Connecting Codex to Zetaris
+          2: 
+          3: Open this repository as the Codex workspace. Codex reads the root `AGENTS.md`,
+          4: which sets the connection, SQL, and permission rules for this repository.
+          5: 
+          6: <a id="contents"></a>
+          7: ## 1. Purpose
+          8: 
+          9: Use Codex to inspect a Zetaris instance, run Lightning SQL, or work through a
+          10: data recipe. It checks the connection before starting your goal.
+          11: 
+          12: ## Repository and instance scope
+          13: 
+          14: Use the shared [client setup](client-setup.md) for connection details, API
+          15: authentication, and troubleshooting. Use your own local or AWS Zetaris
+          16: instance. Inspect existing objects before changing or reusing them.
+          17: 
+          18: ## 2. Prerequisites
+          19: 
+          20: - This repository open as the workspace.
+          21: - Access to the Zetaris instance you want to use.
+          22: - Permission for Codex to run the repository's scripts and reach that instance.
+          23: 
+          24: For a local REST or JDBC instance, `Operation not permitted` when connecting
+          25: to `localhost` can mean Codex's command environment blocked local network
+          26: access; it does not by itself indicate a bad URL, key, or closed port. Retry
+          27: the same read-only preflight with network access if Codex offers it. If that
+          28: permission is unavailable, run the command in a terminal that can reach the
+          29: instance. For JDBC, remember that `localhost` is the machine running the JDBC
+          30: client; use the supplied host and port for a remote instance.
+          31: 
+          32: JDBC also needs Java, the Zetaris driver JAR, and your Zetaris user ID and
+          33: password. REST needs an API key that you create in the Zetaris GUI. See the
+          34: [shared connection settings](client-setup.md#2-set-up-envlocal).
+          35: 
+          36: ## 3. Choosing a protocol
+          37: 
+          38: Use [JDBC or REST](client-setup.md#1-choose-a-protocol) based on the work and
+          39: access you have. The repository's REST runner calls the raw API; the small
+          40: `query_zetaris` and `check_zetaris` helpers use the UI proxy.
+          41: 
+          42: ## 4. Connection parameters
+          43: 
+          44: Put settings in `.env.local`, not in a prompt. See the [connection settings and
+          45: authentication steps](client-setup.md#2-set-up-envlocal).
+          46: 
+          47: ## 5. JDBC starter prompt
+          48: 
+          49: Copy the [JDBC starter prompt](client-setup.md#5-jdbc-starter-prompt) after
+          50: setting up the driver and `.env.local`.
+          51: 
+          52: ## 6. REST starter prompt
+          53: 
+          54: ### 6.1 Create an API key
+          55: 
+          56: Follow the shared [API key steps](client-setup.md#create-an-api-key).
+          57: 
+          58: ### 6.2 Starter prompt
+          59: 
+          60: Set up `.env.local`, then copy the [REST starter prompt](client-setup.md#6-rest-starter-prompt).
+          61: 
+          62: ### 6.3 Local or Zetaris Cloud
+          63: 
+          64: Use the REST URL and organisation ID for your instance from the [shared settings](client-setup.md#2-set-up-envlocal).
+          65: 
+          66: ### 6.4 Fetch the OpenAPI specification
+          67: 
+          68: Fetch the spec with Basic authentication using the [shared instructions](client-setup.md#9-fetch-the-openapi-specification).
+          69: 
+          70: ## 7. Verification
+          71: 
+          72: The shared guide explains the `SELECT 1`, REST endpoint, and instance-list
+          73: checks. Codex runs the read-only preflight before it starts your goal.
+          74: 
+          75: ## 8. Usage rules
+          76: 
+          77: Follow root [`AGENTS.md`](../../AGENTS.md): start with read-only SQL, send one
+          78: statement per call, keep multi-table `COMPILE USL` intact, and wait for your
+          79: go-ahead before creating anything.
+          80: 
+          81: ## 9. Troubleshooting
+          82: 
+          83: See [shared troubleshooting](client-setup.md#10-troubleshooting). It covers
+          84: JDBC setup, REST authentication and organisation IDs, and missing Lightning
+          85: databases.
+
+          (End of file - total 85 lines)
+          </content>
+    time: 10/23/2026, 7:02:24.343 PM UTC
+    response: No opencode-specific guide exists; let me read the connections README plus the closest generic harness guide.
+    duration: 3.679s
+    duration_ms: 3679
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      Now let me read client-setup.md sections relevant: the settings table §2, and REST details. Let me read at least the beginning and REST parts. Also run preflight.py.
+
+      Let me run preflight.py now (read-only) and read client-setup.md in parallel.
+    thinking_duration: 354ms
+    thinking_duration_ms: 354
+    tool_calls:
+      - tool: bash
+        args:
+          command: sed -n '1,140p' docs/connections/client-setup.md
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          # Zetaris client setup
+
+          Choose JDBC or REST below to see the setup for your connection.
+
+          <a id="1-choose-a-protocol"></a>
+
+          <!-- protocol: jdbc -->
+
+          Use JDBC to run Lightning SQL through the Zetaris Java driver. You need your
+          Zetaris user ID and password, JDK 11 or later and the matching driver JAR.
+          For a remote instance, use the JDBC URL supplied to you.
+
+          ## 2. Set up `.env.local`
+
+          Copy the needed settings from [`.env.example`](../../.env.example) into
+          `.env.local` at the repository root. If the file already exists, add settings
+          without replacing its other values. Scripts also find the top-level checkout's
+          `.env.local` when run from a Git worktree.
+
+          Keep passwords and API keys in this local, gitignored file. Never put them in
+          a prompt, source file, command output or URL.
+
+          | Variable | Set it to |
+          |---|---|
+          | `ZETARIS_JDBC_URL` | `jdbc:zetaris:lightning@localhost:10000` locally, or the supplied JDBC URL |
+          | `ZETARIS_JDBC_JAR` | Full path to the matching Zetaris driver JAR. If unset, provide the path when asked; scripts do not search for it. |
+          | `ZETARIS_USERNAME` | Your Zetaris user ID |
+          | `ZETARIS_PASSWORD` | Your Zetaris password |
+          | `ZETARIS_USER_AGENT` | Your app name and contact email as `app_name user@domain.tld`, only for create scripts that call external APIs. `company_dns` V4 and SEC EDGAR need it; without it `company_dns` applies a very strict rate limit, and the runner rejects a value with no contact. |
+
+          ## 4. Prepare JDBC
+
+          To connect with JDBC, you need Java 11 or later, the Zetaris driver file (a
+          `.jar` file), and your Zetaris username and password. The driver must match
+          your Zetaris instance. Get its full file path from whoever supplied the driver;
+          the setup scripts do not search for it.
+
+          On macOS, the `java` command may not find an installed Java runtime. If that
+          happens, check `/usr/libexec/java_home` or the Homebrew JDK location
+          `/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home`, then set
+          `JAVA_HOME` to the JDK folder. The preflight finds a Java path but does not
+          check its version. Confirm it with:
+
+          ```sh
+          "$JAVA_HOME/bin/java" -version
+          ```
+
+          To check your setup, run this read-only preflight from the repository folder:
+
+          ```sh
+          python3 scripts/preflight.py --jdbc --jar "/full/path/to/your/zetaris-driver.jar"
+          ```
+
+          Replace the example path with the actual path to your driver file. The
+          preflight installs nothing and does not change your Zetaris instance. It also
+          checks REST, so read the JDBC results separately; a REST problem by itself does
+          not mean JDBC is unavailable.
+
+          The repository's Python SQL runner also needs a local Python environment
+          (`.venv`) and the `jaydebeapi` package. If either is missing, that runner is
+          not ready. A direct Java JDBC connection does not need these Python components.
+          Ask before installing missing software or packages.
+
+          If a local port check says `Operation not permitted`, Codex may be blocked from
+          accessing your computer's local network. That result does not show that the
+          port is closed or that the JDBC URL is wrong. Retry the same read-only check
+          with network access, or run it in a terminal that can reach Zetaris. For a
+          remote instance, use its supplied host and port; `localhost` refers to the
+          machine running the JDBC client.
+
+          If Java is missing, ask before installing it. If JDBC is unavailable, use REST
+          if your account has access.
+
+          ## 5. JDBC starter prompt
+
+          Set the JDBC values in `.env.local`, then submit this as the first instruction.
+          Replace the goal with your task.
+
+          ```text
+          Read AGENTS.md and follow it. Run python3 scripts/preflight.py --jdbc and show
+          me the result. Report JDBC and REST checks separately. Stop on JDBC failures and report
+          what is missing. REST failures alone do not block JDBC. If the driver JAR path is not set, ask me
+          for it. Once readiness checks pass, connect over JDBC to the instance
+          configured in .env.local and confirm with SELECT 1 and SHOW LIGHTNING DATABASES.
+
+          If a local port check returns `Operation not permitted`, retry the same
+          read-only check with approved network access before reporting the endpoint as
+          closed. Distinguish missing Python runner dependencies (`.venv` or
+          `jaydebeapi`) from direct Java JDBC readiness; do not install dependencies
+          without asking.
+
+          Goal: <for example: list NY_TAXI and TPCDS_DB tables, then read 5 rows from
+          NY_TAXI.taxi_zones; keep it read-only>
+
+          Dry-run before creating anything and wait for my go-ahead.
+          ```
+
+          ## 7. Verify access
+
+          Run the JDBC preflight shown above and read its JDBC result separately from
+          its REST result. The script also runs REST checks, but a missing REST key or
+          unreachable REST service alone does not block a JDBC connection.
+
+          `SELECT 1` should return `1`. `SHOW LIGHTNING DATABASES` shows the instance's
+          Lightning databases; an empty list is normal on a clean instance.
+
+          `SHOW DATASOURCES` lists sources registered with `CREATE DATASOURCE`. Use
+          `SHOW LIGHTNING DATABASES` for REST and file sources.
+
+          ## 8. Safety and permissions
+
+          - Start with read-only commands such as `SHOW`, `DESCRIBE`, and `SELECT`.
+          - Use your own local or AWS Zetaris instance. Check that an existing object
+            matches the recipe definition before reusing it.
+          - Creating, dropping, granting, or writing changes the instance. Preview
+            create scripts with `--dry-run` and wait for the user's clear go-ahead before
+            running them.
+          - Send one Lightning SQL statement per call. Keep a multi-table `COMPILE USL`
+            together as one statement; do not split it at semicolons.
+          - Keep credentials out of prompts, logs, source files, and commits.
+          - Use the least privilege that works: agents and applications that only read should use their own non-administrator user, and creating, updating and deleting stays with administrators. See [Permissions in Zetaris](../guides/permissions.md).
+
+          ## 10. Troubleshooting
+
+          | Symptom | Check |
+          |---|---|
+          | `Unable to locate a Java Runtime` | Find a JDK and set `JAVA_HOME`. Ask before installing one. |
+          | Driver JAR missing or `ClassNotFoundException` | Set the full path to the matching driver JAR. Do not guess a path. |
+          | `externally-managed-environment` from `pip` | Use the repository's `.venv`; do not install packages into system Python. |
+          | REST checks fail during JDBC preflight | Read the JDBC result separately. A REST failure alone does not mean JDBC is unavailable. |
+          | A source is missing from `SHOW DATASOURCES` | Check `SHOW LIGHTNING DATABASES`; REST and file registrations appear there. |
+          | `Table not found` | Use the qualified name `<source>.<table>`. |
+          | JDBC `mismatched input ... expecting` | Send one statement per call. The `run_sql.py` runner splits scripts and keeps `COMPILE USL` intact. |
+
+          For JDBC script options, see [`scripts/HOWTO.md`](../../scripts/HOWTO.md).
+
+          <!-- protocol: rest -->
+
+          Use REST to run SQL or call platform endpoints over HTTP. No Java runtime or
+          JDBC driver is needed. Choose the route used by your client:
+      - tool: bash
+        args:
+          command: python3 scripts/preflight.py 2>&1
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          [PASS] env file: /home/ext_root/lab-data/zetaris-getting-started/.env.local
+          [PASS] ZETARIS_API_KEY: [REDACTED]
+          [PASS] ZETARIS_USERNAME: set
+          [PASS] ZETARIS_PASSWORD: [REDACTED]
+          [PASS] ZETARIS_USER_AGENT: set, in the form app_name user@domain.tld
+          [PASS] REST datasources: HTTP 200, 0 listed: 
+          [PASS] REST SELECT 1
+          [INFO] datasources: none
+          [INFO] lightning databases: NY_TAXI, POKEAPI_REST, TPCDS_DB
+          [INFO] USL namespaces: none
+
+          READY
+    time: 10/23/2026, 7:02:28.029 PM UTC
+    duration: 4.306s
+    duration_ms: 4306
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      Preflight passed. Now I need to confirm the connection with SELECT 1 and SHOW LIGHTNING DATABASES over REST, and also GET /datasource/datasources per AGENTS.md. Preflight already did datasources and SELECT 1 and showed lightning databases, but AGENTS.md says confirm. Let me read the REST section of client-setup.md for exact details, then run the queries via run_sql.py or a direct python script.
+
+      Let me read the rest section.
+    thinking_duration: 409ms
+    thinking_duration_ms: 409
+    tool_calls:
+      - tool: bash
+        args:
+          command: sed -n '140,260p' docs/connections/client-setup.md
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          JDBC driver is needed. Choose the route used by your client:
+
+          | Route | Endpoint | Authentication |
+          |---|---|---|
+          | Direct REST API | API base at `/api/v1.0` | User-created API key, organisation ID and request ID |
+          | UI proxy | Web UI origin, calls to `/api/proxy/...` | API key, or UI login with user ID and password |
+
+          For Zetaris Cloud or another remote instance, use the URLs supplied to you.
+          The routes use separate addresses: put the API base in `ZETARIS_REST_URL` and
+          the web UI origin in `ZETARIS_BASE_URL`.
+
+          For a local install, browse the available endpoints in the
+          [REST API docs](http://localhost:8888/redoc/index.html). Scripts use the
+          separate API base `http://localhost:8888/api/v1.0`; the docs page is not the
+          API base.
+
+          ## 2. Set up `.env.local`
+
+          Copy the needed settings from [`.env.example`](../../.env.example) into
+          `.env.local` at the repository root. If the file already exists, add settings
+          without replacing its other values. Scripts also find the top-level checkout's
+          `.env.local` when run from a Git worktree.
+
+          Keep passwords and API keys in this local, gitignored file. Never put them in
+          a prompt, source file, command output or URL.
+
+          | Variable | Used by | Set it to |
+          |---|---|---|
+          | `ZETARIS_REST_URL` | Direct REST | API base ending in `/api/v1.0`; local default is `http://localhost:8888/api/v1.0` |
+          | `ZETARIS_ORG_ID` | Both routes | Numeric **ID** under **Management → Organisation**. See [Find your organisation ID](#3-find-your-organisation-id). |
+          | `ZETARIS_API_KEY` | Both routes | API key you create in the Zetaris GUI |
+          | `ZETARIS_BASE_URL` | UI-proxy helpers | Web UI origin, such as `http://localhost:3000`; no path after the origin |
+          | `ZETARIS_USERNAME` | OpenAPI spec, optional UI-proxy login | Your Zetaris user ID |
+          | `ZETARIS_PASSWORD` | OpenAPI spec, optional UI-proxy login | Your Zetaris password |
+          | `ZETARIS_QUERY_LIMIT` | UI-proxy query helper | Positive row limit; defaults to `1000` |
+          | `ZETARIS_ENGINE_ID` | UI-proxy query helper | Optional compute engine ID |
+          | `ZETARIS_USER_AGENT` | Create scripts that call external APIs | Your app name and contact email as `app_name user@domain.tld`. `company_dns` V4 and SEC EDGAR need it; the runner rejects a value with no contact. |
+
+          ### Create an API key
+
+          1. Sign in to the Zetaris UI with your account.
+          2. In the sidebar, open **Management → API Tokens**.
+          3. Click the **+** button at the top right to create an API key.
+          4. Copy the key when it is shown and save it as `ZETARIS_API_KEY` in `.env.local`.
+
+          Each key is shown in plaintext only once. The key has your account's
+          permissions. Never ask an agent to create or fetch it, and do not paste it
+          into a prompt. If REST returns `401`, create a fresh key on this page and
+          update the local value.
+
+          The UI-proxy helpers can use that API key directly. If it is not set, they can
+          log in with both `ZETARIS_USERNAME` and `ZETARIS_PASSWORD`. Direct REST uses the
+          bearer key.
+
+          ## 3. Find your organisation ID
+
+          1. Sign in to the Zetaris UI.
+          2. In the sidebar, open **Management → Organisation**.
+          3. Copy the numeric value in the **ID** field into `ZETARIS_ORG_ID` in `.env.local`.
+
+          Use the **ID**, not the organisation name or login URL slug. For example, if
+          the ID field shows `1`, set `ZETARIS_ORG_ID=1`. Use the value shown for your
+          organisation.
+
+          If you cannot access this page, ask your organiser or administrator for the
+          numeric organisation ID. Direct REST and the UI-proxy helpers require this
+          setting.
+
+          ## 6. REST starter prompt
+
+          Create your API key and set the REST values in `.env.local` first. Then submit
+          this as the first instruction.
+
+          ```text
+          Read AGENTS.md and follow it. Run python3 scripts/preflight.py and show me the
+          result. Then connect over REST to the instance configured in .env.local and
+          confirm with SELECT 1 and SHOW LIGHTNING DATABASES.
+
+          Goal: <for example: list NY_TAXI and TPCDS_DB tables, then read 5 rows from
+          NY_TAXI.taxi_zones; keep it read-only>
+
+          Dry-run before creating anything and wait for my go-ahead.
+          ```
+
+          ## 7. Verify access
+
+          For direct REST, run the read-only preflight:
+
+          ```sh
+          python3 scripts/preflight.py
+          ```
+
+          It checks `GET /datasource/datasources`, `SELECT 1` and the instance's
+          Lightning databases.
+
+          `SELECT 1` should return `1`. `SHOW LIGHTNING DATABASES` shows the instance's
+          Lightning databases; an empty list is normal on a clean instance.
+
+          `SHOW DATASOURCES` lists sources registered with `CREATE DATASOURCE`. Use
+          `SHOW LIGHTNING DATABASES` for REST and file sources.
+
+          REST returns values as strings, and decimals may use exponent format;
+          convert them before comparing.
+
+          ### Verify the UI proxy
+
+          The small `query_zetaris` and `check_zetaris` helpers use the UI proxy. Choose
+          Python or Deno; each example runs one query:
+
+          ```sh
+          ./scripts/query_zetaris.ts "SELECT 1"
+          python3 scripts/query_zetaris.py "SELECT 1"
+          ```
+
+          These use `ZETARIS_BASE_URL`, not the direct REST URL. A successful direct REST
+          preflight does not verify the UI-proxy route.
+
+          ## 8. Safety and permissions
+
+          - Start with read-only commands such as `SHOW`, `DESCRIBE`, and `SELECT`.
+          - Use your own local or AWS Zetaris instance. Check that an existing object
+      - tool: bash
+        args:
+          command: sed -n '1,80p' scripts/HOWTO.md
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          # Repository scripts
+
+          Run commands from the repository root. Zetaris and PostgreSQL helpers have
+          Deno/TypeScript and Python versions with matching settings and behaviour.
+          The local file downloaders are Python-only.
+
+          <a id="find-your-organization-id"></a>
+          ## Configure access
+
+          The scripts read `.env.local` from the repository root, or from the top-level
+          checkout when run in a Git worktree. This file is gitignored. Do not replace an
+          existing file or commit credentials. The platform bundle's `.env` is separate.
+          See the [client setup guide](../docs/connections/client-setup.md) for how to
+          find your organisation ID and protect your credentials.
+
+          The quick SQL helpers use the **UI proxy**. Set its UI origin, numeric org ID,
+          and either `ZETARIS_API_KEY` or both `ZETARIS_USERNAME` and
+          `ZETARIS_PASSWORD`:
+
+          ```dotenv
+          ZETARIS_BASE_URL=http://localhost:3000
+          ZETARIS_ORG_ID=
+          ZETARIS_API_KEY=
+          [REDACTED]
+          ZETARIS_PASSWORD=
+          [REDACTED]
+          ZETARIS_ENGINE_ID=
+          ```
+
+          `ZETARIS_BASE_URL` is a UI origin, not the raw API endpoint on port 8888. The
+          multi-statement REST/JDBC runner uses `ZETARIS_REST_URL` for the direct API.
+          These are different clients and routes.
+
+          For PostgreSQL, configure the connection check separately:
+
+          ```dotenv
+          PGHOST=
+          PGPORT=5432
+          PGDATABASE=
+          PGUSER=
+          PGPASSWORD=
+          PGSSLMODE=disable
+          ```
+
+          Set `PGSSLMODE=verify-full` when the server has a trusted certificate that
+          matches its host. Exported environment variables take precedence over
+          `.env.local`.
+
+          <a id="verify-sql-execution"></a>
+          <a id="check-the-zetaris-connection"></a>
+          <a id="run-a-zetaris-query"></a>
+          <a id="how-a-request-works"></a>
+          <a id="what-the-zetaris-scripts-send"></a>
+          ## Run one Zetaris request
+
+          Use `check_zetaris` to list Lightning databases. Use `query_zetaris` to send
+          one SQL request and print its JSON response. These helpers do not split a SQL
+          file or roll back changes. Review the query first; it runs with your Zetaris
+          account's permissions.
+
+          ```sh
+          ./scripts/check_zetaris.ts
+          python3 scripts/check_zetaris.py
+          ```
+
+          ```sh
+          ./scripts/query_zetaris.ts "SELECT 1"
+          python3 scripts/query_zetaris.py "SELECT 1"
+          ```
+
+          To send one complete SQL statement from a file:
+
+          ```sh
+          ./scripts/query_zetaris.ts --file path/to/query.sql
+          python3 scripts/query_zetaris.py --file path/to/query.sql
+          ```
+
+          Each request goes through the UI's `/api/proxy/...` route. The shared helper
+          loads `.env.local`, gets a token, and sends the bearer token, `X-Org-ID`, and a
+          fresh UUID `X-Request-ID`. Requests time out after 30 seconds. `ZETARIS_QUERY_LIMIT`
+    time: 10/23/2026, 7:02:32.343 PM UTC
+    duration: 3.741s
+    duration_ms: 3741
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      Now run the explicit connection confirmation over REST: SELECT 1 and SHOW LIGHTNING DATABASES, plus GET /datasource/datasources.
+
+      I should use scripts/run_sql.py probably. Let me check its usage. `python3 scripts/run_sql.py FILE` and ad hoc SQL? Let me look at HOWTO for run_sql options.
+    thinking_duration: 465ms
+    thinking_duration_ms: 465
+    tool_calls:
+      - tool: bash
+        args:
+          command: sed -n '80,200p' scripts/HOWTO.md
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |+
+          fresh UUID `X-Request-ID`. Requests time out after 30 seconds. `ZETARIS_QUERY_LIMIT`
+          defaults to 1000 rows; `ZETARIS_ENGINE_ID` is optional. A 404 usually means
+          `ZETARIS_BASE_URL` is not the UI origin or the UI does not expose proxy routes.
+
+          <a id="check-readiness-and-run-sql-scripts-rest-or-jdbc"></a>
+          ## Preflight and run SQL scripts
+
+          `preflight.py` checks configuration and connectivity. It is read-only and
+          installs nothing. It checks direct REST and instance state, and can also check
+          JDBC when requested. Even with `--jdbc`, it still runs the REST checks, so a
+          REST-only failure does not by itself mean JDBC is unavailable. Read the
+          JDBC-specific result separately.
+
+          ```sh
+          python3 scripts/preflight.py
+          python3 scripts/preflight.py --jdbc --jar /path/to/zetaris-driver.jar
+          ```
+
+          `run_sql.py` runs one SQL statement at a time from a file or from `-e`. It
+          understands quotes and comments, stops at the first error, and keeps a
+          multi-table `COMPILE USL` whole. Its Python JDBC mode needs a JDK, the driver
+          JAR, and `jaydebeapi` in `.venv`; provide `--jar` or set `ZETARIS_JDBC_JAR`.
+          Direct Java JDBC connections do not need Python. The scripts never guess the
+          JAR path.
+
+          ```sh
+          python3 scripts/run_sql.py --dry-run open_data/rest_apis/sql/rate_limited/12_company_dns_create.sql
+          python3 scripts/run_sql.py open_data/rest_apis/sql/rate_limited/12_company_dns_create.sql
+          python3 scripts/run_sql.py --channel jdbc -e "SELECT 1"
+          ```
+
+          Create scripts change the instance. Inspect the dry-run, confirm object
+          ownership and permissions, and get a clear go-ahead before running without
+          `--dry-run`. `--skip-exists` skips "already exists" errors; inspect matching
+          definitions first. A script containing `YOUR_APP_NAME YOUR_CONTACT_EMAIL`
+          needs `ZETARIS_USER_AGENT`, in the form `app_name user@domain.tld` (an app name and a contact e-mail). `company_dns` V4 and SEC EDGAR need it, and the runner rejects a value with no contact.
+
+          <a id="onboard-sources-with-their-dependencies"></a>
+          ## Plan recipe dependencies
+
+          `onboard.py` reads `open_data/manifest.json` and orders each source's declared
+          dependencies. Use it instead of working out the order by hand.
+
+          ```sh
+          python3 scripts/onboard.py --list
+          python3 scripts/onboard.py --check
+          python3 scripts/onboard.py plan sic_edgar_usl
+          python3 scripts/onboard.py run sic_edgar_usl --dry-run
+          python3 scripts/onboard.py run company_dns pokeapi --dry-run
+          ```
+
+          After reviewing the plan and receiving approval, rerun the selected `run`
+          command without `--dry-run`. Shared dependencies run once. A dependency that
+          already exists satisfies the plan; for named sources, `--skip-exists` skips
+          duplicate errors. Sources marked `known_to_fail` need
+          `--allow-known-to-fail`. Rebuilding a USL may require `REMOVE USL` first;
+          `ACTIVATE USL TABLE` is not verified as a repeatable operation.
+
+          <a id="tear-down-and-start-over"></a>
+          ### Rate limits and deprecated recipes
+
+          A manifest source marked `deprecated` needs `--allow-deprecated`; use its replacement instead. The former company DNS recipe 10 is replaced by recipe 12, which keeps V3 and adds V4 plus compatibility views. Recipes 13 and 14 add EU NACE and Japan.
+
+          `onboard.py` sends statements back to back. For rate-limited recipes, use SQL Editor to run one statement at a time, sending an identifying User-Agent (`app_name user@domain.tld`) and, if you cannot, waiting at least 15 seconds before each endpoint call identified in the recipe header. Cache the raw table immediately; after HTTP 429, wait 60 seconds and retry that statement rather than the whole script. Do not run deprecated recipe 10 alongside replacement 12 on the same instance.
+
+          ## Tear down recipe objects
+
+          `teardown` derives SQL drops from create scripts and includes sources that
+          depend on the target. It shows a plan and sends nothing unless you pass
+          `--yes`. Get clear approval before using `--yes`.
+
+          ```sh
+          python3 scripts/onboard.py teardown sic_edgar_usl
+          python3 scripts/onboard.py teardown sic_edgar_usl --verbose
+          python3 scripts/onboard.py teardown sic_edgar_usl --yes --channel jdbc --jar /path/to/zetaris-driver.jar
+          python3 scripts/onboard.py teardown company_dns --no-dependents
+          python3 scripts/onboard.py teardown sic_edgar_usl --drop-namespace --yes
+          ```
+
+          `--drop-namespace` removes every USL in that namespace. This runner leaves
+          REST/file registrations, Lightning databases and SchemaStore containers for
+          manual cleanup; its output lists them. That is a runner limitation, not proof
+          that the platform has no removal command. See [tested cleanup](../docs/guides/troubleshooting.md#cleanup).
+          If objects remain, inspect their definitions and use `--skip-exists` on the
+          next run. Check the verbose plan when adding statement types.
+
+          <a id="running-the-denotypescript-scripts"></a>
+          <a id="running-the-python-scripts"></a>
+          <a id="check-a-postgresql-connection"></a>
+          ## Use the Deno and Python helpers
+
+          Deno 2.9 or later is required for TypeScript helpers; `deno.lock` pins their
+          dependencies. Python 3.9 or later is required for the Zetaris and PostgreSQL
+          helpers. Use Python 3.8 or later for the local file downloaders. Use a virtual
+          environment if system Python blocks package installation.
+
+          ```sh
+          deno --version
+          deno task check
+          python3 --version
+          python3 -m venv .venv
+          .venv/bin/pip install -r scripts/requirements.txt
+          ```
+
+          Deno entrypoints include their network, environment, and file permissions in
+          their first line and load `.env.local` themselves. If direct execution is not
+          available, run a script with its needed flags, for example:
+
+          ```sh
+          deno run --no-config --allow-net --allow-env='ZETARIS*' --allow-read scripts/check_zetaris.ts
+          ```
+
+          The PostgreSQL check authenticates, runs `SELECT 1`, reports elapsed time,
+          and closes the connection. It checks database access, not ICMP ping. Both
+          versions use 10-second connection and query timeouts.
+
+          ```sh
+          deno task ping:postgres
+          python3 scripts/ping_postgres.py
+          ```
+
+    time: 10/23/2026, 7:02:36.090 PM UTC
+    duration: 4.268s
+    duration_ms: 4268
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      Now run the connection confirmations over REST. Use run_sql.py with -e for both statements. Also call GET /datasource/datasources — preflight already did that (200, 0 listed), but AGENTS.md says also call it. Preflight covers it, but let me do the explicit confirmation with a small python call? Better: run_sql.py for SELECT 1 and SHOW LIGHTNING DATABASES. Then the datasource endpoint is already covered by preflight; I can report it. But AGENTS.md explicitly says "Over REST, also call GET /datasource/datasources." Preflight did that as part of its checks. To be faithful, I could make the direct call. Let me check zetaris_api.py to see if there's a CLI. There's check_zetaris.py which lists lightning databases via UI proxy (different route). run_sql uses direct REST.
+
+      I'll run two run_sql calls in parallel. Then a direct datasource GET via small python using scripts/zetaris_api.py API if easy.
+
+      Let me inspect zetaris_api.py briefly for a callable.
+    thinking_duration: 1.088s
+    thinking_duration_ms: 1088
+    tool_calls:
+      - tool: bash
+        args: {}
+        result: |
+          channel=rest env=/home/ext_root/lab-data/zetaris-getting-started/.env.local statements=1
+            1. SELECT 1
+                ['1']
+          done: 1/1 statements ok
+      - tool: bash
+        args:
+          command: python3 scripts/run_sql.py -e "SHOW LIGHTNING DATABASES" 2>&1
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          channel=rest env=/home/ext_root/lab-data/zetaris-getting-started/.env.local statements=1
+            1. SHOW LIGHTNING DATABASES
+                ['NY_TAXI', 'NY Taxi sample data', '6']
+                ['POKEAPI_REST', 'PokeAPI REST source', '806']
+                ['TPCDS_DB', 'TPC-DS benchmark sample data', '308']
+          done: 1/1 statements ok
+      - tool: bash
+        args:
+          command: grep -n "^def \|^class \|__main__" scripts/zetaris_api.py | head -40
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          26:def _read_json(response: Any) -> Any:
+          30:def _unreachable_message(error: BaseException) -> str:
+          35:def _request(path: str, token: str, method: str = "GET", body: Any = None) -> Any:
+          65:def zetaris_request(path: str, method: str = "GET", body: Any = None) -> Any:
+    time: 10/23/2026, 7:02:40.366 PM UTC
+    duration: 4.873s
+    duration_ms: 4873
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: Now the explicit GET /datasource/datasources via zetaris_api. Use python3 -c importing the module (same dir). Careful with output size — it's empty anyway.
+    thinking_duration: 335ms
+    thinking_duration_ms: 335
+    tool_calls:
+      - tool: bash
+        args:
+          command: |-
+            python3 -c "
+            import sys; sys.path.insert(0,'scripts')
+            import zetaris_api, json
+            print(json.dumps(zetaris_api.zetaris_request('/datasource/datasources'), indent=2))
+            " 2>&1 | head -40
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          Traceback (most recent call last):
+            File "<string>", line 4, in <module>
+            File "/home/ext_root/lab-data/zetaris-getting-started/scripts/zetaris_api.py", line 111, in zetaris_request
+              return _request(path, token, method, body)
+            File "/home/ext_root/lab-data/zetaris-getting-started/scripts/zetaris_api.py", line 51, in _request
+              return _read_json(response)
+            File "/home/ext_root/lab-data/zetaris-getting-started/scripts/zetaris_api.py", line 27, in _read_json
+              return json.loads(response.read().decode("utf-8"))
+            File "/usr/lib/python3.10/json/__init__.py", line 346, in loads
+              return _default_decoder.decode(s)
+            File "/usr/lib/python3.10/json/decoder.py", line 337, in decode
+              obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+            File "/usr/lib/python3.10/json/decoder.py", line 355, in raw_decode
+              raise JSONDecodeError("Expecting value", s, err.value) from None
+          json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+    time: 10/23/2026, 7:02:45.250 PM UTC
+    duration: 3.832s
+    duration_ms: 3832
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: The endpoint returned empty body (0 datasources → probably 204 or empty 200). Preflight reported HTTP 200, 0 listed. Let me see how preflight handles it. Let me check preflight code for datasources.
+    thinking_duration: 273ms
+    thinking_duration_ms: 273
+    tool_calls:
+      - tool: bash
+        args:
+          command: grep -n "datasource" -A 12 -B 4 scripts/preflight.py | head -60
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          54-    except z.ZetarisError as e:
+          55-        report(False, "REST", str(e))
+          56-        return
+          57-    try:
+          58:        ds = ch.datasources()
+          59-        names = [d.get("name") for d in (ds if isinstance(ds, list) else ds.get("data", []))]
+          60:        report(True, "REST datasources", f"HTTP 200, {len(names)} listed: {', '.join(map(str, names))}")
+          61-        report(ch.run("SELECT 1").rows == [["1"]], "REST SELECT 1")
+          62-        state(ch)
+          63-    except z.ZetarisError as e:
+          64-        hint = " (401: bad key; 400: bad X-Org-ID or request id)" if "HTTP 40" in str(e) else ""
+          65-        report(False, "REST", str(e) + hint)
+          66-
+          67-
+          68-def check_jdbc(args) -> None:
+          69-    host, port = "localhost", 10000
+          70-    try:
+          71-        socket.create_connection((host, port), timeout=3).close()
+          72-        report(True, f"JDBC port {port}", "open")
+          --
+          99-
+          100-def state(ch) -> None:
+          101-    """What is already on the instance. SHOW DATASOURCES omits Lightning sources."""
+          102-    for sql, label in (
+          103:        ("SHOW DATASOURCES", "datasources"),
+          104-        ("SHOW LIGHTNING DATABASES", "lightning databases"),
+          105-        ("SHOW NAMESPACES OR TABLES IN lightning.metastore", "USL namespaces"),
+          106-    ):
+          107-        try:
+          108-            rows = ch.run(sql).rows
+          109-            report(None, label, ", ".join(str(r[0]) for r in rows) if rows else "none")
+          110-        except z.ZetarisError as e:
+          111-            report(None, label, f"query failed: {e}")
+          112-
+          113-
+          114-def main() -> int:
+          115-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    time: 10/23/2026, 7:02:49.092 PM UTC
+    duration: 3.323s
+    duration_ms: 3323
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: ch.datasources() handles the empty body. Let me look at zetaris_sql.py datasources implementation.
+    thinking_duration: 105ms
+    thinking_duration_ms: 105
+    tool_calls:
+      - tool: bash
+        args:
+          command: grep -n "def datasources" -A 12 scripts/zetaris_sql.py
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          230:    def datasources(self) -> Any:
+          231-        return self._call("/datasource/datasources")
+          232-
+          233-    def run(self, sql: str, limit: int = 100) -> Result:
+          234-        out = self._call(
+          235-            "/sql-editor/sqls/run",
+          236-            {"queryId": str(uuid.uuid4()), "sql": sql, "source": "SqlEditor", "limit": limit},
+          237-        )
+          238-        return Result(out.get("data") if isinstance(out, dict) else None)
+          239-
+          240-    def close(self) -> None:
+          241-        pass
+          242-
+    time: 10/23/2026, 7:02:52.426 PM UTC
+    duration: 3.300s
+    duration_ms: 3300
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    tool_calls:
+      - tool: bash
+        args:
+          command: sed -n '200,235p' scripts/zetaris_sql.py
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+
+          class RestChannel:
+              name = "rest"
+
+              def __init__(self) -> None:
+                  require("ZETARIS_API_KEY")
+                  self.base = os.environ.get("ZETARIS_REST_URL", DEFAULT_REST_URL).rstrip("/")
+                  self.org = os.environ.get("ZETARIS_ORG_ID", "1")
+                  self._key = os.environ["ZETARIS_API_KEY"]
+
+              def _call(self, path: str, body: dict | None = None) -> Any:
+                  req = Request(
+                      self.base + path,
+                      data=json.dumps(body).encode() if body is not None else None,
+                      method="POST" if body is not None else "GET",
+                      headers={
+                          "Authorization": f"Bearer {self._key}",
+                          "X-Org-ID": self.org,
+                          "X-Request-ID": str(uuid.uuid4()),
+                          "Content-Type": "application/json",
+                      },
+                  )
+                  try:
+                      with urlopen(req, timeout=600) as resp:
+                          return json.loads(resp.read().decode() or "null")
+                  except HTTPError as e:
+                      raise ZetarisError(f"HTTP {e.code}: {_short(e.read().decode(errors='replace'))}") from e
+                  except (URLError, OSError) as e:
+                      raise ZetarisError(f"Cannot reach {self.base}: {getattr(e, 'reason', e)}") from e
+
+              def datasources(self) -> Any:
+                  return self._call("/datasource/datasources")
+
+              def run(self, sql: str, limit: int = 100) -> Result:
+                  out = self._call(
+                      "/sql-editor/sqls/run",
+    time: 10/23/2026, 7:02:55.734 PM UTC
+    duration: 3.271s
+    duration_ms: 3271
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: It tolerates empty body (returns None). My direct call used zetaris_api which didn't. Let me call through RestChannel to confirm GET /datasource/datasources → empty (None) means 0 datasources.
+    thinking_duration: 272ms
+    thinking_duration_ms: 272
+    tool_calls:
+      - tool: bash
+        args:
+          command: |-
+            python3 -c "
+            import sys, json; sys.path.insert(0,'scripts')
+            from zetaris_sql import RestChannel
+            ch = RestChannel()
+            d = ch.datasources()
+            print('GET /datasource/datasources ->', 'HTTP 200, empty/0 datasources' if d is None else json.dumps(d))
+            " 2>&1
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          Traceback (most recent call last):
+            File "<string>", line 4, in <module>
+            File "/home/ext_root/lab-data/zetaris-getting-started/scripts/zetaris_sql.py", line 205, in __init__
+              require("ZETARIS_API_KEY")
+            File "/home/ext_root/lab-data/zetaris-getting-started/scripts/zetaris_sql.py", line 98, in require
+              raise ZetarisError("Missing in the environment or .env.local: " + ", ".join(missing) + (f" ({hint})" if (hint := stray_env_hint()) else ""))
+          zetaris_sql.ZetarisError: Missing in the environment or .env.local: ZETARIS_API_KEY
+    time: 10/23/2026, 7:02:59.013 PM UTC
+    duration: 4.395s
+    duration_ms: 4395
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: 'The module requires load_env first. Let me check how run_sql.py loads env: probably `load_env()` from zetaris_sql. Let me grep.'
+    thinking_duration: 187ms
+    thinking_duration_ms: 187
+    tool_calls:
+      - tool: bash
+        args:
+          command: grep -n "load_env\|def main" scripts/run_sql.py | head -10; grep -n "def load_env" -A 5 scripts/zetaris_sql.py
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          30:def main() -> int:
+          46:        env = z.load_env(args.env_file)
+          74:def load_env(env_file: str | None = None) -> Path | None:
+          75-    """Load the first .env.local found (repo root, then the top-level checkout
+          76-    for a worktree) into os.environ without overriding variables that are
+          77-    already set. Returns the file used, or None."""
+          78-    paths = [Path(env_file)] if env_file else env_file_candidates()
+          79-    for path in paths:
+    time: 10/23/2026, 7:03:03.415 PM UTC
+    duration: 3.861s
+    duration_ms: 3861
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    tool_calls:
+      - tool: bash
+        args:
+          command: |-
+            python3 -c "
+            import sys, json; sys.path.insert(0,'scripts')
+            import zetaris_sql as z
+            z.load_env()
+            d = z.RestChannel().datasources()
+            print('GET /datasource/datasources ->', 'HTTP 200, empty (0 datasources)' if d is None else json.dumps(d))
+            " 2>&1
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          GET /datasource/datasources -> []
+    time: 10/23/2026, 7:03:07.284 PM UTC
+    duration: 3.696s
+    duration_ms: 3696
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      All confirmation checks done. Now the goal: the user wrote `<for example: onboard pokeapi>` — that's literally from the starter prompt template, meaning they didn't specify a real goal. So I should report preflight, connection confirmation, and then ask what the goal is. The instruction says "Goal: <for example: onboard pokeapi>" — this is clearly the template placeholder. I should not pick a goal. Ask the user for the goal.
+
+      However, the instance already has POKEAPI_REST lightning database. Interesting — pokeapi may already be onboarded. But the goal is unspecified; I must not assume. I'll report and ask.
+
+      Also note preflight INFO: USL namespaces none, datasources none. Lightning DBs: NY_TAXI, POKEAPI_REST, TPCDS_DB.
+
+      Let me report concisely. Keep it under ~4 lines? The task asks to show the result, so a compact table is appropriate. I'll show preflight output and confirmation results, then ask for the goal.
+
+      Note: no opencode connection guide exists; I used the shared client-setup (REST). Mention briefly.
+
+      Also I should note no dry-run performed since no goal given — nothing created.
+
+      Should I mention the "Operation not permitted" issue? No, it worked.
+
+      Let me write the final answer.
+    thinking_duration: 1.686s
+    thinking_duration_ms: 1686
+    time: 10/23/2026, 7:03:10.991 PM UTC
+    response: |-
+      **Preflight** (`python3 scripts/preflight.py`, read-only) — all pass:
+
+      ```
+      [PASS] env file: .../zetaris-getting-started/.env.local
+      [PASS] ZETARIS_API_KEY / ZETARIS_USERNAME / ZETARIS_PASSWORD: [REDACTED]
+      [PASS] ZETARIS_USER_AGENT: set, valid app_name user@domain.tld form
+      [PASS] REST datasources: HTTP 200, 0 listed
+      [PASS] REST SELECT 1
+      [INFO] datasources: none
+      [INFO] lightning databases: NY_TAXI, POKEAPI_REST, TPCDS_DB
+      [INFO] USL namespaces: none
+      READY
+      ```
+
+      **REST connection confirmation** (direct `/api/v1.0`, bearer key + `X-Org-ID`):
+
+      | Check | Result |
+      |---|---|
+      | `SELECT 1` | `1` |
+      | `SHOW LIGHTNING DATABASES` | `NY_TAXI` (NY Taxi sample data, 6), `POKEAPI_REST` (PokeAPI REST source, 806), `TPCDS_DB` (TPC-DS benchmark sample data, 308) |
+      | `GET /datasource/datasources` | `[]` (HTTP 200, no `CREATE DATASOURCE` registrations) |
+
+      No opencode-specific guide exists in `docs/connections/`, so I followed the shared `client-setup.md` REST settings.
+
+      Your `Goal:` line is still the template placeholder (`<for example: onboard pokeapi>`), so I have made no changes and run no dry-run. What is the actual goal — e.g. onboard `pokeapi` (note `POKEAPI_REST` already exists), query NY_TAXI, or build a USL? Once you name it, I'll show the `--dry-run` statement list and wait for your go-ahead.
+    duration: 6.209s
+    duration_ms: 6209
+

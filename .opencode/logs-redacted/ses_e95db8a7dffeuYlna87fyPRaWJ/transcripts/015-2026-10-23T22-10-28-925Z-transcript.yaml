@@ -1,0 +1,17 @@
+user:
+  text: since env.local is git ignored - we need .env.example file.
+assistant:
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: |-
+      Updated scope:
+
+      - `.env.example` is now included in Commit 2.
+      - `AGENTS.md` now names both examples: Spring Boot JDBC and Angular browser CRUD.
+      - `examples/eurostat-crud/README.md` now says to copy the tracked `.env.example` to the gitignored `.env.local`.
+
+      Preview artifact and Execution Plan are updated. No commits yet; say `start` to execute.

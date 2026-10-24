@@ -1,0 +1,860 @@
+---
+user:
+  text: |-
+    on /home/ext_root/lab-data/zetaris-getting-started: Read AGENTS.md and follow it. Run python3 scripts/prefl ight.py and show me the 
+    result. Then connect over REST to the instance confi gured in .env.local and 
+    confi rm with SELECT 1 and SHOW LIGHTNING DATABASES. 
+    Goal: onboard pokeapi
+    Dry-run before creating anything and wait for my go-ahead.
+  time: 10/23/2026, 7:04:01.672 PM UTC
+assistant:
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      The user now gives goal: onboard pokeapi. I need to follow AGENTS.md: use scripts/onboard.py plan pokeapi, then run pokeapi --dry-run, show statement list, wait for go-ahead.
+
+      Already ran preflight and connection confirmation in previous turn. But the user repeats the prompt — they want the same flow with the concrete goal. I should re-run? The instruction says run preflight before any Zetaris work in a new session. Same session, already done. But to be faithful and since they repeated it, I could re-run preflight quickly and show results. It's cheap and read-only. Let me re-run preflight and the confirmations? Repeating identical output would bloat scrollback. AGENTS.md says report. I already have results in session. But the user's prompt is a fresh instruction; re-running is safe. However reminder: avoid re-printing content already in scrollback. I can re-run preflight briefly and confirm the connection is still live, then proceed to plan + dry-run.
+
+      Also need to check manifest for pokeapi, and scripts/onboard.py --check maybe. The flow:
+      1. python3 scripts/onboard.py --list
+      2. python3 scripts/onboard.py plan pokeapi
+      3. python3 scripts/onboard.py run pokeapi --dry-run
+
+      Since POKEAPI_REST already exists in lightning databases, I should inspect existing objects before changing/reusing. Note that with --skip-exists if approved. But first dry-run shows statements.
+
+      Also AGENTS.md mentions ZETARIS_USER_AGENT needed for create scripts with YOUR_APP_NAME placeholder — preflight says set and valid.
+
+      Let me run preflight again (cheap) and plan in parallel? Preflight must be before any Zetaris work — it's already passed; running plan is read-only. But to honor order, run preflight + plan together? Plan is read-only, but AGENTS says run preflight before any work, and it already passed this session. I'll run preflight once more to display, then plan/dry-run.
+
+      Actually to minimize calls: run preflight and `onboard.py --check` in parallel (both read-only). Then plan, then dry-run.
+
+      Let me look at manifest for pokeapi first? Use onboard.py --list and plan. Let's do preflight, list, plan in parallel? plan depends on nothing. Fine.
+
+      But note the "one statement" rules don't apply here.
+
+      Let me run.
+    thinking_duration: 2.919s
+    thinking_duration_ms: 2919
+    tool_calls:
+      - tool: bash
+        args:
+          command: python3 scripts/onboard.py --list 2>&1 | head -60
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          id                     kind      status         requires
+          company_dns            rest      verified       -
+                                 US SIC hierarchy (1,005 codes) from the company_dns V3 (deprecated) and V4 services, as four views (V3/V4 data x V3/V4 column names). Rate limited; send a User-Agent as app_name user@domain.tld
+          company_dns_eu_nace    rest      verified       -
+                                 EU NACE classification hierarchy (615 classes) from the company_dns V4 service. Rate limited; needs a User-Agent as app_name user@domain.tld; CC BY 4.0
+          company_dns_japan      rest      verified       -
+                                 Japan industry classification hierarchy (1,460 classes) from the company_dns V4 service. Rate limited; needs a User-Agent as app_name user@domain.tld; CC BY 4.0
+          company_dns_legacy     rest      deprecated     -
+                                 Old V3-only company_dns SIC script; creates the same database, container and view names as company_dns, so never run both
+                                 deprecated: use company_dns
+          edgar_facts            rest      verified       -
+                                 SEC EDGAR XBRL revenue facts for 7 companies; creates the SEC_DATA database and edgar container
+          edgar_profiles         rest      verified       edgar_facts, company_dns
+                                 EDGAR company profiles enriched with the SIC hierarchy
+          pokeapi                rest      verified       -
+                                 PokeAPI game data (nested JSON example)
+          open_food_facts        rest      verified       -
+                                 Open Food Facts live single-product API
+          nasa_neows             rest      verified       -
+                                 NASA near-Earth-object catalog (DEMO_KEY quota applies)
+          nasa_donki             rest      known_to_fail  -
+                                 NASA DONKI space-weather CMEs (top-level JSON array). Known to fail: NASA's API gateway returns HTTP 503 for it, also outside Zetaris, so likely a NASA-side outage. See known_to_fail/ISSUE-06-nasa-donki.md
+          eurostat               rest      verified       -
+                                 Eurostat statistics (JSON-stat, dynamic keys)
+          statcan_wds            rest      verified       -
+                                 Statistics Canada changed-cube list
+          abs_data_api           rest      verified       -
+                                 Australian Bureau of Statistics CPI (SDMX-JSON)
+          singapore_pm25         rest      known_to_fail  -
+                                 Singapore PM2.5 real-time API (HTTP 502 on create)
+          noaa_ghcn              filestore verified       -
+                                 NOAA GHCN-Daily climate CSV on public S3
+          aws_public_blockchain  filestore verified       -
+                                 AWS Public Blockchain Parquet on public S3
+          pudl                   filestore known_to_fail  -
+                                 Catalyst Cooperative PUDL energy data
+          foursquare_places      filestore known_to_fail  -
+                                 Foursquare Open Source Places
+          overture_maps          filestore known_to_fail  -
+                                 Overture Maps GeoParquet
+          ookla_speedtest        filestore known_to_fail  -
+                                 Ookla Speedtest performance Parquet
+          gbif                   filestore known_to_fail  -
+                                 GBIF species occurrences
+          sic_usl                usl       verified       company_dns
+                                 Single-table USL over the SIC hierarchy (lifecycle verified; self-consistency check runs as a plain query)
+          sic_edgar_usl          usl       verified       company_dns, edgar_profiles
+                                 Two-table, FK-related USL: EDGAR companies and the SIC hierarchy
+      - tool: bash
+        args:
+          command: python3 scripts/preflight.py 2>&1
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          [PASS] env file: /home/ext_root/lab-data/zetaris-getting-started/.env.local
+          [PASS] ZETARIS_API_KEY: [REDACTED]
+          [PASS] ZETARIS_USERNAME: set
+          [PASS] ZETARIS_PASSWORD: [REDACTED]
+          [PASS] ZETARIS_USER_AGENT: set, in the form app_name user@domain.tld
+          [PASS] REST datasources: HTTP 200, 0 listed: 
+          [PASS] REST SELECT 1
+          [INFO] datasources: none
+          [INFO] lightning databases: NY_TAXI, POKEAPI_REST, TPCDS_DB
+          [INFO] USL namespaces: none
+
+          READY
+    time: 10/23/2026, 7:04:01.811 PM UTC
+    response: 'Goal noted: `onboard pokeapi`. Re-running the read-only preflight, then planning the onboarding.'
+    duration: 7.746s
+    duration_ms: 7746
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      Now plan pokeapi and dry-run. Also check the manifest entry and the create SQL to understand statement list and note pre-existing POKEAPI_REST.
+
+      Run `onboard.py plan pokeapi` and `onboard.py run pokeapi --dry-run`. Get output.
+    thinking_duration: 348ms
+    thinking_duration_ms: 348
+    tool_calls:
+      - tool: bash
+        args:
+          command: python3 scripts/onboard.py plan pokeapi 2>&1
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |2
+           1. pokeapi                rest      open_data/rest_apis/sql/non_rate_limited/02_pokeapi_create.sql
+      - tool: bash
+        args:
+          command: python3 scripts/onboard.py run pokeapi --dry-run 2>&1
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |2
+           1. pokeapi                rest      open_data/rest_apis/sql/non_rate_limited/02_pokeapi_create.sql
+          (dry run: nothing sent)
+    time: 10/23/2026, 7:04:09.568 PM UTC
+    duration: 3.592s
+    duration_ms: 3592
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: The dry-run didn't list statements? AGENTS.md says "Dry-run first (--dry-run) and show the user the statement list." Let me check onboard.py's dry-run behavior / options. Maybe --verbose shows statements. Let me read scripts/onboard.py relevant portions.
+    thinking_duration: 321ms
+    thinking_duration_ms: 321
+    tool_calls:
+      - tool: bash
+        args:
+          command: grep -n "dry.run\|dry_run\|verbose\|add_argument" scripts/onboard.py | head -60
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          7:    python3 scripts/onboard.py run edgar_profiles --dry-run
+          18:Create scripts change the instance. Use `plan` or `--dry-run` first. A source with
+          210:        if args.verbose:
+          271:    if args.dry_run:
+          272:        print("(dry run: nothing sent)")
+          282:            if not args.dry_run:
+          286:    if args.dry_run:
+          323:    p.add_argument("--list", action="store_true", help="list every source, its status and dependencies")
+          324:    p.add_argument("--check", action="store_true", help="validate the manifest against the repo")
+          325:    p.add_argument("command", nargs="?", choices=["plan", "run", "teardown"])
+          326:    p.add_argument("sources", nargs="*", help="source ids (see --list)")
+          327:    p.add_argument("--channel", choices=["rest", "jdbc"], default="rest")
+          328:    p.add_argument("--jar", help="JDBC driver JAR (or set ZETARIS_JDBC_JAR)")
+          329:    p.add_argument("--env-file", help="env file to load")
+          330:    p.add_argument("--dry-run", action="store_true", help="show the plan and statement counts without connecting")
+          331:    p.add_argument("--skip-exists", action="store_true", help="skip 'already exists' errors on the requested sources too (dependencies always do)")
+          332:    p.add_argument("--no-deps", action="store_true", help="run only the named sources, not their dependencies")
+          333:    p.add_argument("--allow-known-to-fail", action="store_true")
+          334:    p.add_argument("--allow-deprecated", action="store_true", help="run a source marked deprecated (its replacement is shown by --list)")
+          335:    p.add_argument("--limit", type=int, default=20)
+          336:    p.add_argument("--yes", action="store_true", help="teardown: actually send the drops (without it, teardown only prints the plan)")
+          337:    p.add_argument("--no-dependents", action="store_true", help="teardown: only the named sources, not the ones that require them")
+          338:    p.add_argument("--drop-namespace", action="store_true", help="teardown: also DROP NAMESPACE ... CASCADE for the USL namespaces")
+          339:    p.add_argument("--verbose", action="store_true", help="teardown: print every drop statement in the plan")
+    time: 10/23/2026, 7:04:13.169 PM UTC
+    response: The dry-run printed only the file, not the statements. Let me check `onboard.py` options for a verbose statement listing.
+    duration: 3.951s
+    duration_ms: 3951
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: --dry-run "show the plan and statement counts without connecting". Let me look at run() to see output; it likely prints statements only in some cases. Lines 250-290.
+    thinking_duration: 301ms
+    thinking_duration_ms: 301
+    tool_calls:
+      - tool: bash
+        args:
+          command: sed -n '180,300p' scripts/onboard.py
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          def cmd_teardown(args, sources: dict[str, dict]) -> int:
+              targets = args.sources
+              resolve(sources, targets)  # validates ids
+              chosen = set(targets) if args.no_dependents else dependents(sources, targets)
+              order = [s for s in reversed(resolve(sources, sorted(chosen))) if s in chosen]  # dependents first
+              plan: list[tuple[str, list[str]]] = []
+              manual: list[str] = []
+              namespaces: set[str] = set()
+              for sid in order:
+                  text = (z.ROOT / sources[sid]["script"]).read_text(encoding="utf-8")
+                  drops, man, ns = derive_teardown(z.split_statements(text))
+                  plan.append((sid, drops))
+                  for item in man:
+                      if item not in manual:
+                          manual.append(item)
+                  namespaces |= ns
+              if args.drop_namespace:
+                  plan.append(("namespaces", [f"DROP NAMESPACE {n} CASCADE" for n in sorted(namespaces)]))
+
+              for i, (sid, drops) in enumerate(plan, 1):
+                  note = "" if sid in targets or sid == "namespaces" else "  [dependent]"
+                  print(f"{i:>2}. {sid:<22} {len(drops)} SQL drops{note}")
+              print("\nNot removable by SQL; remove these in the Zetaris Data Explorer afterwards:")
+              for item in manual or ["(none)"]:
+                  print(f"  - {item}")
+              if namespaces and not args.drop_namespace:
+                  print(f"\nNamespaces left in place: {', '.join(sorted(namespaces))} (add --drop-namespace to CASCADE-drop them; "
+                        "this removes every USL inside)")
+              if not args.yes:
+                  print("\n(plan only: nothing sent. Add --yes to run it)")
+                  if args.verbose:
+                      for sid, drops in plan:
+                          print(f"\n-- {sid}")
+                          print("\n".join(f"{d};" for d in drops))
+                  return 0
+
+              z.load_env(args.env_file)
+              z.reexec_in_venv_if_needed(args.channel)
+              channel = z.open_channel(args.channel, args.jar)
+              try:
+                  for sid, drops in plan:
+                      print(f"\n=== {sid} ({len(drops)} statements)")
+                      ok = absent = 0
+                      for i, stmt in enumerate(drops, 1):
+                          try:
+                              channel.run(stmt, limit=args.limit)
+                              ok += 1
+                              print(f"{i:>3}. ok       {stmt}")
+                          except z.ZetarisError as e:
+                              if NOT_THERE.search(str(e)):
+                                  absent += 1
+                                  print(f"{i:>3}. absent   {stmt}")
+                                  continue
+                              print(f"{i:>3}. ERROR    {stmt}\n     {e}", file=sys.stderr)
+                              print(f"\nSTOPPED in {sid} at statement {i}.", file=sys.stderr)
+                              return 1
+                      print(f"    {ok} dropped" + (f", {absent} already absent" if absent else ""))
+              finally:
+                  channel.close()
+              print("\ndone. Now remove the Data Explorer items listed above, then re-run `run <id>... --skip-exists`.")
+              return 0
+
+
+          def cmd_list(sources: dict[str, dict]) -> int:
+              print(f"{'id':<22} {'kind':<9} {'status':<14} requires")
+              for sid, src in sources.items():
+                  print(f"{sid:<22} {src['kind']:<9} {src['status']:<14} {', '.join(src.get('requires', [])) or '-'}")
+                  print(f"{'':<22} {src['summary']}")
+                  if src["status"] == "deprecated":
+                      print(f"{'':<22} deprecated: use {src.get('replaced_by')}")
+              return 0
+
+
+          def cmd_run(args, sources: dict[str, dict]) -> int:
+              targets = args.sources
+              order = targets[:] if args.no_deps else resolve(sources, targets)
+              for t in targets:
+                  resolve(sources, [t])  # validates ids
+              bad = [s for s in order if sources[s]["status"] == "known_to_fail" and s in targets]
+              old = [s for s in order if sources[s]["status"] == "deprecated" and s in targets]
+              if old and not args.allow_deprecated:
+                  raise z.ZetarisError(
+                      "; ".join(f"{s} is deprecated, use {sources[s].get('replaced_by')}" for s in old)
+                      + ". Pass --allow-deprecated to run it anyway."
+                  )
+              if bad and not args.allow_known_to_fail:
+                  raise z.ZetarisError(
+                      f"{', '.join(bad)} is marked known_to_fail (see its known_to_fail/ write-up). "
+                      "Pass --allow-known-to-fail to run it anyway."
+                  )
+              print_plan(sources, order, targets)
+              if args.dry_run:
+                  print("(dry run: nothing sent)")
+
+              env = z.load_env(args.env_file)
+              prepared: list[tuple[str, list[str]]] = []
+              for sid in order:
+                  text = (z.ROOT / sources[sid]["script"]).read_text(encoding="utf-8")
+                  stmts = z.split_statements(text)
+                  try:
+                      stmts = z.apply_user_agent(stmts)
+                  except z.ZetarisError as e:
+                      if not args.dry_run:
+                          raise z.ZetarisError(f"{sid}: {e}") from e
+                      print(f"warning: {sid}: {e}", file=sys.stderr)
+                  prepared.append((sid, stmts))
+              if args.dry_run:
+                  return 0
+
+              z.reexec_in_venv_if_needed(args.channel)
+              channel = z.open_channel(args.channel, args.jar)
+              print(f"\nchannel={args.channel} env={env or 'process environment'}")
+              try:
+                  for sid, stmts in prepared:
+                      is_dep = sid not in targets
+                      # A dependency that already exists is satisfied, so duplicates are skipped for
+                      # dependencies; the requested targets only skip when --skip-exists is given.
+                      skip = args.skip_exists or is_dep
+                      print(f"\n=== {sid} ({len(stmts)} statements{', dependency' if is_dep else ''})")
+                      ok = skipped = 0
+                      for i, stmt in enumerate(stmts, 1):
+    time: 10/23/2026, 7:04:17.128 PM UTC
+    duration: 3.377s
+    duration_ms: 3377
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      The dry-run only shows plan without statements. AGENTS.md says "Dry-run first (--dry-run) and show the user the statement list." Since onboard.py has no --verbose for run, I can show the statements by using run_sql.py --dry-run on the create script, which likely lists statements. Let me check run_sql.py dry-run output.
+
+      Also inspect the create script 02_pokeapi_create.sql to know what it creates and whether POKEAPI_REST already exists (it does). Let me run:
+      - python3 scripts/run_sql.py --dry-run open_data/rest_apis/sql/non_rate_limited/02_pokeapi_create.sql
+      - view the SQL file.
+    thinking_duration: 779ms
+    thinking_duration_ms: 779
+    tool_calls:
+      - tool: bash
+        args:
+          command: python3 scripts/run_sql.py --dry-run open_data/rest_apis/sql/non_rate_limited/02_pokeapi_create.sql 2>&1
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |2
+            1. CREATE LIGHTNING DATABASE POKEAPI_REST DESCRIBE BY "PokeAPI REST source"
+            2. CREATE SCHEMASTORE CONTAINER pokeapi
+            3. CREATE LIGHTNING REST TABLE pikachu_facts FROM POKEAPI_REST REQUEST( endpoint "https://pokeapi.co...
+            4. CREATE SCHEMASTORE VIEW pikachu_abilities_table WITH CONTAINER pokeapi AS SELECT id, name AS poke...
+            5. CREATE SCHEMASTORE VIEW pikachu_types_table WITH CONTAINER pokeapi AS SELECT id, name AS pokemon_...
+            6. CREATE SCHEMASTORE VIEW pikachu_stats_table WITH CONTAINER pokeapi AS SELECT id, name AS pokemon_...
+            7. CREATE LIGHTNING REST TABLE charizard_facts FROM POKEAPI_REST REQUEST( endpoint "https://pokeapi....
+            8. CREATE SCHEMASTORE VIEW charizard_abilities_table WITH CONTAINER pokeapi AS SELECT id, name AS po...
+            9. CREATE SCHEMASTORE VIEW charizard_types_table WITH CONTAINER pokeapi AS SELECT id, name AS pokemo...
+           10. CREATE SCHEMASTORE VIEW charizard_stats_table WITH CONTAINER pokeapi AS SELECT id, name AS pokemo...
+           11. CREATE SCHEMASTORE VIEW all_pokemon_types_table WITH CONTAINER pokeapi AS SELECT * FROM pokeapi.p...
+           12. CREATE SCHEMASTORE VIEW all_pokemon_stats_table WITH CONTAINER pokeapi AS SELECT * FROM pokeapi.p...
+           13. CREATE SCHEMASTORE VIEW all_pokemon_abilities_table WITH CONTAINER pokeapi AS SELECT pokemon_name...
+          13 statements (dry run, nothing sent)
+      - tool: bash
+        args:
+          command: cat open_data/rest_apis/sql/non_rate_limited/02_pokeapi_create.sql
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          -- =============================================================================
+          -- Source: PokéAPI -- per-Pokémon lookup (abilities, types, base stats).
+          -- Repeats the pattern for two Pokémon, Pikachu and Charizard, to prove
+          -- it generalizes across records -- one REST table plus one set of
+          -- views per Pokémon, all landing in the shared `pokeapi` container,
+          -- with cross-Pokémon union views at the bottom.
+          --
+          -- License: BSD-3-Clause for the code/API --
+          -- https://github.com/PokeAPI/pokeapi/blob/master/LICENSE.md
+          -- Fair Use Policy: cache responses locally, don't use this as a
+          -- load-testing target. Pokémon names/characters are Nintendo
+          -- trademarks -- fine for a technical demo, not for anything
+          -- Zetaris-branded.
+          --
+          -- Format: REST/JSON, top-level object per Pokémon, array-of-structs
+          -- nested fields (abilities, types, stats). `abilities` nests a struct
+          -- two levels deep (ability.ability.name) -- confirmed working; see the
+          -- SQL companion guide for the general shape taxonomy.
+          --
+          -- Docs: https://pokeapi.co/docs/v2
+          --
+          -- Rate limit: no formal limit (removed 2018), but respect the Fair Use
+          -- Policy above -- this is a shared free resource.
+          --
+          -- Before running: sanity-check the endpoint returns something sane:
+          --   curl -s https://pokeapi.co/api/v2/pokemon/pikachu | python3 -m json.tool | head -20
+          --
+          -- Status: live-tested and confirmed working end to end (2026-09-19) --
+          -- both Pokémon's REST tables, all per-Pokémon and cross-Pokémon views,
+          -- and the example queries all ran successfully.
+          -- =============================================================================
+          --
+          -- Caveats:
+          --   1. `moves` also exists on the response object but has a doubly-
+          --      nested array (`version_group_details` inside each move) -- not
+          --      attempted here, would need a second LATERAL VIEW explode()
+          --      layered on top of this pattern.
+          -- =============================================================================
+
+          -- Step 0: Lightning database for this source.
+          CREATE LIGHTNING DATABASE POKEAPI_REST DESCRIBE BY "PokeAPI REST source";
+
+          -- Step 1: schemastore container. Run once -- comment out on a re-run
+          -- if it already exists in your environment.
+          CREATE SCHEMASTORE CONTAINER pokeapi;
+
+          -- Pikachu -- id 25
+          CREATE LIGHTNING REST TABLE pikachu_facts FROM POKEAPI_REST REQUEST(
+              endpoint "https://pokeapi.co/api/v2/pokemon/pikachu",
+              method "get",
+              response_type "json",
+              http_encoding "URLENCODED"
+          ) HEADER (
+          ) BODY ();
+
+          CREATE SCHEMASTORE VIEW pikachu_abilities_table WITH CONTAINER pokeapi AS
+          SELECT
+              id,
+              name AS pokemon_name,
+              base_experience,
+              height,
+              weight,
+              ability.is_hidden,
+              ability.slot,
+              ability.ability.name AS ability_name,
+              ability.ability.url AS ability_url
+          FROM pokeapi_rest.pikachu_facts
+          LATERAL VIEW explode(abilities) AS ability;
+
+          CREATE SCHEMASTORE VIEW pikachu_types_table WITH CONTAINER pokeapi AS
+          SELECT
+              id,
+              name AS pokemon_name,
+              t.slot,
+              t.type.name AS type_name
+          FROM pokeapi_rest.pikachu_facts
+          LATERAL VIEW explode(types) AS t;
+
+          CREATE SCHEMASTORE VIEW pikachu_stats_table WITH CONTAINER pokeapi AS
+          SELECT
+              id,
+              name AS pokemon_name,
+              s.stat.name AS stat_name,
+              s.base_stat,
+              s.effort
+          FROM pokeapi_rest.pikachu_facts
+          LATERAL VIEW explode(stats) AS s;
+
+          -- Charizard -- id 6
+          CREATE LIGHTNING REST TABLE charizard_facts FROM POKEAPI_REST REQUEST(
+              endpoint "https://pokeapi.co/api/v2/pokemon/charizard",
+              method "get",
+              response_type "json",
+              http_encoding "URLENCODED"
+          ) HEADER (
+          ) BODY ();
+
+          CREATE SCHEMASTORE VIEW charizard_abilities_table WITH CONTAINER pokeapi AS
+          SELECT
+              id,
+              name AS pokemon_name,
+              base_experience,
+              height,
+              weight,
+              ability.is_hidden,
+              ability.slot,
+              ability.ability.name AS ability_name,
+              ability.ability.url AS ability_url
+          FROM pokeapi_rest.charizard_facts
+          LATERAL VIEW explode(abilities) AS ability;
+
+          CREATE SCHEMASTORE VIEW charizard_types_table WITH CONTAINER pokeapi AS
+          SELECT
+              id,
+              name AS pokemon_name,
+              t.slot,
+              t.type.name AS type_name
+          FROM pokeapi_rest.charizard_facts
+          LATERAL VIEW explode(types) AS t;
+
+          CREATE SCHEMASTORE VIEW charizard_stats_table WITH CONTAINER pokeapi AS
+          SELECT
+              id,
+              name AS pokemon_name,
+              s.stat.name AS stat_name,
+              s.base_stat,
+              s.effort
+          FROM pokeapi_rest.charizard_facts
+          LATERAL VIEW explode(stats) AS s;
+
+          -- Cross-Pokémon views -- a third-plus Pokémon just needs one more
+          -- UNION ALL branch per view, not a redesign.
+          CREATE SCHEMASTORE VIEW all_pokemon_types_table WITH CONTAINER pokeapi AS
+          SELECT * FROM pokeapi.pikachu_types_table
+          UNION ALL
+          SELECT * FROM pokeapi.charizard_types_table;
+
+          CREATE SCHEMASTORE VIEW all_pokemon_stats_table WITH CONTAINER pokeapi AS
+          SELECT * FROM pokeapi.pikachu_stats_table
+          UNION ALL
+          SELECT * FROM pokeapi.charizard_stats_table;
+
+          CREATE SCHEMASTORE VIEW all_pokemon_abilities_table WITH CONTAINER pokeapi AS
+          SELECT pokemon_name, ability_name, is_hidden FROM pokeapi.pikachu_abilities_table
+          UNION ALL
+          SELECT pokemon_name, ability_name, is_hidden FROM pokeapi.charizard_abilities_table;
+
+          -- =============================================================================
+          -- Teardown -- removes the flattened views this script created.
+          -- Commented out by default. See the SQL companion guide for why
+          -- DROP VIEW is the only reliable teardown statement, and how to remove
+          -- the underlying REST tables and database registration (Zetaris Data
+          -- Explorer -- no SQL path exists).
+          -- =============================================================================
+
+          -- DROP VIEW pokeapi.all_pokemon_types_table;
+          -- DROP VIEW pokeapi.all_pokemon_stats_table;
+          -- DROP VIEW pokeapi.all_pokemon_abilities_table;
+          -- DROP VIEW pokeapi.pikachu_abilities_table;
+          -- DROP VIEW pokeapi.pikachu_types_table;
+          -- DROP VIEW pokeapi.pikachu_stats_table;
+          -- DROP VIEW pokeapi.charizard_abilities_table;
+          -- DROP VIEW pokeapi.charizard_types_table;
+          -- DROP VIEW pokeapi.charizard_stats_table;
+    time: 10/23/2026, 7:04:20.513 PM UTC
+    duration: 4.156s
+    duration_ms: 4156
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      Now, the important nuance: POKEAPI_REST already exists in SHOW LIGHTNING DATABASES. Statement 1 would fail with "already exists" unless --skip-exists. Also CREATE SCHEMASTORE CONTAINER pokeapi may already exist. The dry-run says nothing sent. Per AGENTS.md: "Check that an existing object matches the recipe definition before reusing it." And "--skip-exists skips 'already exists' errors".
+
+      I should inspect existing objects to see how much of pokeapi already exists: 
+      - SHOW DATABASES? POKEAPI_REST exists.
+      - SHOW TABLES IN POKEAPI_REST? or DESCRIBE? Need to check existing REST tables pikachu_facts, charizard_facts.
+      - SHOW SCHEMASTORE CONTAINER? Check syntax in docs. Let me check guides for commands: SHOW CONTAINERS? Let me grep zetaris-lightning-sql-commands.md.
+
+      The goal is "onboard pokeapi", dry-run before creating anything. I should present the dry-run and note the collision, then propose the exact command. But should I inspect existing state first? Yes — read-only inspection aligns with "Inspect existing objects before changing or reusing them." Let's do read-only checks:
+      - SHOW LIGHTNING DATABASES (already)
+      - SHOW NAMESPACES OR TABLES IN POKEAPI_REST? Actually for REST database, tables listed by SHOW TABLES IN POKEAPI_REST perhaps.
+      - Container listing: search docs.
+
+      Let me grep docs for "SCHEMASTORE" commands.
+    thinking_duration: 1.765s
+    thinking_duration_ms: 1765
+    tool_calls:
+      - tool: bash
+        args:
+          command: grep -n -i "schemastore\|SHOW TABLES\|SHOW NAMESPACES" docs/guides/zetaris-lightning-sql-commands.md | head -40
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          13:| Create views and connect more data | SchemaStore, file, REST and datasource commands | Creation permission, your own object names and the source-specific setup below |
+          1596:Views need an accessible source, an existing container and creation permission. First [create your own container](#122-create-schemastore-container). Preview can use `SELECT 1` without a container. Rename/removal needs an existing view.
+          1598:### 12.1 CREATE [OR REPLACE] SCHEMASTORE VIEW
+          1603:CREATE [OR REPLACE] SCHEMASTORE VIEW <view> WITH CONTAINER <container> AS <SELECT query …>
+          1617:CREATE SCHEMASTORE VIEW reasons WITH CONTAINER analysis AS
+          1621:### 12.2 CREATE SCHEMASTORE CONTAINER
+          1626:CREATE SCHEMASTORE CONTAINER <name>
+          1636:CREATE SCHEMASTORE CONTAINER analysis
+          1639:### 12.3 PREVIEW SCHEMASTORE SQL
+          1644:PREVIEW SCHEMASTORE SQL AS <SELECT query …>
+          1653:- Begin the statement with `PREVIEW SCHEMASTORE SQL AS`.
+          1658:PREVIEW SCHEMASTORE SQL AS SELECT country, COUNT(*) AS customers FROM crm_pg.customers GROUP BY country
+          1679:### 12.5 UPDATE SCHEMASTORE VIEW
+          1684:UPDATE SCHEMASTORE VIEW <source>.<table> SET NAME <new_name>
+          1699:UPDATE SCHEMASTORE VIEW analysis.top_customers SET NAME best_customers
+          1702:### 12.6 DROP SCHEMASTORE VIEW
+          1707:DROP SCHEMASTORE VIEW <view> FROM <container>
+          1717:DROP SCHEMASTORE VIEW best_customers FROM analysis
+          1789:### 13.3 SHOW NAMESPACES OR TABLES
+          1794:SHOW NAMESPACES OR TABLES IN <namespace>
+          1803:- Use this command in place of `SHOW NAMESPACES` and `SHOW TABLES`.
+          1808:SHOW NAMESPACES OR TABLES IN lightning.metastore
+      - tool: bash
+        args:
+          command: python3 scripts/run_sql.py -e "SHOW TABLES IN POKEAPI_REST" 2>&1
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          channel=rest env=/home/ext_root/lab-data/zetaris-getting-started/.env.local statements=1
+            1. SHOW TABLES IN POKEAPI_REST
+                ['POKEAPI_REST.pikachu_facts', 'POKEAPI_REST', 'Lightning Database']
+                ['POKEAPI_REST.charizard_facts', 'POKEAPI_REST', 'Lightning Database']
+          done: 1/1 statements ok
+    time: 10/23/2026, 7:04:24.681 PM UTC
+    response: Onboarding plan is one source, 13 statements. `POKEAPI_REST` already exists on the instance, so let me inspect what's already there and confirm the re-run syntax.
+    duration: 5.567s
+    duration_ms: 5567
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: Both REST tables already exist. What about the container/view? Let me check how to list container views. Search docs for listing SchemaStore objects. Possibly "SHOW TABLES IN pokeapi" or "SHOW SCHEMASTORE". Let's grep.
+    thinking_duration: 344ms
+    thinking_duration_ms: 344
+    tool_calls:
+      - tool: bash
+        args:
+          command: grep -n -i "container" docs/guides/zetaris-lightning-sql-commands.md | sed -n '1,60p'
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          14:| Build models and pipelines | USL, DQ, pipeline and data-mart commands | Accessible source data and the required namespaces or containers |
+          88:| `analysis`                     | A schema store container                                                                       |
+          90:| `etl`                          | A pipeline container                                                                           |
+          437:Creates a Lightning database, the container for file-store and REST tables.
+          1592:A schema store view is a stored Spark SQL view held in a container. Query Builder views are stored the same way.
+          1596:Views need an accessible source, an existing container and creation permission. First [create your own container](#122-create-schemastore-container). Preview can use `SELECT 1` without a container. Rename/removal needs an existing view.
+          1603:CREATE [OR REPLACE] SCHEMASTORE VIEW <view> WITH CONTAINER <container> AS <SELECT query …>
+          1606:Creates a Spark SQL view in a container; OR REPLACE overwrites an existing view.
+          1612:- Query a view as `<container>.<view>`.
+          1617:CREATE SCHEMASTORE VIEW reasons WITH CONTAINER analysis AS
+          1621:### 12.2 CREATE SCHEMASTORE CONTAINER
+          1626:CREATE SCHEMASTORE CONTAINER <name>
+          1629:Creates a schema-store view container, the folder Query Builder views live in.
+          1636:CREATE SCHEMASTORE CONTAINER analysis
+          1694:- Needs `<container>.<view>`.
+          1707:DROP SCHEMASTORE VIEW <view> FROM <container>
+          2134:Pipelines are built in the Data Pipeline designer and stored in pipeline containers. Several commands in this chapter take the pipeline specification in JSON form.
+          2138:Saving needs your own container, write permission and a complete specification with accessible sources. Infer/verify needs a valid query or specification. Named describe/update/drop needs a saved relation.
+          2140:### 16.1 CREATE PIPELINE CONTAINER
+          2145:CREATE PIPELINE CONTAINER <name> [DESCRIPTION '<desc>']
+          2148:Creates a pipeline container.
+          2155:CREATE PIPELINE CONTAINER etl DESCRIPTION 'Daily ETL'
+          2158:### 16.2 REGISTER PIPELINE RELATION CONTAINER
+          2163:REGISTER PIPELINE RELATION CONTAINER <container> SPEC <pipeline JSON …>
+          2166:Saves a pipeline into a container.
+          2177:REGISTER PIPELINE RELATION CONTAINER etl SPEC
+          2188:### 16.3 LIST PIPELINE CONTAINER
+          2193:LIST PIPELINE CONTAINER
+          2196:Lists accessible pipeline containers.
+          2203:LIST PIPELINE CONTAINER
+          2211:LIST PIPELINE RELATION <container>
+          2214:Lists the pipelines in a container.
+          2229:DESCRIBE PIPELINE RELATION <container>.<pipeline>
+          2238:- The pipeline must be qualified with its container name.
+          2313:UPDATE PIPELINE RELATION <container>.<pipeline> SPEC <pipeline JSON>
+          2322:- The pipeline must be qualified with its container name.
+          2356:### 16.11 DROP PIPELINE CONTAINER
+          2361:DROP PIPELINE CONTAINER <name>
+          2364:Deletes a pipeline container with its dependent views and privileges.
+          2371:DROP PIPELINE CONTAINER etl
+          2379:DROP PIPELINE RELATION <container>.<pipeline>
+          2388:- The pipeline must be qualified with its container name.
+          2992:Access is controlled at two levels. An assignment attaches a user or role to an object; a grant gives a privilege (SELECT or INSERT) on a table or namespace. Schema store views are protected by grants; view assignments are made per container in the platform interface.
+          3072:- Grants on views take the form `VIEW TABLE <container>.<view>` or `VIEW NAMESPACE <container>`.
+      - tool: bash
+        args:
+          command: python3 scripts/run_sql.py -e "SHOW VIEWS IN pokeapi" 2>&1; echo "---"; python3 scripts/run_sql.py -e "SHOW TABLES IN pokeapi" 2>&1
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          channel=rest env=/home/ext_root/lab-data/zetaris-getting-started/.env.local statements=1
+            1. SHOW VIEWS IN pokeapi
+                ['ALL_POKEMON_ABILITIES_TABLE', 'Schema Store View', 'query_builder', None]
+                ['ALL_POKEMON_STATS_TABLE', 'Schema Store View', 'query_builder', None]
+                ['ALL_POKEMON_TYPES_TABLE', 'Schema Store View', 'query_builder', None]
+                ['CHARIZARD_ABILITIES_TABLE', 'Schema Store View', 'query_builder', None]
+                ['CHARIZARD_STATS_TABLE', 'Schema Store View', 'query_builder', None]
+                ['CHARIZARD_TYPES_TABLE', 'Schema Store View', 'query_builder', None]
+                ['PIKACHU_ABILITIES_TABLE', 'Schema Store View', 'query_builder', None]
+                ['PIKACHU_STATS_TABLE', 'Schema Store View', 'query_builder', None]
+                ['PIKACHU_TYPES_TABLE', 'Schema Store View', 'query_builder', None]
+          done: 1/1 statements ok
+          ---
+          channel=rest env=/home/ext_root/lab-data/zetaris-getting-started/.env.local statements=1
+            1. SHOW TABLES IN pokeapi
+                ['PIKACHU_ABILITIES_TABLE', 'pokeapi', 'Schema Store View']
+                ['PIKACHU_TYPES_TABLE', 'pokeapi', 'Schema Store View']
+                ['PIKACHU_STATS_TABLE', 'pokeapi', 'Schema Store View']
+                ['CHARIZARD_ABILITIES_TABLE', 'pokeapi', 'Schema Store View']
+                ['CHARIZARD_TYPES_TABLE', 'pokeapi', 'Schema Store View']
+                ['CHARIZARD_STATS_TABLE', 'pokeapi', 'Schema Store View']
+                ['ALL_POKEMON_TYPES_TABLE', 'pokeapi', 'Schema Store View']
+                ['ALL_POKEMON_STATS_TABLE', 'pokeapi', 'Schema Store View']
+                ['ALL_POKEMON_ABILITIES_TABLE', 'pokeapi', 'Schema Store View']
+          done: 1/1 statements ok
+    time: 10/23/2026, 7:04:30.263 PM UTC
+    duration: 4.574s
+    duration_ms: 4574
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      PokeAPI is already fully onboarded on this instance: database, container, 2 REST tables, 9 views.
+
+      So "onboard pokeapi" is effectively already done. Options:
+      1. Report it already exists and verification only (read-only row counts).
+      2. Dry-run shows the statement list; if user still wants to run, they need --skip-exists (would skip all "already exists" errors). But CREATE SCHEMASTORE CONTAINER pokeapi will error "already exists" and be skipped, then views likely error already exist (skip), and REST tables error (skip). So a re-run with --skip-exists would do nothing but confirm existence. That could be a legitimate "onboard" idempotent run.
+
+      Per AGENTS.md: "Check that an existing object matches the recipe definition before reusing it." Compare existing object names to script — they match. Maybe verify data with SELECT count from views or REST table.
+
+      The user asked: dry-run before creating anything and wait for go-ahead. So my job now: present dry-run, note it's already onboarded, propose next step. Do not create anything. Should I do read-only verification (SELECT rows) as part of assessing? AGENTS.md says "Verify after creating, as in open_data/rest_apis/HOWTO.md section 2: compare Zetaris row counts with an independent check against the source API." Since nothing is being created, and goal is onboard... I can verify current state read-only. But maybe wait for go-ahead before running queries? Read-only is allowed ("Start read-only"). A quick check of existing views would strengthen my report.
+
+      Let me read open_data/rest_apis/HOWTO.md section 2 to see verification procedure, and possibly run a SELECT on the views. But careful about scope creep. The user wants dry-run and go-ahead. The key finding is: already onboarded. Dry-run is done. I should stop and ask whether to (a) treat as satisfied and just verify, or (b) re-run with --skip-exists.
+
+      Let me read the HOWTO section 2 quickly to give an accurate proposal.
+    thinking_duration: 2.635s
+    thinking_duration_ms: 2635
+    tool_calls:
+      - tool: bash
+        args:
+          command: grep -n "## 2" -A 40 open_data/rest_apis/HOWTO.md | head -60
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          90:## 2. Verifying data
+          91-
+          92-For every source, run the verification query in its `_select.sql` (commented out by default):
+          93-
+          94-1. Count rows in the Zetaris view.
+          95-2. Count the matching array directly from the API with `curl` and `jq`, for example:
+          96-   ```bash
+          97-   curl -s -A "YOUR_APP_NAME YOUR_CONTACT_EMAIL" \
+          98-     https://data.sec.gov/api/xbrl/companyconcept/CIK0000320193/us-gaap/Revenues.json \
+          99-     | jq '.units.USD | length'
+          100-   ```
+          101-3. Compare counts before analysis. A lower Zetaris count may mean truncation; check the source response first. On EDGAR, the direct API and Zetaris both returned 11 rows for Apple's `us-gaap:Revenues` tag.
+          102-
+          103----
+          104-
+          105-## 3. Removing a source
+          106-
+          107-On 12 October 2026, Zetaris 2.4.3.1 accepted these commands against disposable public-S3 file tables and a PokeAPI REST table:
+          108-
+          109-- `DROP LIGHTNING DATABASE TABLE sqltest_20261012_files.reason` (file table)
+          110-- `DROP LIGHTNING DATABASE TABLE sqltest_20261012_files.ability` (PokeAPI REST table)
+          111-- `DROP LIGHTNING DATABASE sqltest_20261012_files`
+          112-
+          113-The database drop succeeded after its test tables were removed. This does not establish behavior for every connector. Use the exact `DROP LIGHTNING DATABASE TABLE` form; the check does not establish that generic `DROP TABLE` works. `DROP DATASOURCE` was not validated for these Lightning registrations.
+          114-
+          115-`DROP VIEW <container>.<view>` removes a SchemaStore view. Container removal was performed through the documented API after confirming `viewCount` was zero; this validation did not establish a SQL command for dropping a container. Script `TEARDOWN` blocks therefore keep their `DROP VIEW` statements and direct readers here for source cleanup.
+          116-
+          117----
+          118-
+          119-## 4. Troubleshooting / FAQ
+          120-
+          121-### My query failed with an unresolved-column error mentioning a mixed-case, reserved-word, or hyphenated field name
+          122-
+          123-A JSON field may need backticks when it uses mixed case, a reserved word, spaces, or punctuation such as a hyphen. For example, use `` `entityName` ``, `` fact.`start` ``, or `` product.nutriments.`energy-kcal_100g` ``. Check the source keys before writing a view.
+          124-
+          125-The unquoted forms may fail or parse incorrectly because Zetaris treats the name as a different identifier or as an operator.
+          126-
+          127-### My query failed with `UNRESOLVED_COLUMN`, referencing a column that "doesn't exist" on a view I expected to have it
+          128-
+          129-Check the view's own `CREATE SCHEMASTORE VIEW ... AS SELECT` list. A comment or a similar view may name columns this view does not expose.
+          130-
+    time: 10/23/2026, 7:04:34.847 PM UTC
+    duration: 5.780s
+    duration_ms: 5780
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      Good. Now I'll report:
+
+      - Preflight PASS (repeated).
+      - REST confirm SELECT 1, SHOW LIGHTNING DATABASES.
+      - Dry-run output for pokeapi: plan + 13 statements (already shown).
+      - Finding: everything already exists — POKEAPI_REST DB, table list, container views (9). So re-running without --skip-exists will stop at statement 1 with "already exists".
+      - Options: A) treat as already onboarded; run read-only verification (counts in views + API check); B) re-run `python3 scripts/onboard.py run pokeapi --skip-exists` (idempotent, effectively no-op because all objects exist) — needs go-ahead.
+
+      Wait — with --skip-exists, first statement "CREATE LIGHTNING DATABASE POKEAPI_REST..." error already exists → skipped. Container same. REST tables same. Views same. So it would report skipped for all 13. Is that meaningful? It confirms definitions? Not really.
+
+      Note AGENTS.md: "Check that an existing object matches the recipe definition before reusing it." I compared names/types. Looking at the views: SHOW VIEWS shows 9 views matching the script's 9 view names. REST tables 2 matching. Container exists. So the recipe is already instantiated.
+
+      I should ask the go-ahead for what? The user said dry-run before creating anything and wait for go-ahead. Since nothing needs creating, the decision is whether to verify data or re-run. I'll present options via question tool? The instructions say use question tool for choices. But keep response short. I could just ask in text. Given CLI, a concise question is fine. The `question` tool is available; using it may be appropriate. But the user asked to "wait for my go-ahead" — I'll stop and ask.
+
+      Let me present the dry-run statement list compactly (13 statements, full endpoint truncated in dry-run). I already have full SQL content. Show the list fully but compact.
+
+      Should I mention preflight result again? They asked to run and show. Yes, briefly.
+
+      Let me format.
+
+      Also note "Dry-run before creating anything" — done, nothing sent. So no changes made.
+
+      One more consideration: the connection confirmation in this turn — I re-ran preflight (which does SELECT 1 and SHOW LIGHTNING DATABASES) but did not re-run the explicit run_sql calls this turn. Earlier in the session I did. The results are the same. To be accurate, I can say preflight re-ran those checks this turn; the explicit calls were run earlier in this session. But user repeated prompt, maybe they want it fresh. Cheap to re-run both explicit calls now. Let me do that to be safe — they're read-only and small. Then report.
+
+      Actually I already re-ran preflight which internally runs SELECT 1 and SHOW LIGHTNING DATABASES. But explicit run_sql is what "connect over REST" means. Let me quickly re-run both (small outputs) and include.
+    thinking_duration: 3.670s
+    thinking_duration_ms: 3670
+    tool_calls:
+      - tool: bash
+        args:
+          command: python3 scripts/run_sql.py -e "SELECT 1" 2>&1; python3 scripts/run_sql.py -e "SHOW LIGHTNING DATABASES" 2>&1
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          channel=rest env=/home/ext_root/lab-data/zetaris-getting-started/.env.local statements=1
+            1. SELECT 1
+                ['1']
+          done: 1/1 statements ok
+          channel=rest env=/home/ext_root/lab-data/zetaris-getting-started/.env.local statements=1
+            1. SHOW LIGHTNING DATABASES
+                ['NY_TAXI', 'NY Taxi sample data', '6']
+                ['POKEAPI_REST', 'PokeAPI REST source', '806']
+                ['TPCDS_DB', 'TPC-DS benchmark sample data', '308']
+          done: 1/1 statements ok
+    time: 10/23/2026, 7:04:40.644 PM UTC
+    duration: 7.893s
+    duration_ms: 7893
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      Now formulate final response. Key: nothing created, awaiting go-ahead. Note the goal is already satisfied.
+
+      Structure:
+      1. Preflight result (compact)
+      2. REST confirmation table
+      3. Plan + dry-run (13 statements list)
+      4. Finding: already onboarded
+      5. Ask: verify only (recommended) vs re-run with --skip-exists vs teardown/recreate (needs more authorization)
+
+      Keep concise but complete.
+
+      Row counts? Not run. Could offer. Don't run without approval? Read-only is allowed, but let's wait since goal is already satisfied and they asked for go-ahead. Actually "Dry-run before creating anything and wait for my go-ahead" — the next step is verify. I'll ask.
+
+      Let me be precise: `SHOW VIEWS IN pokeapi` shows 9 views. `SHOW TABLES IN POKEAPI_REST` shows 2 REST tables.
+
+      Also note the plan file `open_data/rest_apis/sql/non_rate_limited/02_pokeapi_create.sql` (note filename is 02_pokeapi_create.sql while user said pokeapi).
+
+      I'll use the question tool? Probably text is enough; but question tool gives options. The guidance says use it when needing decisions. I'll use text to avoid overhead? The user explicitly says "wait for my go-ahead", so a text question is fine. I'll keep it short.
+    thinking_duration: 1.580s
+    thinking_duration_ms: 1580
+    time: 10/23/2026, 7:04:48.548 PM UTC
+    response: |-
+      **Preflight** (`scripts/preflight.py`, read-only) — READY:
+
+      ```
+      [PASS] env file, ZETARIS_API_KEY, ZETARIS_USERNAME, ZETARIS_PASSWORD
+      [PASS] ZETARIS_USER_AGENT: valid app_name user@domain.tld
+      [PASS] REST datasources: HTTP 200, 0 listed
+      [PASS] REST SELECT 1
+      [INFO] lightning databases: NY_TAXI, POKEAPI_REST, TPCDS_DB
+      [INFO] USL namespaces: none
+      ```
+
+      **REST confirmation** (direct `/api/v1.0`): `SELECT 1` → `1`; `SHOW LIGHTNING DATABASES` → `NY_TAXI`, `POKEAPI_REST`, `TPCDS_DB`; `GET /datasource/datasources` → `[]`.
+
+      **Dry-run** (`onboard.py run pokeapi --dry-run`, nothing sent) — 1 source, 0 dependencies:
+
+      ```
+      plan: pokeapi  rest  open_data/rest_apis/sql/non_rate_limited/02_pokeapi_create.sql
+      ```
+
+      Statement list from `run_sql.py --dry-run` (13 statements):
+
+      ```
+       1. CREATE LIGHTNING DATABASE POKEAPI_REST DESCRIBE BY "PokeAPI REST source"
+       2. CREATE SCHEMASTORE CONTAINER pokeapi
+       3. CREATE LIGHTNING REST TABLE pikachu_facts   (endpoint /pokemon/pikachu)
+       4-6. CREATE SCHEMASTORE VIEW pikachu_{abilities,types,stats}_table
+       7. CREATE LIGHTNING REST TABLE charizard_facts (endpoint /pokemon/charizard)
+       8-10. CREATE SCHEMASTORE VIEW charizard_{abilities,types,stats}_table
+      11-13. CREATE SCHEMASTORE VIEW all_pokemon_{types,stats,abilities}_table
+      ```
+
+      **Important:** pokeapi is already fully onboarded on this instance — `POKEAPI_REST` exists, both REST tables (`pikachu_facts`, `charizard_facts`) exist, and `SHOW VIEWS IN pokeapi` lists all 9 views. A plain re-run would stop at statement 1 with "already exists" (or skip all 13 under `--skip-exists`, changing nothing).
+
+      Awaiting your go-ahead. Recommended next step is read-only verification of the existing objects (`SELECT` counts on the views vs the PokeAPI responses). Do you want that, an idempotent `run pokeapi --skip-exists`, or a teardown/recreate (separate approval)?
+    duration: 7.020s
+    duration_ms: 7020
+

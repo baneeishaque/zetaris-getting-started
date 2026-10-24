@@ -1,0 +1,485 @@
+---
+user:
+  text: Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+  time: 10/23/2026, 7:23:45.218 PM UTC
+assistant:
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      I need to write the task file, then lint the plan, then present summary/approval gate. Let me check the plan for lint issues and fix. First write task file.
+
+      Task file should follow task template. Let me write concise but complete.
+    thinking_duration: 245ms
+    thinking_duration_ms: 245
+    tool_calls:
+      - tool: write
+        args:
+          content: |
+            # Eurostat data dossier and Angular CRUD
+
+            **Status:** `PLANNED`
+            **Session:** `ses_e95db8a7dffeuYlna87fyPRaWJ`
+            **Created:** `2026-10-23 19:20`
+            **Updated:** `2026-10-23 19:20`
+            **Plan:** [`..._eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md`](./2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md)
+
+            ## Objective
+
+            Create a verified Eurostat data-source dossier and a pure Angular 22 CRUD example that reads public
+            `une_rt_m` observations and manages saved series plus notes in `localStorage`.
+
+            ## Checklist
+
+            - [ ] `[2026-10-23 19:20]` Phase 1.1 — Confirm baseline and create scratch folder
+            - [ ] `[2026-10-23 19:20]` Phase 1.2 — Fetch and validate live Eurostat source
+            - [ ] `[2026-10-23 19:20]` Phase 1.3 — Generate coverage and statistics tables
+            - [ ] `[2026-10-23 19:20]` Phase 1.4 — Verify Zetaris REST table and views
+            - [ ] `[2026-10-23 19:20]` Phase 1.5 — Write eight dossier documents
+            - [ ] `[2026-10-23 19:20]` Phase 1.6 — Integrate root README and REST catalog
+            - [ ] `[2026-10-23 19:20]` Phase 1.7 — Create Markdown lint config
+            - [ ] `[2026-10-23 19:20]` Phase 1.8 — Lint dossier and integrations
+            - [ ] `[2026-10-23 19:20]` Phase 2.1 — Scaffold Angular app and install dependencies
+            - [ ] `[2026-10-23 19:20]` Phase 2.2 — Implement models, Eurostat service, and storage store
+            - [ ] `[2026-10-23 19:20]` Phase 2.3 — Implement routes, pages, chart, and styles
+            - [ ] `[2026-10-23 19:20]` Phase 2.4 — Write app README
+            - [ ] `[2026-10-23 19:20]` Phase 2.5 — Write and pass unit tests
+            - [ ] `[2026-10-23 19:20]` Phase 2.6 — Run production build
+            - [ ] `[2026-10-23 19:20]` Phase 2.7 — Run browser CRUD smoke test
+            - [ ] `[2026-10-23 19:20]` Phase 3.1 — Apply root README and catalog edits
+            - [ ] `[2026-10-23 19:20]` Phase 3.2 — Run final lint and link audit
+            - [ ] `[2026-10-23 19:20]` Phase 3.3 — Report results; no commit
+
+            ## Key Decisions
+
+            - Dossier: `docs/data-sources/eurostat/` (8 files).
+            - App: `examples/eurostat-crud/`, Angular 22.2.4, standalone, zoneless, strict, Vitest.
+            - Read path: public Eurostat REST API; no BFF and no Zetaris key.
+            - Persistence: `localStorage` key `eurostat-crud.saved-series.v1`.
+            - CRUD entity: saved series plus notes; observations are read-only.
+            - Allowlists: geo PL/DE/FR/ES/IT; sex T/M/F; fixed `freq=M`, `age=TOTAL`, `unit=PC_ACT`, `s_adj=SA`.
+            - No live Zetaris edits, no onboarding SQL edits, no website publishing, no commit or push.
+
+            ## Verification
+
+            - Source: 356 values, 1997-01 to 2026-08, 169 missing positions.
+            - Zetaris: `une_rt_m_pl_series_table` has 356 rows and 356 distinct periods.
+            - Markdown: `markdownlint-cli2` exits 0 on changed files.
+            - App: `npm test -- --watch=false` passes; `npm run build` exits 0.
+            - Browser: create, read, update, delete, and reload work at `http://localhost:4200/`.
+
+            ## Blockers
+
+            - Plan approval required before implementation.
+            - `ng test --watch=false` syntax must be confirmed after dependency installation.
+
+            ## Deferred / Follow-Up
+
+            - Website publication of the dossier (`website/build.mjs`).
+            - Refresh or repair of the three-column snapshot view.
+            - Additional countries or datasets beyond the fixed allowlist.
+            - Commit and push, only if the user explicitly requests them.
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_task.md
+        result: Wrote file successfully.
+    time: 10/23/2026, 7:23:45.346 PM UTC
+    response: ​
+    duration: 9.137s
+    duration_ms: 9137
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      Now lint the plan and task. Need create .markdownlint-cli2.jsonc? The plan says Phase 1.7 creates it after approval, but to lint now we can use a temporary config in scratch. However we must avoid writing scratch? Scratch is allowed per repo. We can invoke markdownlint-cli2 with config via `--config` pointing to temp. We shouldn't create the config file yet since implementation hasn't been approved. Use /tmp? User prefs say no temp for scratch; but /tmp/opencode is allowed for temporary work outside workspace. Yet repo-scratch-output-capture suggests scratch. We can create scratch/e95db8a7dffeuYlna87fyPRaWJ/lint-config.jsonc. Scratch is gitignored locally. Do that.
+
+      But first check line lengths. There are many long lines in the plan, including code blocks exempt, tables exempt, but headers/paragraphs may exceed 120. Use a script to report lines >120 outside fenced code blocks and tables. Simpler: run markdownlint-cli2 with config. Create config via write tool to scratch path. Then run.
+
+      Let's write config.
+    thinking_duration: 1.527s
+    thinking_duration_ms: 1527
+    tool_calls:
+      - tool: write
+        args:
+          content: |
+            {
+                "config": {
+                    "MD013": {
+                        "line_length": 120,
+                        "code_blocks": false,
+                        "tables": false
+                    },
+                    "MD007": {
+                        "indent": 4
+                    },
+                    "MD046": {
+                        "style": "fenced"
+                    },
+                    "MD033": {
+                        "allowed_elements": ["br"]
+                    }
+                }
+            }
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/markdownlint-cli2.jsonc
+        result: Wrote file successfully.
+    time: 10/23/2026, 7:23:54.504 PM UTC
+    response: ​
+    duration: 6.650s
+    duration_ms: 6650
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    tool_calls:
+      - tool: bash
+        args:
+          command: markdownlint-cli2 --config scratch/e95db8a7dffeuYlna87fyPRaWJ/markdownlint-cli2.jsonc "docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md" "docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_task.md"
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          markdownlint-cli2 v0.23.3 (markdownlint v0.41.1)
+          Finding: docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_task.md
+          Linting: 2 files
+          Summary: 100 issues in 1 file
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:35:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:38:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:40:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:41:1 error MD007/ul-indent Unordered list indentation [Expected: 8; Actual: 4]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:44:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:47:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:49:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:85:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:86:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:150:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:151:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:152:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:213:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:214:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:215:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:216:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:217:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:218:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:219:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:777:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:778:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:780:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:781:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:782:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:784:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:785:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:787:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:788:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:806:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:807:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:808:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:830:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:831:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:832:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:834:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:835:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:836:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:837:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:838:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:840:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:841:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:843:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:886:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:887:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:888:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:889:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:890:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:892:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:893:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:894:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:895:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:896:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:898:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:899:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:900:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:901:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:902:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:903:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:904:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:905:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:907:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:908:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:909:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:910:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:911:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:912:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:913:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:914:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:915:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:918:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:919:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:920:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:922:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:924:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:925:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:926:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:957:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:958:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:959:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:960:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:961:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:963:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:964:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:965:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:966:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:967:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:968:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:969:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:971:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:972:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:974:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:975:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:976:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:978:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:979:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:980:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:982:1 error MD007/ul-indent Unordered list indentation [Expected: 4; Actual: 2]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:1009:1 error MD029/ol-prefix Ordered list item prefix [Expected: 1; Actual: 2; Style: 1/1/1]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:1017:1 error MD029/ol-prefix Ordered list item prefix [Expected: 1; Actual: 3; Style: 1/2/3]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:1026:1 error MD029/ol-prefix Ordered list item prefix [Expected: 2; Actual: 4; Style: 1/2/3]
+    time: 10/23/2026, 7:24:01.171 PM UTC
+    response: ​
+    duration: 5.404s
+    duration_ms: 5404
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      The MD007 expected 4 means the config's indent 4 conflicts with standard 2-space nesting? MD007 indent option is the number of spaces for each level; expected 4 at level 1 means nested lists need 4 spaces. Our nested bullets use 2 spaces. We can either fix all nesting to 4 spaces or set MD007 indent 2. The plan's config specified MD007 indent 4 (from ai-suite). But our plan content uses 2-space nesting. Easier to set MD007 indent 2 in the lint config since this repo doesn't have a standard. But the plan says create config with indent 4. Hmm. We could set the test config to 2 just for lint, but then the planned config would fail. Better to change plan's configured indent to 2, matching content and CommonMark default. Wait, in ai-suite MD007 indent 4 is used, but that would require 4-space nested bullets. Quite a lot of reformatting. We can instead fix config to 2 and update plan text in two places. But user preferences? No requirement for 4. Standard markdownlint default is 2. Use 2. That's cleaner.
+
+      Also MD029 errors: ordered list numbering. The list in 6.5.3 uses 1..11 with proper numbers but markdownlint expects 1/1/1 because it's "one" style maybe due to ordered list start? Actually default MD029 style is "one_or_ordered"; since first item is `1.` and next is `2.`, it should accept ordered. Error at line 1009 expected 1 actual 2 style 1/1/1 suggests the list is being parsed as starting at 2? Let's inspect around lines 1000-1030. Could be because of a preceding line without blank, or nested list off. Let's view the plan around there.
+
+      Also 100 issues only in plan; task clean. Fix config MD007 2, then re-lint to see remaining MD029. Use edit on scratch config and plan config section.
+
+      Let's first update plan config from 4 to 2. Also mention. Use edit.
+
+      Then inspect lines 995-1035.
+    thinking_duration: 2.640s
+    thinking_duration_ms: 2640
+    tool_calls:
+      - tool: bash
+        args:
+          command: sed -n '995,1035p' docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |+
+          - Production build exits 0 and writes `dist/eurostat-crud/browser/`.
+          - No test makes a real network request.
+
+          ### 7.10 Browser smoke test
+
+          Exact steps:
+
+          1. Start the dev server:
+
+          ```bash
+          cd /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud
+          mise x node@26 -- npm start -- --host 127.0.0.1 --port 4200
+          ```
+
+          2. Confirm the server is live:
+
+          ```bash
+          curl -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:4200/
+          ```
+
+          Expected: `200`.
+
+          3. In a browser at `http://127.0.0.1:4200/`:
+             - Create a saved series for Poland, total sex, with a note.
+             - Confirm it appears in the list.
+             - Open it and confirm the chart, latest observation (2026-08, 3.4), and source timestamp
+               (2026-10-21T11:00:00+0200).
+             - Edit the name and note; confirm the list reflects the change.
+             - Delete it through the confirmation panel; confirm the list is empty.
+             - Reload the page and confirm the storage state matches the last action.
+
+          4. Stop the dev server with `Ctrl+C`.
+
+          Pass criteria: all six browser steps behave as described; no console errors.
+
+          ## 8. Phase 3 — Repository Integration and Final Verification
+
+          ### 8.1 Root README map
+
+          Add rows to the repository map in `/home/ext_root/lab-data/zetaris-getting-started/README.md`:
+
+    time: 10/23/2026, 7:24:06.599 PM UTC
+    response: ​
+    duration: 7.668s
+    duration_ms: 7668
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      MD029 because blank lines and code blocks between ordered items. Markdownlint default "one_or_ordered" should accept 1/2/3. But it says style 1/1/1 expected; maybe because each item separated by code block resets list? Actually MD029 sees first item start 1, then expects successive increments; it says expected 1 actual 2 style 1/1/1. That happens when list uses "one" style? Weird. Could avoid by making them unordered or restart each as `1.`? If style 1/1/1, use all `1.`. In Markdown, all 1. works and renders numbered. Let's change 2., 3., 4. to 1. in this section, or set MD029 style ordered in config. Simpler: set MD029 to `"style": "ordered"` in config. But does `ordered` mean strict sequential? Yes. Then current 1/2/3/4 should pass. Why did it think 1/1/1? Possibly because the first ordered list item "1." was interpreted as a new list after code block, and default style auto-detected "one" from... hmm.
+
+      Could set `"MD029": {"style": "ordered"}`. Then re-lint. Also MD007 2.
+
+      Update plan config and scratch.
+    thinking_duration: 1.721s
+    thinking_duration_ms: 1721
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/markdownlint-cli2.jsonc
+          oldString: |2-
+                    "MD007": {
+                        "indent": 4
+                    },
+                    "MD046": {
+                        "style": "fenced"
+                    },
+          newString: |2-
+                    "MD007": {
+                        "indent": 2
+                    },
+                    "MD029": {
+                        "style": "ordered"
+                    },
+                    "MD046": {
+                        "style": "fenced"
+                    },
+        result: Edit applied successfully.
+    time: 10/23/2026, 7:24:14.284 PM UTC
+    response: ​
+    duration: 6.725s
+    duration_ms: 6725
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md
+          newString: |2-
+                    "MD007": {
+                        "indent": 2
+                    },
+                    "MD029": {
+                        "style": "ordered"
+                    },
+                    "MD046": {
+                        "style": "fenced"
+                    },
+          oldString: |2-
+                    "MD007": {
+                        "indent": 4
+                    },
+                    "MD046": {
+                        "style": "fenced"
+                    },
+        result: Edit applied successfully.
+    time: 10/23/2026, 7:24:21.037 PM UTC
+    response: ​
+    duration: 4.958s
+    duration_ms: 4958
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: Also there are other references to MD007 indent 4 in the plan? Search.
+    thinking_duration: 127ms
+    thinking_duration_ms: 127
+    tool_calls:
+      - tool: bash
+        args:
+          command: grep -n "indent.*4\|MD007" docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          609:        "MD007": {
+    time: 10/23/2026, 7:24:26.019 PM UTC
+    response: ​
+    duration: 4.741s
+    duration_ms: 4741
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    tool_calls:
+      - tool: bash
+        args:
+          command: markdownlint-cli2 --config scratch/e95db8a7dffeuYlna87fyPRaWJ/markdownlint-cli2.jsonc "docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md" "docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_task.md"
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          markdownlint-cli2 v0.23.3 (markdownlint v0.41.1)
+          Finding: docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_task.md
+          Linting: 2 files
+          Summary: 3 issues in 1 file
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:1012:1 error MD029/ol-prefix Ordered list item prefix [Expected: 1; Actual: 2; Style: 1/2/3]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:1020:1 error MD029/ol-prefix Ordered list item prefix [Expected: 1; Actual: 3; Style: 1/2/3]
+          docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md:1029:1 error MD029/ol-prefix Ordered list item prefix [Expected: 2; Actual: 4; Style: 1/2/3]
+    time: 10/23/2026, 7:24:30.780 PM UTC
+    duration: 5.338s
+    duration_ms: 5338
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      Interesting: Markdownlint treats each after code block as a new list, expecting restart at 1, but spec style 1/2/3? It expects 1 for item 2 because a new list begins. This is because code blocks interrupt list continuity without indentation. The list items with code blocks are separated by blank line and code at column 0, which ends the list. So each item starts a new ordered list. Use all `1.` to make each list valid under 1/1/1? But config says ordered, so each new list must start at 1. If we change all to 1., style ordered may complain? "ordered" requires sequential; but each is a single-item list starting at 1, so fine. Let's change 2., 3., 4. to 1. in that section. Also check other similar lists with code blocks between items, e.g. 6.5.3 list? That list likely has no code blocks. The only MD029 issues are here.
+
+      Change lines 1012, 1020, 1029. Use edit.
+    thinking_duration: 1.415s
+    thinking_duration_ms: 1415
+    tool_calls:
+      - tool: bash
+        args:
+          command: sed -n '1004,1032p' docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |+
+
+          1. Start the dev server:
+
+          ```bash
+          cd /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud
+          mise x node@26 -- npm start -- --host 127.0.0.1 --port 4200
+          ```
+
+          2. Confirm the server is live:
+
+          ```bash
+          curl -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:4200/
+          ```
+
+          Expected: `200`.
+
+          3. In a browser at `http://127.0.0.1:4200/`:
+             - Create a saved series for Poland, total sex, with a note.
+             - Confirm it appears in the list.
+             - Open it and confirm the chart, latest observation (2026-08, 3.4), and source timestamp
+               (2026-10-21T11:00:00+0200).
+             - Edit the name and note; confirm the list reflects the change.
+             - Delete it through the confirmation panel; confirm the list is empty.
+             - Reload the page and confirm the storage state matches the last action.
+
+          4. Stop the dev server with `Ctrl+C`.
+
+          Pass criteria: all six browser steps behave as described; no console errors.
+
+    time: 10/23/2026, 7:24:36.150 PM UTC
+    response: ​
+    duration: 6.538s
+    duration_ms: 6538
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: Change 2., 3., 4. to 1. Each is a separate list. Do it.
+    thinking_duration: 132ms
+    thinking_duration_ms: 132
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md
+          newString: '1. Confirm the server is live:'
+          oldString: '2. Confirm the server is live:'
+        result: Edit applied successfully.
+    time: 10/23/2026, 7:24:42.708 PM UTC
+    response: ​
+

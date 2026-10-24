@@ -1,0 +1,14 @@
+user:
+  text: setup local git config by refering ai-suite repo
+assistant:
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: |-
+      Local Git identity configured in `/home/ext_root/lab-data/zetaris-getting-started` from ai-suite:
+
+      `Banee Ishaque K <Baneeishaque@gmail.com>`
+
+      Verified via `git var GIT_AUTHOR_IDENT`. No commits executed. Say `start` to run the approved plan.

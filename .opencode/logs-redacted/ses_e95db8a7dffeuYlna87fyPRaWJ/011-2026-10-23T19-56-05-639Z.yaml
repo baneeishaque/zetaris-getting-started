@@ -1,0 +1,2823 @@
+---
+user:
+  text: proceed with /home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md
+  time: 10/23/2026, 7:51:58.923 PM UTC
+assistant:
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      We need proceed with the plan. Need read plan fully, especially Phase 2 app. We have prior summary details, but must read current plan and applicable AGENTS/docs. Need use skill? The task is implementing an Angular app. We need follow plan. Also need read AGENTS.md and relevant child docs? The repo root AGENTS.md exists; need read. We already have system AGENTS from ai-suite, but target repo is `/home/ext_root/lab-data/zetaris-getting-started`, which likely has its own AGENTS.md. Need read it and relevant docs. Also need use plan file. Need inspect current repo state, app absent. Need execute Phase 2: scaffold Angular 22.2.4, implement models/services/components/routes, tests, build, browser smoke test. This is a large task. Need use todo list. Need careful with commands, no heredoc nesting, output size. Need use mise Node 26. Need maybe network install. Need check plan exact commands and files.
+
+      First, read plan sections 7, 8, 9, and target file map. Also read AGENTS.md, package docs? Let's read plan fully maybe 1,150 lines; use view ranges. We need exact app design. Read §7-9.
+    thinking_duration: 1.487s
+    thinking_duration_ms: 1487
+    tool_calls:
+      - tool: bash
+        args:
+          command: sed -n '1,120p' AGENTS.md
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          # Agent instructions
+
+          This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`. You are acting as a data engineer against a Zetaris instance.
+
+          ## Connect first
+
+          The user's first prompt names a protocol (JDBC or REST) and a goal. Which instance you talk to is set in `.env.local` (`ZETARIS_REST_URL`, `ZETARIS_JDBC_URL` and the rest; local is the default), not in the prompt. Before running anything else, read the connection guide for your harness in `docs/connections/` (`claude-code-connection.md`, `codex-connection.md`, `cursor-connection.md`) for the settings table and troubleshooting, run the preflight below, and confirm the connection with `SELECT 1` and `SHOW LIGHTNING DATABASES`. Over REST, also call `GET /datasource/datasources`. Then work on the user's goal.
+
+          - **JDBC:** use `ZETARIS_JDBC_JAR` if set; otherwise ask the user for the full path to the driver JAR. Do not assume or search for it.
+          - **REST:** the key is `ZETARIS_API_KEY` in `.env.local`, created by the user in the Zetaris GUI. Never create, request, print, log or put it in a URL.
+          - **OpenAPI spec:** fetch it fresh from `/redoc/docs.yaml` using Basic auth (`ZETARIS_USERNAME` and `ZETARIS_PASSWORD` from `.env.local`), not the bearer key. See section 6.4 of the connection guide.
+          - **Finding `.env.local`:** it is the only env file; do not use `.env`. It is gitignored, so a git worktree has none. Every script in `scripts/` (Python and Deno) already looks in the repo root and then the top-level checkout. For your own shell commands, use the snippet in the preflight section.
+
+          ## Preflight check
+
+          Run this before any Zetaris work in a new session, and report what is missing. Do not install anything, create credentials, or start work until the user has seen the result. Ask before installing.
+
+          Run `python3 scripts/preflight.py` (add `--jdbc --jar <path>` for JDBC). It is read-only and covers the checklist below; the list is what it checks and why. Run SQL files with `python3 scripts/run_sql.py FILE` (`--dry-run` first, `--skip-exists` to re-run, `--channel jdbc` for JDBC); see `scripts/HOWTO.md`.
+
+          1. **Credentials.** Find `.env.local` (see "Connect first"). Check that these names are set, without printing values: `ZETARIS_API_KEY` for REST, and `ZETARIS_USERNAME` / `ZETARIS_PASSWORD` for the OpenAPI spec and for JDBC. Also note `ZETARIS_JDBC_JAR` (driver path, JDBC only) and `ZETARIS_USER_AGENT` (needed by any create script containing the `YOUR_APP_NAME YOUR_CONTACT_EMAIL` placeholder).
+             ```bash
+             ENV="$(dirname "$(cd "$(git rev-parse --git-common-dir)" && pwd)")/.env.local"
+             set -a; . "$ENV"; set +a
+             for v in ZETARIS_API_KEY ZETARIS_USERNAME ZETARIS_PASSWORD; do [ -n "$(printenv "$v")" ] && echo "$v set" || echo "$v MISSING"; done
+             ```
+          2. **REST.** `GET /datasource/datasources` returns 200, and `SELECT 1` through `/sql-editor/sqls/run` returns `1`. A 401 means a bad key; a 400 means a bad `X-Org-ID` or a non-UUID `X-Request-ID`. If localhost fails with `Operation not permitted` before an HTTP response, treat it as a possible command-environment network restriction, not an API or credential failure. Request approved/elevated execution for the same read-only preflight and retry when available. If access is unavailable or denied, report the blocker and stop; do not change the endpoint or credentials to work around it.
+          3. **JDBC** (only if the user wants JDBC):
+             - **Endpoint:** `nc -z localhost 10000` succeeds.
+             - **Java:** JDK 11 or later. On macOS `java` can be a stub that reports "Unable to locate a Java Runtime" even when a Homebrew JDK exists. Check `/usr/libexec/java_home`, then `/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home`, and export `JAVA_HOME`. If none exists, offer `brew install openjdk@17`. The `temurin` cask needs `sudo`, which the agent cannot enter.
+             - **Python:** a venv (`.venv` is gitignored) with `jaydebeapi` importable.
+             - **Driver JAR:** ask the user for the full path and confirm the file exists. Never assume a location.
+             - **Query:** connect with `jdbc:zetaris:lightning@localhost:10000` and class `com.zetaris.lightning.jdbc.LightningDriver`, then run `SELECT 1`.
+          4. **Instance state.** `SHOW DATASOURCES` does not list Lightning-registered sources (REST, file). Also run `SHOW LIGHTNING DATABASES`. For USL, run `SHOW NAMESPACES OR TABLES IN lightning.metastore`; an empty result is normal on a clean instance, but a failing `CREATE NAMESPACE` on a missing parent means `lightning.metastore` is not initialized (see the USL note under "Writing SQL").
+          5. **Report** a short pass/fail list, and stop on any failure.
+
+          ## Writing SQL
+
+          - Zetaris Lightning SQL only. Not Spark SQL or Hive SQL, and never start a local Spark session.
+          - One statement per call, no trailing semicolon, qualified names (`<source>.<table>`). A `_create.sql` script holds many statements; `scripts/run_sql.py` splits and sends them for you.
+          - **USL:** `lightning.metastore` must exist before `CREATE NAMESPACE IF NOT EXISTS lightning.metastore.<name>` works; check with `SHOW NAMESPACES OR TABLES IN lightning.metastore` (on an uninitialized instance the statement fails with "parent namespace : metastore is not existing"). A multi-table `COMPILE USL` must be sent as one whole statement, so do not split it on `;`. It works over JDBC and REST that way. Use `SHOW DQ ALL INVALID TABLE <namespace.usl.table>` (the `TABLE` clause is required).
+          - Read `docs/guides/zetaris-lightning-sql-commands.md` for syntax and `docs/guides/zetaris-lightning-sql-companion.md` for confirmed gotchas and platform limitations before writing new SQL.
+
+          ## Running scripts
+
+          Use `scripts/onboard.py` to onboard sources and USL models with their dependencies, and `scripts/run_sql.py` to run any single `_create.sql` / `_select.sql` file or ad hoc SQL. Do not hand-roll a splitter. See `scripts/HOWTO.md` for options.
+
+          - **Dry-run first** (`--dry-run`) and show the user the statement list. Create scripts change the instance, so get a clear go-ahead before running one for real.
+          - **User-agent.** `ZETARIS_USER_AGENT` must be `app_name user@domain.tld`: an app name and a contact e-mail. `company_dns` V4 gives anything vaguer (a bare name, a library default, none) a very strict rate limit, and SEC EDGAR needs a real contact. Never send the `YOUR_APP_NAME YOUR_CONTACT_EMAIL` placeholder, and do not invent or reuse a contact email. If `ZETARIS_USER_AGENT` is not set, or is not in that form, ask the user which value to send, then pass it for the run or have them add it to `.env.local`. The runner refuses the placeholder and any value without a contact e-mail.
+          - **Re-runs.** `--skip-exists` skips "already exists" errors, so a script can be run again on an instance that already has some of its objects. Without it the run stops at the first duplicate.
+          - **JDBC.** `--channel jdbc` needs the driver JAR from `--jar` or `ZETARIS_JDBC_JAR`. Ask the user for the path; never assume one. The runner finds a Homebrew JDK and hops into `.venv` itself.
+          - **Order and dependencies.** The approach is: onboard the data sources first, then create and activate a USL over them. Every source and USL model, with the sources it `requires`, is declared once in `open_data/manifest.json`. Use `python3 scripts/onboard.py --list` to see them, `plan <id>...` to see the resolved order, and `run <id>... --dry-run` then `run <id>...` to onboard them with their dependencies first. Never work out the order by hand or from HOWTO prose. A `known_to_fail` source needs `--allow-known-to-fail`. When you add a create script, add it to the manifest (`onboard.py --check` validates it).
+          - **Teardown and restarts.** When the user asks to clean up or start over, confirm the scope first (instance objects, local setup such as `.venv`, any published viewer), then use `python3 scripts/onboard.py teardown <id>...`. Do not hand-write DROP statements. Show the plan (it also pulls in sources that `require` the target), wait for a go-ahead, then re-run with `--yes`. Do not pipe a script that changes the instance through a filter such as `grep` on its first run; a filter error hides the output while the statements still run. After it finishes, report what only the Zetaris Data Explorer can remove (REST and file tables, Lightning databases, containers) and say that a re-run needs `--skip-exists` if they are left. `--drop-namespace` also removes every USL in the namespace, so only use it when asked.
+          - **Verify after creating**, as in `open_data/rest_apis/HOWTO.md` section 2: compare Zetaris row counts with an independent check against the source API.
+
+          ## Safety
+
+          - Start read-only (`SHOW`, `DESCRIBE`, `SELECT`). Ask before anything that creates, drops, grants or writes.
+          - Keep passwords and keys out of prompts, logs, source files and commits.
+          - Do not call port 8889 on a local instance.
+          - Least privilege: an agent that only reads should run as a non-administrator user, with creating, updating and deleting left to administrators. If a statement is refused for lack of privilege, report it and ask for the right access; do not switch to an administrator login unless the user tells you to. See `docs/guides/permissions.md`.
+          - Sources under `known_to_fail/` are documented failures, and `rate_limited/` sources should be run deliberately, not repeatedly.
+
+          ## Adding or changing sources
+
+          Follow `CONTRIBUTING.md`: the `_create.sql` / `_select.sql` pattern, the `known_to_fail/` write-up format, and license verification. Source HOWTOs live in `open_data/*/HOWTO.md`.
+      - tool: bash
+        args:
+          command: sed -n '647,1090p' docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |+
+          ## 7. Phase 2 — Angular CRUD Application
+
+          ### 7.1 Architecture
+
+          ```text
+          Browser (Angular 22)
+            ├── EurostatService
+            │     └── GET https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_m
+            │           (public, CORS, no key)
+            ├── SeriesStoreService
+            │     └── localStorage key: eurostat-crud.saved-series.v1
+            └── Routed pages
+                  ├── /series           list saved records
+                  ├── /series/new       create
+                  ├── /series/:id       read + chart + table + delete
+                  └── /series/:id/edit  update
+          ```
+
+          No server. No Zetaris. No secrets. The app is a static Angular build.
+
+          ### 7.2 Scaffold
+
+          Exact commands:
+
+          ```bash
+          cd /home/ext_root/lab-data/zetaris-getting-started
+          mise x node@26 -- npx --yes @angular/cli@22.2.4 new eurostat-crud \
+            --directory examples/eurostat-crud \
+            --defaults \
+            --skip-git \
+            --style=css \
+            --routing \
+            --ssr=false \
+            --zoneless \
+            --strict \
+            --test-runner=vitest \
+            --package-manager=npm \
+            --prefix=app
+          cd /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud
+          mise x node@26 -- npm install
+          ```
+
+          Pass criteria:
+
+          - `examples/eurostat-crud/package.json` exists and contains Angular `^22.2.0`, CLI `^22.2.4`, TypeScript `~6.0.2`,
+            and Vitest `^5.0.0`.
+          - `npm install` exits 0.
+          - `ng version` reports Angular CLI 22.2.4 and Node 26.x.
+
+          ### 7.3 Data model
+
+          `src/app/core/series/saved-series.model.ts` defines exactly:
+
+          ```ts
+          export const GEO_CODES = ['PL', 'DE', 'FR', 'ES', 'IT'] as const;
+          export type GeoCode = (typeof GEO_CODES)[number];
+
+          export const SEX_CODES = ['T', 'M', 'F'] as const;
+          export type SexCode = (typeof SEX_CODES)[number];
+
+          export interface SeriesFilters {
+            geo: GeoCode;
+            sex: SexCode;
+          }
+
+          export interface SavedSeries {
+            id: string;
+            name: string;
+            note: string;
+            filters: SeriesFilters;
+            createdAt: string;
+            updatedAt: string;
+          }
+
+          export interface SavedSeriesInput {
+            name: string;
+            note: string;
+            filters: SeriesFilters;
+          }
+
+          export interface Observation {
+            period: string;
+            rate: number;
+          }
+
+          export interface SeriesData {
+            datasetLabel: string;
+            source: string;
+            updated: string;
+            observations: Observation[];
+          }
+          ```
+
+          `src/app/core/eurostat/eurostat.models.ts` defines the JSON-stat response types:
+
+          ```ts
+          export interface JsonStatCategory {
+            index: Record<string, number>;
+            label: Record<string, string>;
+          }
+
+          export interface JsonStatDimension {
+            category: JsonStatCategory;
+            label: string;
+          }
+
+          export interface JsonStatDataset {
+            version: string;
+            class: 'dataset';
+            label: string;
+            source: string;
+            updated: string;
+            value: Record<string, number>;
+            status?: Record<string, string>;
+            id: string[];
+            size: number[];
+            dimension: Record<string, JsonStatDimension>;
+            extension?: {
+              status?: { label?: Record<string, string> };
+              'positions-with-no-data'?: { time?: number[] };
+            };
+          }
+          ```
+
+          ### 7.4 Eurostat service contract
+
+          `src/app/core/eurostat/eurostat.service.ts`:
+
+          - Injectable, `providedIn: 'root'`.
+          - Constructor injects `HttpClient`.
+          - `getSeries(filters: SeriesFilters): Promise<SeriesData>`.
+          - Cache: `Map<string, { data: SeriesData; fetchedAt: number }>`; TTL 300,000 ms; key `${geo}:${sex}`.
+          - URL construction:
+            - Base: `https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_m`.
+            - Query: `format=JSON`, `lang=EN`, `freq=M`, `s_adj=SA`, `age=TOTAL`, `unit=PC_ACT`, `sex=<sex>`, `geo=<geo>`.
+          - Validation:
+            - `response.class === 'dataset'`.
+            - `response.id` includes `time`; `response.size.length === response.id.length`.
+            - `response.dimension.time.category.index` and `response.value` are objects.
+          - Decode:
+            - Build `indexToPeriod` by inverting `dimension.time.category.index`.
+            - Compute the JSON-stat flat index for each time position with all other dimensions at index 0:
+              `flat = Σ index[d] * stride[d]`, where `stride` is the product of later dimension sizes.
+            - Include only positions where `value[String(flat)]` is a finite number.
+            - Sort ascending by period.
+          - Return `{ datasetLabel: response.label, source: response.source, updated: response.updated, observations }`.
+          - Throw `EurostatDataError` for malformed shapes, empty observations, network errors, and HTTP errors. The error
+            message includes the country and sex codes.
+          - Do not log the response or any credential.
+
+          Exact URL template:
+
+          ```text
+          https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_m?format=JSON&lang=EN&freq=M&s_adj=SA&age=TOTAL&unit=PC_ACT&sex={sex}&geo={geo}
+          ```
+
+          ### 7.5 Local storage contract
+
+          `src/app/core/series/series-store.service.ts`:
+
+          - Injectable, `providedIn: 'root'`.
+          - Signals:
+            - `private readonly _series = signal<SavedSeries[]>(this.load());`
+            - `readonly series = this._series.asReadonly();`
+            - `readonly loadWarning = signal<string | null>(null);`
+          - Storage key: `eurostat-crud.saved-series.v1`.
+          - Corrupt backup key: `eurostat-crud.saved-series.v1.corrupt`.
+          - Envelope:
+
+          ```json
+          {
+            "version": 1,
+            "items": [
+              {
+                "id": "8f14e45f-ea8b-4c1d-9f2a-3b5c7d9e1f20",
+                "name": "Poland total",
+                "note": "Baseline series.",
+                "filters": { "geo": "PL", "sex": "T" },
+                "createdAt": "2026-10-23T19:20:00.000Z",
+                "updatedAt": "2026-10-23T19:20:00.000Z"
+              }
+            ]
+          }
+          ```
+
+          - Load:
+            - Parse JSON; if parsing fails, copy the raw value to the corrupt key, set `loadWarning`, and start empty.
+            - Validate `version === 1` and `Array.isArray(items)`.
+            - Drop items whose `id`, `name`, filters, or timestamps are invalid; set `loadWarning` if any were dropped.
+          - Create:
+            - Trim `name`; require 1–80 characters.
+            - Trim `note`; allow 0–2,000 characters.
+            - Require `geo` in `GEO_CODES` and `sex` in `SEX_CODES`.
+            - Set `id = crypto.randomUUID()`, `createdAt = updatedAt = new Date().toISOString()`.
+            - Persist, then return the record.
+          - Update:
+            - Find by id; return `undefined` if absent.
+            - Apply the same validation; set `updatedAt`; persist.
+          - Delete:
+            - Remove by id; persist; return whether a record was removed.
+          - List order: `updatedAt` descending, then `name` ascending.
+          - Cross-tab: listen for the `storage` event for the key and reload the signal.
+          - Never store observations or fetched data in `localStorage`.
+
+          ### 7.6 Routes and components
+
+          `src/app/app.routes.ts`:
+
+          ```ts
+          import { Routes } from '@angular/router';
+
+          export const routes: Routes = [
+            { path: '', pathMatch: 'full', redirectTo: 'series' },
+            {
+              path: 'series',
+              loadComponent: () =>
+                import('./features/series-list/series-list').then((m) => m.SeriesList),
+            },
+            {
+              path: 'series/new',
+              loadComponent: () =>
+                import('./features/series-form/series-form').then((m) => m.SeriesForm),
+              data: { mode: 'create' },
+            },
+            {
+              path: 'series/:id',
+              loadComponent: () =>
+                import('./features/series-detail/series-detail').then((m) => m.SeriesDetail),
+            },
+            {
+              path: 'series/:id/edit',
+              loadComponent: () =>
+                import('./features/series-form/series-form').then((m) => m.SeriesForm),
+              data: { mode: 'edit' },
+            },
+            { path: '**', redirectTo: 'series' },
+          ];
+          ```
+
+          Component requirements:
+
+          - `App` (`app.ts`, `app.html`, `app.css`):
+            - Standalone; imports `RouterOutlet`, `RouterLink`, and `RouterLinkActive`.
+            - Header with brand link to `/series` and a "New saved series" link to `/series/new`.
+            - Main `router-outlet`.
+            - Footer with attribution and a link to the Eurostat copyright notice.
+            - `ChangeDetectionStrategy.OnPush`.
+          - `SeriesList`:
+            - Reads `store.series()`.
+            - Empty state with a "Create your first saved series" link.
+            - Table or card list: name, country label, sex label, latest saved update timestamp, note preview.
+            - Link to `/series/:id`.
+            - No delete action on this page.
+          - `SeriesForm`:
+            - Standalone; imports `ReactiveFormsModule`, `RouterLink`.
+            - Reactive form with `name` (required, maxLength 80), `geo` (select), `sex` (select), `note` (maxLength 2000).
+            - `mode` from route data: `create` or `edit`.
+            - Edit mode: read `:id`, load record; if absent, show a not-found panel with a link back.
+            - Submit label: "Create saved series" or "Save changes".
+            - Cancel link to `/series` or `/series/:id`.
+            - On success, navigate to `/series/:id`.
+            - Show field-level validation messages and a form-level error for storage failures.
+          - `SeriesDetail`:
+            - Standalone; imports `RateChart`, `RouterLink`, `DatePipe` or a local formatter.
+            - Resolve `:id`; if absent, show not-found.
+            - Display name, country/sex labels, created/updated timestamps, note.
+            - Fetch observations on load; show loading, error with retry, and empty states.
+            - Render `RateChart` with the observations.
+            - Render a table of the latest 24 observations, newest first; "Show all" toggles the full set.
+            - Show the source `updated` timestamp and the attribution line.
+            - "Edit" link to `/series/:id/edit`.
+            - "Delete" button toggles an inline confirmation panel; "Delete permanently" calls `store.delete(id)` and
+              navigates to `/series`; "Cancel" closes the panel.
+          - `RateChart`:
+            - Standalone; `observations = input.required<Observation[]>()`.
+            - Inline SVG `viewBox="0 0 600 180"`; `polyline`; min/max labels; first/last period labels.
+            - Use `role="img"` and an `aria-label` that includes the country/sex label passed as an input or a generic
+              "Unemployment rate over time".
+            - No chart library.
+          - Global:
+            - `app.config.ts` adds `provideHttpClient(withFetch())`.
+            - `app.html` and `index.html` set the title "Eurostat unemployment CRUD".
+            - `styles.css` defines a system font stack, readable contrast, focus-visible outlines, and responsive layout.
+
+          ### 7.7 UI copy and attribution
+
+          - Every page that displays data includes: "Source: Eurostat, une_rt_m (unemployment rate, monthly)."
+          - The detail page includes: "Data may be revised by Eurostat. Saved series and notes are stored only in this
+            browser."
+          - The empty state includes: "Observations are read-only. You can save a named view and notes locally."
+          - Country labels: Poland, Germany, France, Spain, Italy.
+          - Sex labels: Total, Male, Female.
+
+          ### 7.8 App README
+
+          Replace the generated `examples/eurostat-crud/README.md` with:
+
+          1. `# Eurostat unemployment CRUD example`
+          2. What it demonstrates: read-only public data plus local CRUD.
+          3. Why there is no backend: CORS, no key, browser-only persistence.
+          4. Data scope table.
+          5. Run commands.
+          6. Build and test commands.
+          7. Storage keys and reset instructions.
+          8. Limitations: one browser, no sync, no auth, source revisions, five-country allowlist.
+          9. Attribution and license link.
+          10. Link back to `docs/data-sources/eurostat/README.md`.
+
+          ### 7.9 Tests
+
+          Use Vitest through Angular's `ng test` builder. Required specs:
+
+          - `eurostat.service.spec.ts`:
+            - Parses a minimal fixture into sorted observations.
+            - Omits missing values.
+            - Rejects a malformed response.
+            - Rejects an empty observation set.
+            - Uses the cache on a second call.
+          - `series-store.service.spec.ts`:
+            - Starts empty.
+            - Creates, reads, updates, and deletes a record.
+            - Persists across a new service instance.
+            - Sorts by `updatedAt` descending.
+            - Drops invalid stored items and sets `loadWarning`.
+            - Backs up corrupt JSON and starts empty.
+            - Rejects blank names and invalid filters.
+          - `series-list.spec.ts`:
+            - Empty state renders.
+            - Saved records render with country/sex labels.
+          - `series-form.spec.ts`:
+            - Create mode requires a name.
+            - Create mode stores a record and navigates.
+            - Edit mode loads and updates a record.
+          - `series-detail.spec.ts`:
+            - Renders name, note, chart, and table with a mocked `EurostatService`.
+            - Shows an error state when the service rejects.
+            - Delete confirmation calls the store and navigates.
+          - `app.spec.ts`:
+            - App shell renders the brand and navigation.
+
+          Test commands:
+
+          ```bash
+          cd /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud
+          mise x node@26 -- npm test -- --watch=false
+          mise x node@26 -- npm run build
+          ```
+
+          Pass criteria:
+
+          - All specs pass.
+          - Production build exits 0 and writes `dist/eurostat-crud/browser/`.
+          - No test makes a real network request.
+
+          ### 7.10 Browser smoke test
+
+          Exact steps:
+
+          1. Start the dev server:
+
+          ```bash
+          cd /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud
+          mise x node@26 -- npm start -- --host 127.0.0.1 --port 4200
+          ```
+
+          1. Confirm the server is live:
+
+          ```bash
+          curl -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:4200/
+          ```
+
+          Expected: `200`.
+
+          1. In a browser at `http://127.0.0.1:4200/`:
+             - Create a saved series for Poland, total sex, with a note.
+             - Confirm it appears in the list.
+             - Open it and confirm the chart, latest observation (2026-08, 3.4), and source timestamp
+               (2026-10-21T11:00:00+0200).
+             - Edit the name and note; confirm the list reflects the change.
+             - Delete it through the confirmation panel; confirm the list is empty.
+             - Reload the page and confirm the storage state matches the last action.
+
+          2. Stop the dev server with `Ctrl+C`.
+
+          Pass criteria: all six browser steps behave as described; no console errors.
+
+          ## 8. Phase 3 — Repository Integration and Final Verification
+
+          ### 8.1 Root README map
+
+          Add rows to the repository map in `/home/ext_root/lab-data/zetaris-getting-started/README.md`:
+
+          ```text
+          docs/data-sources/   Verified data-source dossiers, starting with Eurostat
+          examples/eurostat-crud/  Angular CRUD example over the public Eurostat API, with local saved series
+          ```
+
+          Add a documentation-table row:
+
+          ```markdown
+          | [Eurostat data source](docs/data-sources/eurostat/README.md) | Dataset profile, API reference, Zetaris integration, quality, runbook, and license |
+          ```
+
+          ### 8.2 REST catalog correction
+
+          In `open_data/rest_apis/rest-api-sources.md` section 7, the license line must become:
+
+          ```text
+          - **Licence:** Reuse is authorised with source acknowledgement under the European Commission reuse policy
+            (Decision 2011/833/EU); editorial content is CC BY 4.0. See the
+            [Eurostat license and attribution dossier](../../docs/data-sources/eurostat/license-and-attribution.md).
+          ```
+
+          Add one line:
+
+          ```text
+          - **Full dossier:** [`../../docs/data-sources/eurostat/README.md`](../../docs/data-sources/eurostat/README.md)
+          ```
+
+          Do not change the `Verified` status or the script path.
+
+          ### 8.3 Final lint and link audit
+
+          Exact commands:
+
+          ```bash
+          cd /home/ext_root/lab-data/zetaris-getting-started
+          markdownlint-cli2 "docs/data-sources/eurostat/*.md" \
+            "README.md" \
+            "open_data/rest_apis/rest-api-sources.md" \
+            "examples/eurostat-crud/README.md"
+          ```
+
+          Pass criteria:
+
+          - Exit code 0.
+          - No relative link in the changed Markdown points to a missing file.
+          - No dossier or app file contains a session ID or `scratch/` path.
+
+          ### 8.4 No commit
+
+          Do not run `git add`, `git commit`, or `git push`. The final report lists changed files and verification results. A
+          commit is a separate user-authorized action.
+
+    time: 10/23/2026, 7:51:58.978 PM UTC
+    response: "\n\n"
+    duration: 3.383s
+    duration_ms: 3383
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: We have plan. Need implement app. Need use todo list. First inspect current repo app absent, Node/mise, Angular CLI. Also read plan §5.2/5.3 file map exact. Need read 251-331.
+    thinking_duration: 241ms
+    thinking_duration_ms: 241
+    tool_calls:
+      - tool: bash
+        args:
+          command: sed -n '251,331p' docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          ## 5. Target File Map
+
+          All paths are absolute. `NEW` means create; `MOD` means modify in place.
+
+          ### 5.1 Planning artifacts (local-only, never committed)
+
+          ```text
+          /home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_task.md  NEW
+          ```
+
+          ### 5.2 Eurostat dossier (committed content)
+
+          ```text
+          /home/ext_root/lab-data/zetaris-getting-started/docs/data-sources/eurostat/README.md  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/docs/data-sources/eurostat/dataset-profile.md  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/docs/data-sources/eurostat/data-dictionary.md  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/docs/data-sources/eurostat/api-reference.md  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/docs/data-sources/eurostat/zetaris-integration.md  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/docs/data-sources/eurostat/data-quality.md  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/docs/data-sources/eurostat/operations-runbook.md  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/docs/data-sources/eurostat/license-and-attribution.md  NEW
+          ```
+
+          ### 5.3 Angular application (committed content)
+
+          ```text
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/README.md  NEW (replaces generated README)
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/angular.json  NEW (generated, then reviewed)
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/package.json  NEW (generated)
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/package-lock.json  NEW (generated)
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/tsconfig.json  NEW (generated)
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/tsconfig.app.json  NEW (generated)
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/tsconfig.spec.json  NEW (generated)
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/.editorconfig  NEW (generated)
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/.gitignore  NEW (generated)
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/.prettierrc  NEW (generated)
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/.vscode/extensions.json  NEW (generated)
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/.vscode/launch.json  NEW (generated)
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/.vscode/tasks.json  NEW (generated)
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/public/favicon.ico  NEW (generated)
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/index.html  NEW (generated, then modified)
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/main.ts  NEW (generated)
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/styles.css  NEW (generated, then modified)
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/app.ts  NEW (generated, then modified)
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/app.html  NEW (generated, then modified)
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/app.css  NEW (generated, then modified)
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/app.config.ts  NEW (generated, then modified)
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/app.routes.ts  NEW (generated, then modified)
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/app.spec.ts  NEW (generated, then modified)
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/core/eurostat/eurostat.models.ts  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/core/eurostat/eurostat.service.ts  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/core/eurostat/eurostat.service.spec.ts  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/core/eurostat/eurostat.fixture.ts  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/core/series/saved-series.model.ts  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/core/series/series-store.service.ts  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/core/series/series-store.service.spec.ts  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/features/series-list/series-list.ts  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/features/series-list/series-list.html  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/features/series-list/series-list.css  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/features/series-list/series-list.spec.ts  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/features/series-form/series-form.ts  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/features/series-form/series-form.html  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/features/series-form/series-form.css  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/features/series-form/series-form.spec.ts  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/features/series-detail/series-detail.ts  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/features/series-detail/series-detail.html  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/features/series-detail/series-detail.css  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/features/series-detail/series-detail.spec.ts  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/shared/rate-chart/rate-chart.ts  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/shared/rate-chart/rate-chart.html  NEW
+          /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/shared/rate-chart/rate-chart.css  NEW
+          ```
+
+          ### 5.4 Repository integration (committed content)
+
+          ```text
+          /home/ext_root/lab-data/zetaris-getting-started/README.md  MOD
+          /home/ext_root/lab-data/zetaris-getting-started/open_data/rest_apis/rest-api-sources.md  MOD
+          /home/ext_root/lab-data/zetaris-getting-started/.markdownlint-cli2.jsonc  NEW
+          ```
+    time: 10/23/2026, 7:52:02.390 PM UTC
+    response: "\n\n"
+    duration: 2.018s
+    duration_ms: 2018
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Need create todo.
+    thinking_duration: 417ms
+    thinking_duration_ms: 417
+    tool_calls:
+      - tool: todowrite
+        args:
+          todos:
+            - content: Scaffold Angular 22.2.4 app and install dependencies
+              status: in_progress
+              priority: high
+            - content: Implement models, Eurostat service, and localStorage store
+              status: pending
+              priority: high
+            - content: Implement routes, pages, chart, and styles
+              status: pending
+              priority: high
+            - content: Write app README
+              status: pending
+              priority: medium
+            - content: Write and pass unit tests
+              status: pending
+              priority: high
+            - content: Run production build
+              status: pending
+              priority: high
+            - content: Run browser CRUD smoke test
+              status: pending
+              priority: high
+            - content: Run final lint/link audit and report; no commit
+              status: pending
+              priority: high
+        result: |-
+          [
+            {
+              "content": "Scaffold Angular 22.2.4 app and install dependencies",
+              "status": "in_progress",
+              "priority": "high"
+            },
+            {
+              "content": "Implement models, Eurostat service, and localStorage store",
+              "status": "pending",
+              "priority": "high"
+            },
+            {
+              "content": "Implement routes, pages, chart, and styles",
+              "status": "pending",
+              "priority": "high"
+            },
+            {
+              "content": "Write app README",
+              "status": "pending",
+              "priority": "medium"
+            },
+            {
+              "content": "Write and pass unit tests",
+              "status": "pending",
+              "priority": "high"
+            },
+            {
+              "content": "Run production build",
+              "status": "pending",
+              "priority": "high"
+            },
+            {
+              "content": "Run browser CRUD smoke test",
+              "status": "pending",
+              "priority": "high"
+            },
+            {
+              "content": "Run final lint/link audit and report; no commit",
+              "status": "pending",
+              "priority": "high"
+            }
+          ]
+    time: 10/23/2026, 7:52:04.443 PM UTC
+    response: "\n\n"
+    duration: 4.355s
+    duration_ms: 4355
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Need scaffold. Before, check `mise` and Node, directory absent. Also maybe network. Run `mise x node@26 -- node --version` and `npx @angular/cli@22.2.4 version`? The scaffold command will fetch. We should run exact. Could be long; redirect output to scratch. Use `mise x node@26 -- npx --yes @angular/cli@22.2.4 new ...`. Need avoid `cd` chaining? Use workdir. Command one. Let's check `ls examples` and node.
+    thinking_duration: 636ms
+    thinking_duration_ms: 636
+    tool_calls:
+      - tool: bash
+        args:
+          command: mise x node@26 -- node --version
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          v26.10.0
+      - tool: bash
+        args:
+          command: ls -la examples 2>/dev/null || true
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          total 12
+          drwxrwxr-x  3 ext_root docker 4096 Oct 23 18:46 .
+          drwxrwxr-x 10 ext_root docker 4096 Oct 23 19:47 ..
+          drwxrwxr-x  2 ext_root docker 4096 Oct 23 18:46 pudl-chart
+    time: 10/23/2026, 7:52:08.828 PM UTC
+    response: "\n\n"
+    duration: 3.363s
+    duration_ms: 3363
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Scaffold. Use exact command with workdir repo. Redirect to scratch file to avoid huge output. Timeout maybe 300000.
+    thinking_duration: 684ms
+    thinking_duration_ms: 684
+    tool_calls:
+      - tool: bash
+        args:
+          command: mise x node@26 -- npx --yes @angular/cli@22.2.4 new eurostat-crud --directory examples/eurostat-crud --defaults --skip-git --style=css --routing --ssr=false --zoneless --strict --test-runner=vitest --package-manager=npm --prefix=app > scratch/e95db8a7dffeuYlna87fyPRaWJ/angular-scaffold.log 2>&1; printf 'exit:%s\n' "$?"; tail -40 scratch/e95db8a7dffeuYlna87fyPRaWJ/angular-scaffold.log
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+          timeout: 300000
+        result: "exit:0\nCREATE examples/eurostat-crud/.prettierrc (161 bytes)\nCREATE examples/eurostat-crud/README.md (1465 bytes)\nCREATE examples/eurostat-crud/.editorconfig (314 bytes)\nCREATE examples/eurostat-crud/.gitignore (622 bytes)\nCREATE examples/eurostat-crud/angular.json (1924 bytes)\nCREATE examples/eurostat-crud/package.json (789 bytes)\nCREATE examples/eurostat-crud/tsconfig.json (908 bytes)\nCREATE examples/eurostat-crud/tsconfig.app.json (398 bytes)\nCREATE examples/eurostat-crud/tsconfig.spec.json (409 bytes)\nCREATE examples/eurostat-crud/.vscode/extensions.json (130 bytes)\nCREATE examples/eurostat-crud/.vscode/launch.json (470 bytes)\nCREATE examples/eurostat-crud/.vscode/tasks.json (978 bytes)\nCREATE examples/eurostat-crud/src/main.ts (222 bytes)\nCREATE examples/eurostat-crud/src/index.html (298 bytes)\nCREATE examples/eurostat-crud/src/styles.css (80 bytes)\nCREATE examples/eurostat-crud/src/app/app.css (0 bytes)\nCREATE examples/eurostat-crud/src/app/app.spec.ts (687 bytes)\nCREATE examples/eurostat-crud/src/app/app.ts (296 bytes)\nCREATE examples/eurostat-crud/src/app/app.html (20144 bytes)\nCREATE examples/eurostat-crud/src/app/app.config.ts (312 bytes)\nCREATE examples/eurostat-crud/src/app/app.routes.ts (77 bytes)\nCREATE examples/eurostat-crud/public/favicon.ico (15086 bytes)\n- Installing packages (npm)...\n\e[32m✔\e[39m Packages installed successfully.\n"
+    time: 10/23/2026, 7:52:12.226 PM UTC
+    response: "\n\n"
+    duration: 61.038s
+    duration_ms: 61038
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Scaffold succeeded, installed packages. Need `npm install` exact? Scaffold already installed; plan says run npm install. Do it to ensure.
+    thinking_duration: 115ms
+    thinking_duration_ms: 115
+    tool_calls:
+      - tool: bash
+        args:
+          command: mise x node@26 -- npm install > scratch/e95db8a7dffeuYlna87fyPRaWJ/npm-install.log 2>&1; printf 'exit:%s\n' "$?"; tail -20 scratch/e95db8a7dffeuYlna87fyPRaWJ/npm-install.log
+          workdir: /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud
+          timeout: 300000
+        result: |
+          /bin/bash: line 1: scratch/e95db8a7dffeuYlna87fyPRaWJ/npm-install.log: No such file or directory
+          tail: cannot open 'scratch/e95db8a7dffeuYlna87fyPRaWJ/npm-install.log' for reading: No such file or directory
+          exit:1
+    time: 10/23/2026, 7:53:13.329 PM UTC
+    response: "\n\n"
+    duration: 1.840s
+    duration_ms: 1840
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Workdir is app, scratch relative wrong. Use absolute path. Also npm install didn't run because redirect failed. Re-run with absolute.
+    thinking_duration: 110ms
+    thinking_duration_ms: 110
+    tool_calls:
+      - tool: bash
+        args:
+          command: mise x node@26 -- npm install > /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/npm-install.log 2>&1; printf 'exit:%s\n' "$?"; tail -20 /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/npm-install.log
+          workdir: /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud
+          timeout: 300000
+        result: |
+          exit:0
+
+          up to date, audited 282 packages in 1s
+
+          84 packages are looking for funding
+            run `npm fund` for details
+
+          2 vulnerabilities (1 low, 1 high)
+
+          To address all issues (including breaking changes), run:
+            npm audit fix --force
+
+          Run `npm audit` for details.
+          npm warn install-scripts 4 packages have install scripts not yet covered by allowScripts:
+          npm warn install-scripts   @parcel/watcher@2.6.0 (install: node-gyp rebuild)
+          npm warn install-scripts   esbuild@0.28.2 (postinstall: node install.js)
+          npm warn install-scripts   lmdb@3.5.6 (install: node-gyp rebuild)
+          npm warn install-scripts   msgpackr-extract@3.0.4 (install: node-gyp rebuild)
+          npm warn install-scripts
+          npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+    time: 10/23/2026, 7:53:15.209 PM UTC
+    response: "\n\n"
+    duration: 3.104s
+    duration_ms: 3104
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Interesting `npm install-scripts` warnings due npm 11 maybe; Angular build may need esbuild postinstall. The scaffold's install may have run scripts? Need check. We'll see build. Also two vulnerabilities pre-existing; don't audit fix.
+
+      Need inspect generated files: package.json, app.ts, app.config.ts, routes, index, styles, app.html.
+    thinking_duration: 468ms
+    thinking_duration_ms: 468
+    tool_calls:
+      - tool: bash
+        args:
+          command: cat package.json
+          workdir: /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud
+        result: |-
+          {
+            "name": "eurostat-crud",
+            "version": "0.0.0",
+            "scripts": {
+              "ng": "ng",
+              "start": "ng serve",
+              "build": "ng build",
+              "watch": "ng build --watch --configuration development",
+              "test": "ng test"
+            },
+            "private": true,
+            "packageManager": "npm@11.19.1",
+            "dependencies": {
+              "@angular/common": "^22.2.0",
+              "@angular/compiler": "^22.2.0",
+              "@angular/core": "^22.2.0",
+              "@angular/forms": "^22.2.0",
+              "@angular/platform-browser": "^22.2.0",
+              "@angular/router": "^22.2.0",
+              "rxjs": "~7.8.0",
+              "tslib": "^2.3.0"
+            },
+            "devDependencies": {
+              "@angular/build": "^22.2.4",
+              "@angular/cli": "^22.2.4",
+              "@angular/compiler-cli": "^22.2.0",
+              "jsdom": "^30.0.0",
+              "prettier": "^3.8.1",
+              "typescript": "~6.0.2",
+              "vitest": "^5.0.0"
+            }
+          }
+      - tool: bash
+        args:
+          command: cat src/app/app.ts; echo '---CONFIG---'; cat src/app/app.config.ts; echo '---ROUTES---'; cat src/app/app.routes.ts
+          workdir: /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud
+        result: |
+          import { Component, signal } from '@angular/core';
+          import { RouterOutlet } from '@angular/router';
+
+          @Component({
+            imports: [RouterOutlet],
+            selector: 'app-root',
+            styleUrl: './app.css',
+            templateUrl: './app.html',
+          })
+          export class App {
+            protected readonly title = signal('eurostat-crud');
+          }
+          ---CONFIG---
+          import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
+          import { provideRouter } from '@angular/router';
+          import { routes } from './app.routes';
+
+          export const appConfig: ApplicationConfig = {
+            providers: [
+              provideBrowserGlobalErrorListeners(),
+              provideRouter(routes)
+            ]
+          };
+          ---ROUTES---
+          import { Routes } from '@angular/router';
+
+          export const routes: Routes = [];
+      - tool: bash
+        args:
+          command: cat src/index.html; echo '---STYLES---'; cat src/styles.css; echo '---APPHTML---'; sed -n '1,40p' src/app/app.html
+          workdir: /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud
+        result: |
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <title>EurostatCrud</title>
+            <base href="/">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <link rel="icon" type="image/x-icon" href="favicon.ico">
+          </head>
+          <body>
+            <app-root></app-root>
+          </body>
+          </html>
+          ---STYLES---
+          /* You can add global styles to this file, and also import other style files */
+          ---APPHTML---
+          <!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
+          <!-- * * * * * * * * * * * The content below * * * * * * * * * * * -->
+          <!-- * * * * * * * * * * is only a placeholder * * * * * * * * * * -->
+          <!-- * * * * * * * * * * and can be replaced.  * * * * * * * * * * -->
+          <!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
+          <!-- * * * * * * * * * Delete the template below * * * * * * * * * -->
+          <!-- * * * * * * * to get started with your project! * * * * * * * -->
+          <!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
+
+          <style>
+            :host {
+              --bright-blue: oklch(51.01% 0.274 263.83);
+              --electric-violet: oklch(53.18% 0.28 296.97);
+              --french-violet: oklch(47.66% 0.246 305.88);
+              --vivid-pink: oklch(69.02% 0.277 332.77);
+              --hot-red: oklch(61.42% 0.238 15.34);
+              --orange-red: oklch(63.32% 0.24 31.68);
+
+              --gray-900: oklch(19.37% 0.006 300.98);
+              --gray-700: oklch(36.98% 0.014 302.71);
+              --gray-400: oklch(70.9% 0.015 304.04);
+
+              --red-to-pink-to-purple-vertical-gradient: linear-gradient(
+                180deg,
+                var(--orange-red) 0%,
+                var(--vivid-pink) 50%,
+                var(--electric-violet) 100%
+              );
+
+              --red-to-pink-to-purple-horizontal-gradient: linear-gradient(
+                90deg,
+                var(--orange-red) 0%,
+                var(--vivid-pink) 50%,
+                var(--electric-violet) 100%
+              );
+
+              --pill-accent: var(--bright-blue);
+
+              font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+    time: 10/23/2026, 7:53:18.351 PM UTC
+    response: "\n\n"
+    duration: 2.590s
+    duration_ms: 2590
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Need implement. Need understand Angular 22 APIs. We can use signals, inject, input.required, HttpClient. Need ensure tests with Vitest and Angular testing. Generated app.spec uses `TestBed`. Let's view.
+    thinking_duration: 1.192s
+    thinking_duration_ms: 1192
+    tool_calls:
+      - tool: bash
+        args:
+          command: cat src/app/app.spec.ts; echo '---TSCONFIG---'; cat tsconfig.json; echo '---APP TSCONFIG---'; cat tsconfig.app.json; echo '---SPEC---'; cat tsconfig.spec.json; echo '---ANGULAR---'; cat angular.json
+          workdir: /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud
+        result: |
+          import { TestBed } from '@angular/core/testing';
+          import { App } from './app';
+
+          describe('App', () => {
+            beforeEach(async () => {
+              await TestBed.configureTestingModule({
+                imports: [App],
+              })
+                .compileComponents();
+            });
+
+            it('should create the app', () => {
+              const fixture = TestBed.createComponent(App);
+              const app = fixture.componentInstance;
+              expect(app).toBeTruthy();
+            });
+
+            it('should render title', async () => {
+              const fixture = TestBed.createComponent(App);
+              await fixture.whenStable();
+              const compiled = fixture.nativeElement as HTMLElement;
+              expect(compiled.querySelector('h1')?.textContent).toContain('Hello, eurostat-crud');
+            });
+          });
+          ---TSCONFIG---
+          /* To learn more about Typescript configuration file: https://www.typescriptlang.org/docs/handbook/tsconfig-json.html. */
+          /* To learn more about Angular compiler options: https://angular.dev/reference/configs/angular-compiler-options. */
+          {
+            "compileOnSave": false,
+            "compilerOptions": {
+              "noImplicitOverride": true,
+              "noPropertyAccessFromIndexSignature": true,
+              "noImplicitReturns": true,
+              "noFallthroughCasesInSwitch": true,
+              "skipLibCheck": true,
+              "isolatedModules": true,
+              "experimentalDecorators": true,
+              "importHelpers": true,
+              "target": "ES2022",
+              "module": "preserve"
+            },
+            "angularCompilerOptions": {
+              "enableI18nLegacyMessageIdFormat": false,
+              "strictInjectionParameters": true,
+              "strictInputAccessModifiers": true
+            },
+            "files": [],
+            "references": [
+              {
+                "path": "./tsconfig.app.json"
+              },
+              {
+                "path": "./tsconfig.spec.json"
+              }
+            ]
+          }
+          ---APP TSCONFIG---
+          /* To learn more about Typescript configuration file: https://www.typescriptlang.org/docs/handbook/tsconfig-json.html. */
+          /* To learn more about Angular compiler options: https://angular.dev/reference/configs/angular-compiler-options. */
+          {
+            "extends": "./tsconfig.json",
+            "compilerOptions": {
+              "types": []
+            },
+            "include": [
+              "src/**/*.ts"
+            ],
+            "exclude": [
+              "src/**/*.spec.ts"
+            ]
+          }
+          ---SPEC---
+          /* To learn more about Typescript configuration file: https://www.typescriptlang.org/docs/handbook/tsconfig-json.html. */
+          /* To learn more about Angular compiler options: https://angular.dev/reference/configs/angular-compiler-options. */
+          {
+            "extends": "./tsconfig.json",
+            "compilerOptions": {
+              "types": [
+                "vitest/globals"
+              ]
+            },
+            "include": [
+              "src/**/*.d.ts",
+              "src/**/*.spec.ts"
+            ]
+          }
+          ---ANGULAR---
+          {
+            "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+            "version": 1,
+            "cli": {
+              "packageManager": "npm"
+            },
+            "newProjectRoot": "projects",
+            "projects": {
+              "eurostat-crud": {
+                "projectType": "application",
+                "schematics": {},
+                "root": "",
+                "sourceRoot": "src",
+                "prefix": "app",
+                "architect": {
+                  "build": {
+                    "builder": "@angular/build:application",
+                    "options": {
+                      "browser": "src/main.ts",
+                      "tsConfig": "tsconfig.app.json",
+                      "assets": [
+                        {
+                          "glob": "**/*",
+                          "input": "public"
+                        }
+                      ],
+                      "styles": [
+                        "src/styles.css"
+                      ]
+                    },
+                    "configurations": {
+                      "production": {
+                        "budgets": [
+                          {
+                            "type": "initial",
+                            "maximumWarning": "500kB",
+                            "maximumError": "1MB"
+                          },
+                          {
+                            "type": "anyComponentStyle",
+                            "maximumWarning": "4kB",
+                            "maximumError": "8kB"
+                          }
+                        ],
+                        "outputHashing": "all"
+                      },
+                      "development": {
+                        "optimization": false,
+                        "extractLicenses": false,
+                        "sourceMap": true
+                      }
+                    },
+                    "defaultConfiguration": "production"
+                  },
+                  "serve": {
+                    "builder": "@angular/build:dev-server",
+                    "configurations": {
+                      "production": {
+                        "buildTarget": "eurostat-crud:build:production"
+                      },
+                      "development": {
+                        "buildTarget": "eurostat-crud:build:development"
+                      }
+                    },
+                    "defaultConfiguration": "development"
+                  },
+                  "test": {
+                    "builder": "@angular/build:unit-test"
+                  }
+                }
+              }
+            }
+          }
+    time: 10/23/2026, 7:53:20.986 PM UTC
+    response: "\n\n"
+    duration: 3.118s
+    duration_ms: 3118
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Need implement files. Let's plan architecture carefully.
+
+      Models:
+      - `saved-series.model.ts` exactly as plan. Need also helper labels? Plan says country labels etc. Could put `GEO_LABELS`, `SEX_LABELS` in model or separate. The model file "defines exactly" the types; adding label maps may violate "exactly"? It says defines exactly the code shown. We can add label maps in a separate `series-labels.ts` or inside components. Better create `series-labels.ts` with `GEO_LABELS`, `SEX_LABELS`, `geoLabel`, `sexLabel`. But plan file map doesn't list it. We can add extra file, but plan target map is exact? It says NEW list; extra file is okay but maybe avoid. Put label maps in `saved-series.model.ts` after types? "defines exactly" suggests not. Could define labels in `series-list.ts`, `series-detail.ts`, `series-form.ts` duplicated? Better a small helper file `series-labels.ts` (extra). The plan doesn't prohibit. Or define in `saved-series.model.ts` as exported consts; "defines exactly" likely means the interfaces/types; adding labels is fine. But to be safe, create `src/app/core/series/series-labels.ts`. It will be an extra file not in plan, but useful. The plan says "Component requirements: country labels ... sex labels." A shared helper is clean. Could also put in `saved-series.model.ts`; no. Let's create `series-labels.ts` with:
+      ```ts
+      import { GeoCode, SexCode } from './saved-series.model';
+      export const GEO_LABELS: Record<GeoCode, string> = { PL: 'Poland', ... };
+      export const SEX_LABELS: Record<SexCode, string> = { T: 'Total', M: 'Male', F: 'Female' };
+      ```
+      Need type-only imports due `verbatimModuleSyntax`? tsconfig doesn't set, but Angular uses. Use `import type`.
+
+      Eurostat models exactly.
+
+      Eurostat service:
+      - `@Injectable({ providedIn: 'root' })`
+      - constructor inject HttpClient. Could use `private readonly http = inject(HttpClient);` Plan says constructor injects HttpClient. Use constructor for clarity:
+      ```ts
+      constructor(private readonly http: HttpClient) {}
+      ```
+      But Angular 22 `inject` preferred; plan says constructor injects. Use `private readonly http = inject(HttpClient);` is injection. Either. For tests, provideHttpClient/testing. Use `inject` simpler.
+      - Cache Map. Need ensure cache doesn't leak across tests? Service is root; TestBed resets. Fine.
+      - `getSeries(filters)` async. Build URL via `HttpParams` or `URLSearchParams`. Use `HttpClient.get<JsonStatDataset>(url)` with `firstValueFrom` or `lastValueFrom`. Angular HttpClient returns Observable; use `firstValueFrom`.
+      - Error handling: `EurostatDataError` class. Need define and export. Plan doesn't specify file, can put in service.
+      - Validate response:
+        - `response.class === 'dataset'`
+        - `response.id` includes time; `response.size.length === response.id.length`
+        - `response.dimension?.time?.category?.index` object and `response.value` object
+        - Also label/source/updated strings? Could validate.
+        - Empty observations throw.
+      - Decode general flat index. Need compute strides. For each time category position, compute flat index with all other dimensions at index 0:
+        - `id` array, `size`.
+        - `stride[d] = product(size[d+1:])`.
+        - `timeDimension = id.indexOf('time')`.
+        - For each time position, `flat = position * stride[timeDimension]` because other dims 0. This matches plan. But the plan says "Compute the JSON-stat flat index for each time position with all other dimensions at index 0: flat = Σ index[d] * stride[d]". Since all other index 0, same. For a general filtered request, all other dims size 1, so position * stride[time]. We can implement general:
+      ```ts
+      const flatIndex = (indices: number[]) => indices.reduce((sum, idx, d) => sum + idx * strides[d], 0);
+      const base = new Array(id.length).fill(0);
+      base[timeDimension] = position;
+      const flat = flatIndex(base);
+      ```
+      This is robust.
+      - Include finite numeric values. JSON values may be numbers or strings? Type says number; runtime maybe number. Use `typeof value === 'number' && Number.isFinite(value)`. Could also accept numeric strings? Not needed.
+      - Sort by period ascending using `localeCompare` (YYYY-MM works).
+      - Return datasetLabel, source, updated, observations.
+      - Cache only successful data. Key `${filters.geo}:${filters.sex}`. TTL 300000. On second call within TTL, return cached data. Need clone? Data immutable; return same object. Fine.
+      - Error messages include country/sex. `EurostatDataError` with message. Catch network/HTTP:
+      ```ts
+      try { ... } catch (error) {
+       if (error instanceof EurostatDataError) throw error;
+       throw new EurostatDataError(`Could not load Eurostat series for ${geo}/${sex}.`, { cause: error });
+      }
+      ```
+      ES2022 supports `cause`; TypeScript lib? target ES2022 includes ErrorOptions? `lib` default maybe ES2022. Could avoid cause to be safe. Define constructor `(message: string, readonly cause?: unknown) { super(message); this.name = 'EurostatDataError'; }`.
+      - For malformed shape, throw with specific message and include country/sex. Maybe:
+      ```ts
+      private fail(filters, detail): never { throw new EurostatDataError(`Eurostat returned ${detail} for ${filters.geo}/${filters.sex}.`); }
+      ```
+      - HTTP errors: `firstValueFrom` throws HttpErrorResponse; catch and wrap.
+      - No logging.
+
+      Store:
+      - Need localStorage abstraction for tests. If service directly uses `localStorage`, tests can set global localStorage (jsdom). Good. But tests need new service instances; `TestBed` resets. Could use `localStorage.clear()`.
+      - Signals:
+      ```ts
+      private readonly _series = signal<SavedSeries[]>(this.load());
+      readonly series = this._series.asReadonly();
+      readonly loadWarning = signal<string | null>(null);
+      ```
+      Important: `this.load()` may set `loadWarning`, but `loadWarning` is declared after `_series` if order as plan. In class field initialization, `load()` runs before `loadWarning` is initialized, causing error if load sets it. Need order: declare `loadWarning` before `_series`, or initialize `_series` after. Plan lists `_series` then `series` then `loadWarning`, but that's a bug. We can declare `readonly loadWarning = signal<string | null>(null);` first, then `_series`. Or `_series = signal(this.load())` with `load` not touching loadWarning; set warning after? Better order:
+      ```ts
+      readonly loadWarning = signal<string | null>(null);
+      private readonly _series = signal<SavedSeries[]>(this.load());
+      readonly series = this._series.asReadonly();
+      ```
+      This preserves API. Plan's order is illustrative; functional correctness wins.
+      - Storage key and corrupt key constants.
+      - Envelope `{version:1, items}`. Need validate. `load()`:
+        - `const raw = localStorage.getItem(KEY); if (!raw) return [];`
+        - try parse; catch: backup raw to corrupt key, set warning, return [].
+        - validate object, version === 1, items array. If invalid envelope: maybe backup? Plan says "Parse JSON; if parsing fails, copy raw to corrupt key, set warning, start empty. Validate version === 1 and Array.isArray(items)." If envelope invalid, set warning and return []; maybe backup raw too? The plan only says copy on parse failure. For invalid envelope, could copy to corrupt too for safety. But "Backs up corrupt JSON" test likely parse failure. We can backup on any invalid envelope. Set warning.
+        - Validate each item: id string nonempty, name string trimmed 1-80? The plan says "Drop items whose id, name, filters, or timestamps are invalid; set loadWarning if any were dropped." Validate:
+          - object
+          - id string nonempty
+          - name string trim length 1-80
+          - note string (allow empty; if missing? invalid? Plan says note? "id, name, filters, or timestamps are invalid"; note not mentioned. Could default note to '' if string; if not string, drop? Safer validate note is string, else drop. But plan says note allowed 0-2000. Use validation function.
+          - filters object with geo in GEO_CODES, sex in SEX_CODES
+          - createdAt/updatedAt valid ISO dates (`!Number.isNaN(Date.parse(...))`)
+          - Maybe normalize name/note trim? For stored items, preserve as stored? Could trim. Better validate and return sanitized `{...item, name: item.name.trim(), note: item.note.trim()}`. But that changes stored values; okay.
+        - Sort? The signal should be sorted by updatedAt desc/name asc. `load()` can return `sortSeries(valid)`.
+        - If dropped, set warning. Warning message e.g. "Some saved series were invalid and were ignored." Need tests maybe check truthy only.
+        - If envelope invalid, warning "Saved series data could not be read. The original value was backed up.".
+      - Create:
+        - Validate input. `validateInput` returns `{name, note, filters}` or throws `SeriesValidationError`. Plan says "Trim name; require 1–80. Trim note; allow 0–2000. Require geo/sex." It doesn't specify error type. Components need field-level validation, but form handles required/maxlength; store should reject. Could throw `SeriesValidationError` with field and message. Define class in store or model. For tests, "Rejects blank names and invalid filters" likely expect throw. Use `SeriesValidationError` exported.
+        - `crypto.randomUUID()` may not exist in jsdom? Node 26 has `crypto.randomUUID`; jsdom window.crypto.randomUUID maybe. Use `globalThis.crypto.randomUUID()`. In tests Node's crypto global available. Fallback? Could implement `createId()` with `crypto.randomUUID` if available else random. But plan says set `id = crypto.randomUUID()`. Use `crypto.randomUUID()`. In jsdom, `crypto` global might be Node webcrypto with randomUUID. Likely. To be safe, use `globalThis.crypto.randomUUID()` and if not function, fallback? That deviates. Node 26 has it.
+        - Persist: `this.persist(items)`. If localStorage throws (quota), what? Plan says "Show form-level error for storage failures." Store should throw. `persist` can throw; create should not mutate signal until persist succeeds? Better: build next array, persist, then set signal. If persist throws, signal unchanged. Implement `persist(next)` then `_series.set(sortSeries(next))`.
+        - Return record.
+      - Update:
+        - Find by id; return undefined if absent.
+        - Validate input. Set updatedAt new ISO.
+        - Persist, set signal, return updated.
+      - Delete:
+        - Remove by id; if absent return false; persist; set; return true.
+      - List order: `updatedAt` descending, then name ascending. Use `sort` copy.
+      - Cross-tab: `storage` event for key; reload signal. Need listener in constructor:
+      ```ts
+      constructor() {
+        if (typeof window !== 'undefined') {
+          window.addEventListener('storage', this.onStorage);
+        }
+      }
+      private readonly onStorage = (event: StorageEvent) => { if (event.key === STORAGE_KEY) this.reload(); };
+      ```
+      Need cleanup? Root service lives app lifetime; fine. Tests create multiple instances; listeners accumulate across TestBed? Each service instance adds listener, could cause cross-test issues. We can use `DestroyRef` to remove:
+      ```ts
+      private readonly destroyRef = inject(DestroyRef);
+      constructor() {
+        if (typeof window !== 'undefined') {
+          const handler = (event: StorageEvent) => { ... };
+          window.addEventListener('storage', handler);
+          this.destroyRef.onDestroy(() => window.removeEventListener('storage', handler));
+        }
+      }
+      ```
+      But `DestroyRef` in root service only destroyed on app destroy; in TestBed, provider destroyed after each test, so good.
+      - `reload()`: set `_series` to `load()`; but `load()` may set warning. If storage event newValue null, load returns []; good. If new value invalid, backup. Fine.
+      - Need avoid `load()` setting warning on every reload if no issue? It only sets if invalid. Could clear warning on successful load? Maybe set `loadWarning.set(null)` at start? But if user already saw warning, reload could clear. Fine. In `load()`, don't clear; on successful load, perhaps leave previous warning? Better `loadWarning.set(null)` at start of load? But if load is called from field initializer before loadWarning? We put loadWarning first. Do:
+      ```ts
+      private load(): SavedSeries[] {
+        this.loadWarning.set(null);
+        ...
+      }
+      ```
+      Then invalid sets warning. Good.
+      - But `loadWarning` is a signal declared before `_series`; `load()` called during `_series` initialization after loadWarning initialized. Good.
+      - `persist` JSON.stringify envelope. No observations.
+      - Storage event reload: if `event.storageArea !== localStorage`? Could check. Not necessary.
+      - Tests: need ability to instantiate fresh service with same localStorage. `TestBed.inject(SeriesStoreService)`. On new TestBed, new instance loads. Good.
+
+      Routes: exact from plan. Need component class names `SeriesList`, `SeriesForm`, `SeriesDetail`, `RateChart`.
+
+      App shell:
+      - `app.ts`: standalone, imports RouterOutlet, RouterLink, RouterLinkActive, ChangeDetectionStrategy.OnPush. Remove title signal. Header brand link `/series`, new link. Footer attribution + copyright link. `app.html` replace huge generated content. `app.css` styles.
+      - `app.config.ts`: add `provideHttpClient(withFetch())`. Keep `provideBrowserGlobalErrorListeners`, `provideRouter`.
+      - `index.html` title "Eurostat unemployment CRUD".
+      - `styles.css` global.
+
+      Components:
+      SeriesList:
+      - `series = inject(SeriesStoreService).series;` signal.
+      - Need country/sex labels. Use helper.
+      - Template:
+      ```html
+      <section class="page">
+        <header class="page-header">
+          <div><p class="eyebrow">Saved series</p><h1>Your saved series</h1><p>...</p></div>
+          <a class="button" routerLink="/series/new">New saved series</a>
+        </header>
+        @if (series().length === 0) { empty state }
+        @else { table/cards }
+      </section>
+      ```
+      - Note preview: `note.length > 120 ? note.slice(0,117)+'...' : note`; could use CSS line clamp. Simpler display full note? Plan says note preview. Use method `notePreview(note)`.
+      - Latest saved update timestamp: use DatePipe. Need import DatePipe. Or local formatter. Use DatePipe with `'medium'`. Plan allows.
+      - Link to detail.
+      - Empty state copy exactly: "Observations are read-only. You can save a named view and notes locally." Include.
+      - "Source: Eurostat, une_rt_m (unemployment rate, monthly)." Every page that displays data. List displays saved metadata, not observations, but plan says every page that displays data includes attribution. Include in footer/global? App footer includes attribution; that covers every page. Also detail page explicit. Could include in list page footer? App footer global. Good.
+      - `series-list.spec.ts`: Empty state renders; saved records render labels. Need mock store? Could provide a fake `SeriesStoreService` or use real with localStorage. Easier use real store and seed localStorage before TestBed; but service loads on injection. Or override provider with `{ provide: SeriesStoreService, useValue: { series: signal([...]), loadWarning: signal(null) } }`. Need type compatibility. Use real store? Tests can set localStorage then inject. For list, seed via store.create; but create uses crypto. Fine. Yet easier to create a fake with signal. We'll write tests carefully.
+
+      SeriesForm:
+      - Need ReactiveFormsModule, RouterLink, ActivatedRoute, Router, store. Standalone.
+      - `mode` from route data. In Angular 22, `ActivatedRoute.snapshot.data['mode']`. Use `inject(ActivatedRoute)`.
+      - Form:
+      ```ts
+      readonly form = this.fb.nonNullable.group({
+        name: ['', [Validators.required, Validators.maxLength(80)]],
+        geo: this.fb.nonNullable.control<GeoCode>('PL'),
+        sex: this.fb.nonNullable.control<SexCode>('T'),
+        note: ['', [Validators.maxLength(2000)]],
+      });
+      ```
+      Need `FormBuilder` inject. In Angular 22, `fb.nonNullable.group` works.
+      - `isEdit = route.snapshot.data['mode'] === 'edit'`.
+      - `recordId = route.snapshot.paramMap.get('id')`.
+      - `record = signal<SavedSeries | undefined>(...)`? For template. On edit, find in store. Need handle absent. Could use `readonly record = signal<SavedSeries | null>(null);` and `notFound = signal(false)`. In constructor:
+      ```ts
+      if (this.isEdit) {
+        const id = this.route.snapshot.paramMap.get('id');
+        const existing = id ? this.store.series().find(...) : undefined;
+        if (!existing) { this.notFound.set(true); return; }
+        this.record.set(existing);
+        this.form.setValue({ name: existing.name, geo: existing.filters.geo, sex: existing.filters.sex, note: existing.note });
+      }
+      ```
+      - Submit:
+      ```ts
+      if (this.form.invalid) { this.form.markAllAsTouched(); return; }
+      this.formError.set(null);
+      const input = this.form.getRawValue();
+      try {
+        if (this.isEdit) {
+          const updated = this.store.update(this.recordId!, input);
+          if (!updated) { this.formError.set('...'); return; }
+          await this.router.navigate(['/series', updated.id]);
+        } else {
+          const created = this.store.create(input);
+          await this.router.navigate(['/series', created.id]);
+        }
+      } catch (error) {
+        this.formError.set(error instanceof Error ? error.message : 'Could not save...');
+      }
+      ```
+      `Router.navigate` returns Promise<boolean>; `void` or await. Template submit handler can be `(ngSubmit)="submit()"`; method returns void and uses `void this.router.navigate`.
+      - Field-level validation messages:
+        - name required: `form.controls.name.touched && form.controls.name.hasError('required')` etc.
+        - maxlength.
+        - note maxlength.
+        - geo/sex selects always valid; no messages.
+      - Edit not-found panel with link back.
+      - Cancel link to `/series` or `/series/:id`.
+      - `mode` label.
+      - `formError` signal.
+
+      Need handle `recordId` undefined in edit; notFound true.
+      - `store.update` may throw validation error; show.
+      - `store.create` may throw.
+      - No `DatePipe` needed.
+
+      SeriesDetail:
+      - Imports `RateChart`, `RouterLink`, `DatePipe` maybe `DecimalPipe`? Use DatePipe.
+      - `route`, `router`, `store`, `eurostat`.
+      - `record = signal<SavedSeries | null>(null); notFound = signal(false);`
+      - `seriesData = signal<SeriesData | null>(null); loading = signal(false); error = signal<string | null>(null); showAll = signal(false); confirmDelete = signal(false);`
+      - On init/constructor: resolve id; find record; if absent notFound; else set and `load()`.
+      - `load()`:
+      ```ts
+      const record = this.record(); if (!record) return;
+      this.loading.set(true); this.error.set(null);
+      try { const data = await this.eurostat.getSeries(record.filters); this.seriesData.set(data); }
+      catch (error) { this.error.set(error instanceof Error ? error.message : '...'); }
+      finally { this.loading.set(false); }
+      ```
+      - Need handle component destruction while fetch pending? Could use `takeUntilDestroyed` but using Promise. Could check `this.destroyed` flag with DestroyRef. Simpler: no issue in tests. But avoid setting signals after destroy? Angular tolerates. Could use `DestroyRef` and `isDestroyed`. Not necessary.
+      - `observations = computed(() => this.seriesData()?.observations ?? [])`.
+      - `visibleObservations = computed(() => { const obs = this.observations(); return this.showAll() ? [...obs].reverse() : [...obs].slice(-24).reverse(); });` Plan: latest 24 newest first; "Show all" toggles full set. Full set likely newest first too. Use reverse.
+      - Template:
+        - notFound panel.
+        - if record:
+          - header with name, country/sex, timestamps, note.
+          - actions edit, delete.
+          - delete confirmation panel if confirmDelete.
+          - data section: loading, error with retry button, empty state, else chart + table.
+          - `RateChart [observations]="observations()" [ariaLabel]="'Unemployment rate for ' + ..."` Plan says RateChart has `observations = input.required<Observation[]>()`, optional label input. Define `ariaLabel = input<string>('Unemployment rate over time')` maybe. Then pass.
+          - table columns Period, Rate.
+          - "Show all"/"Show latest 24" button if observations length > 24.
+          - source updated and attribution line. "Source: Eurostat, une_rt_m (unemployment rate, monthly)." and "Data may be revised...".
+      - Delete:
+        - `confirmDelete.set(true)`; "Delete permanently" calls `store.delete(record.id)`; if true `void router.navigate(['/series'])`; else error? Could set error.
+        - Cancel closes.
+      - Timestamps: `DatePipe` with `'medium'`.
+      - Note: if empty, show "No note.".
+      - Not-found link back.
+
+      RateChart:
+      - Standalone, `observations = input.required<Observation[]>(); ariaLabel = input<string>('Unemployment rate over time');`
+      - Need compute SVG polyline. Use `computed`:
+      ```ts
+      readonly chart = computed(() => {
+       const obs = this.observations();
+       if (obs.length === 0) return null;
+       const rates = obs.map(o => o.rate);
+       const min = Math.min(...rates); const max = Math.max(...rates);
+       const range = max - min || 1;
+       const width=600, height=180, pad=24;
+       const points = obs.map((o,i) => {
+        const x = obs.length === 1 ? width/2 : pad + (i/(obs.length-1))*(width-2*pad);
+        const y = height-pad - ((o.rate-min)/range)*(height-2*pad);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+       }).join(' ');
+       return { points, min, max, first: obs[0].period, last: obs[obs.length-1].period, width, height, pad };
+      });
+      ```
+      - Template:
+      ```html
+      @if (chart(); as chart) {
+      <figure class="rate-chart">
+      <svg viewBox="0 0 600 180" role="img" [attr.aria-label]="ariaLabel()">
+        <line ... axes>
+        <polyline [attr.points]="chart.points" ... />
+      </svg>
+      <div class="chart-labels"><span>{{ chart.first }}</span><span>{{ chart.last }}</span></div>
+      <div class="chart-range"><span>Min {{ chart.min }}%</span><span>Max {{ chart.max }}%</span></div>
+      </figure>
+      }
+      ```
+      - Need avoid `chart` variable name collision with method; use `chartData`.
+      - `role="img"` on svg.
+      - Min/max labels. First/last period labels.
+      - CSS.
+
+      App styles:
+      - System font stack, readable contrast, focus-visible outlines, responsive layout.
+      - Global `:root` colors; body margin; a; button; input/select; `.page`, `.panel`, `.button`, `.button-danger`, `.muted`, `.error`, `.success`, `.table-wrap`, etc.
+      - Component CSS scoped; global for shared.
+      - Need budgets: anyComponentStyle 4kB warning/8kB error. Keep CSS under 4kB per component. Global styles not component. Fine.
+
+      App HTML:
+      - Header with brand and nav; main router-outlet; footer with attribution and link.
+      - `routerLinkActive="active"` on nav link; `[routerLinkActiveOptions]="{ exact: false }"`? For `/series` brand and nav; active on all series routes. Use `routerLinkActive="active"` with default. For New link, active on `/series/new` only. Brand link maybe not active.
+      - Footer link to Eurostat copyright notice.
+
+      App CSS:
+      - header, nav, main, footer.
+
+      Need tests. Before writing all, maybe scaffold component files via `ng generate`? Could use CLI to generate components, but it may create CSS/HTML/ts/spec and update routes? We can create manually. Plan exact names. Using `ng generate component features/series-list --standalone` etc. might create `series-list.ts` with class `SeriesList`, good. But it may add `app-series-list` selector and default template. We can overwrite. It may also add to app imports? Standalone generated not imported. Could use CLI for consistency, but manual is fine. Need create directories. Use `mkdir -p` and write files. For many files, use `write` tool. Could use a script with heredocs but AGENTS warns; many files. The `write` tool is best. We need write ~30 files. Token budget large but manageable. Could use `bash` with `cat > file <<'EOF'` for each? That's many heredocs; risk. Use `write` tool for each. We can batch multiple writes in parallel? Tools can be called multiple in one message; but each write is a tool call. We can do several per message. Need ensure no huge single output. Fine.
+
+      First create model files and service/store. Then components. Then tests. Then build/test.
+
+      Need consider TypeScript strict flags: `noPropertyAccessFromIndexSignature` true. Accessing `dataset.dimension['time']` is okay; `dataset.dimension.time` is property access on Record index signature -> error? `noPropertyAccessFromIndexSignature` means must use bracket notation for index signatures. `JsonStatDataset.dimension` is `Record<string, JsonStatDimension>`, so `dataset.dimension.time` would error under `noPropertyAccessFromIndexSignature`. Use `dataset.dimension['time']`. Similarly `value[String(flat)]` okay. `extension?.['positions-with-no-data']` okay. Need be careful in all code/tests. Also `Record<string, number>` access `value[key]` okay. `form.controls.name` is property, fine. `GEO_LABELS[geo]` okay. `route.snapshot.data['mode']` okay. `filters.geo` okay.
+
+      `noImplicitReturns`: methods must return all paths. `EurostatDataError` etc.
+
+      `strict` includes `strictNullChecks`, `noImplicitAny`, etc. Need handle undefined.
+
+      `isolatedModules`: use `import type` for types where appropriate, but not required.
+
+      Angular 22 uses `provideHttpClient(withFetch())`. Need import from `@angular/common/http`.
+
+      `crypto.randomUUID()` type available with DOM lib. Yes.
+
+      `localStorage` in SSR? App is browser-only; but tests jsdom. Use `typeof localStorage !== 'undefined'`. In service, `localStorage` global. Fine.
+
+      Need maybe use `inject(DestroyRef)` and `inject` in field initializers. Good.
+
+      Need test setup. Angular 22 Vitest builder may require `vitest` globals. Generated app.spec uses `describe`, `it`, `expect` global. Fine.
+
+      Testing HTTP: `provideHttpClientTesting()` and `HttpTestingController`. Need import from `@angular/common/http/testing`. Use `TestBed.configureTestingModule({ providers: [EurostatService, provideHttpClient(), provideHttpClientTesting()] })`. Then `service.getSeries(...)` returns promise. `httpMock.expectOne(request => ...)`. Flush fixture. Need `firstValueFrom` not used in test. Cache test: two calls; expect one request; flush; await both. Since service caches after first resolves. Good.
+      - Fixture: create `eurostat.fixture.ts` with a minimal JSON-stat dataset. Need time dimension, value keys. Could make 3 periods, one missing. Example:
+      ```ts
+      export function createJsonStatFixture(): JsonStatDataset {
+       return {
+        version:'2.0', class:'dataset', label:'Test dataset', source:'ESTAT', updated:'2026-10-21T11:00:00+0200',
+        value: {'0': 10.5, '2': 8.25},
+        id:['freq','s_adj','age','unit','sex','geo','time'],
+        size:[1,1,1,1,1,1,3],
+        dimension: {
+          freq: {label:'Time frequency', category:{index:{M:0}, label:{M:'Monthly'}}},
+          ...
+          time: {label:'Time', category:{index:{'2024-01':0,'2024-02':1,'2024-03':2}, label:{...}}}
+        },
+        extension: { status: { label: { b:'break in time series' } } }
+       };
+      }
+      ```
+      But `JsonStatDataset` requires all dimension entries? `dimension: Record<string, JsonStatDimension>` can be partial. For validation, only time is needed. But flat index uses size/id; other dims at 0. Fine. Could include all for realism. For missing value: value has 0 and 2, omits 1. Observations sorted. Expected 2 observations, periods 2024-01, 2024-03.
+      - Need test malformed: `class: 'other'` or missing time. Use `as unknown as JsonStatDataset`.
+      - Empty observations: value `{}`; expect rejects.
+      - Cache: call twice with same filters; only one request. The first call flushes; second returns cached. Need ensure `httpMock.verify()` after.
+      - Network error: not required but maybe add. Plan only required 5 tests.
+
+      Store tests:
+      - `localStorage.clear()` before each; TestBed configure with `SeriesStoreService`; inject.
+      - Create: `store.create({name:' Poland ', note:' note ', filters:{geo:'PL',sex:'T'}})`; expect name trimmed, id, timestamps, series length 1.
+      - Read via `store.series()`.
+      - Update: `store.update(id, {...})`; expect updatedAt >= createdAt and name changed.
+      - Delete: `store.delete(id)` true; series empty.
+      - Persist across new instance: create; `TestBed.resetTestingModule()`? Then configure new TestBed and inject; localStorage persists. Need `TestBed.resetTestingModule()` and `TestBed.configureTestingModule`. Or create a second service instance with `new SeriesStoreService`? Constructor uses inject, can't. Use TestBed reset.
+      - Sort: create A, B; update A later; expect A first. Date timestamps may be same millisecond; to ensure, use `vi.useFakeTimers()` and advance? Or create records with manual localStorage data with timestamps. Simpler: seed localStorage with envelope items with different updatedAt and instantiate. But testing create sort order: create A, advance fake timers, create B, update A; then expect A first. Use `vi.useFakeTimers()` and `vi.setSystemTime(new Date(...))`. `crypto.randomUUID` fine. Need restore real timers after. Or test load sorting with seeded data. Plan says "Sorts by updatedAt descending." We can seed localStorage with two items and inject; expect order. That also tests load validation. Good.
+      - Drops invalid items and sets loadWarning: seed envelope with valid + invalid; inject; expect length 1 and warning non-null.
+      - Backs up corrupt JSON and starts empty: seed raw `'{not json'`; inject; expect series empty, warning, corrupt key equals raw.
+      - Rejects blank names and invalid filters: expect(() => store.create(...)).toThrow(SeriesValidationError) or message. Need ensure invalid filters can be passed despite types; cast `as unknown as SavedSeriesInput`.
+      - Maybe test storage event? Not required.
+
+      Component tests:
+      - Need mock services. Angular TestBed with standalone imports.
+      - SeriesList:
+        - Use a fake store object with `series` signal and `loadWarning` signal. Since component injects `SeriesStoreService`, provide `{ provide: SeriesStoreService, useValue: fake }`.
+        - Empty state: fake series signal([]); create component; detectChanges; query text "Create your first saved series" / empty state.
+        - Saved records: signal with one record; expect text "Poland", "Total", name.
+        - Need `RouterLink` in template; provide router? `provideRouter([])` or `RouterTestingHarness`? For rendering, RouterLink requires Router. Use `provideRouter([])` in TestBed. Or use `RouterModule.forRoot([])`. Angular 22 `provideRouter([])`.
+      - SeriesForm:
+        - Need ActivatedRoute with data mode and paramMap, Router mock, store fake.
+        - Use `provideRouter([])` and mock `ActivatedRoute` with snapshot. But RouterLink requires router; okay.
+        - For navigation assertion, use a Router spy object. Provide `{ provide: Router, useValue: routerMock }`. `RouterLink` injection uses Router; if we replace Router with mock lacking `createUrlTree` etc., RouterLink may fail. Better use real Router with `provideRouter([])` and spy on `router.navigate` via `vi.spyOn`. Or use `RouterTestingHarness`. Simpler: provide real router, spy.
+        - ActivatedRoute: `{ provide: ActivatedRoute, useValue: { snapshot: { data: { mode: 'create' }, paramMap: convertToParamMap({}) } } }`.
+        - Store fake with `create` and `update` vi.fn, `series` signal.
+        - Create mode requires name: submit with empty name; expect store.create not called; form touched; error message.
+        - Create mode stores and navigates: set name, submit; expect create called with trimmed? Store fake receives raw form values; component passes `getRawValue` (name maybe untrimmed). Store handles trim. Test expect called. Router navigate called with `/series/id`.
+        - Edit mode loads and updates: fake series signal with record; ActivatedRoute data mode edit, paramMap id; component should set form values; change name, submit; expect update called with id and input; navigate.
+        - Need `fixture.detectChanges()` and `await fixture.whenStable()` for navigation promise? `submit()` may call `void router.navigate`, so synchronous spy call.
+      - SeriesDetail:
+        - Mock EurostatService with `getSeries` returning promise; fake store with series signal and delete.
+        - ActivatedRoute paramMap id.
+        - Provide router real + spy.
+        - Render name, note, chart, table: create record; service resolves observations; await fixture.whenStable(); detectChanges; expect text. RateChart component renders svg.
+        - Error state: service rejects; expect error message and retry button.
+        - Delete confirmation calls store and navigates: click delete button, detectChanges, click delete permanently; expect store.delete called and router.navigate.
+        - Need query buttons by text. Could use `fixture.nativeElement.querySelectorAll('button')` and find text. Or add data-testid attributes to templates for robust tests. Use `data-testid` on key elements. Good.
+      - App spec:
+        - Render brand and navigation. App imports RouterOutlet/RouterLink; provideRouter([]). TestBed create App; detectChanges; expect text "Eurostat unemployment CRUD" or brand. Plan says "App shell renders the brand and navigation." Use brand text "Eurostat unemployment CRUD" and links "Saved series", "New saved series". Need ensure app template.
+      - Test config: `src/app/app.spec.ts` generated; replace. Need `describe` etc.
+
+      Need maybe test `RateChart` separately? Plan doesn't require; detail test covers.
+
+      Need test app with `provideHttpClient`? App doesn't inject Eurostat. No.
+
+      Need `SeriesForm` and `SeriesDetail` use `ActivatedRoute` snapshot. For tests, `convertToParamMap` from `@angular/router`.
+
+      Need `SeriesDetail` async load in constructor. Angular component constructor can call async method; tests await `fixture.whenStable()` which waits for pending promises? Angular's `whenStable` waits for zone tasks; with zoneless, maybe not. In Angular 22 zoneless, `whenStable` may wait for `PendingTasks`? `provideZonelessChangeDetection` maybe. The generated app is zoneless. Tests with `fixture.whenStable()` should wait for `PendingTasks`? Angular's `whenStable` in zoneless mode returns when no pending tasks; promises not tracked unless using `PendingTasks`. Hmm. Could call `await fixture.whenStable()` plus `await Promise.resolve()`? The service promise resolves microtask; `fixture.detectChanges()` after a tick. In tests, we can `await fixture.whenStable(); fixture.detectChanges();` but if whenStable doesn't wait for promise, may need `await new Promise(r => setTimeout(r, 0))`. We can design component to use `afterNextRender`? Simpler: tests can call `await fixture.whenStable()` and `fixture.detectChanges()`; likely works because Angular's `whenStable` waits for `PendingTasks` and TestBed's `fixture.whenStable` includes `ApplicationRef.isStable` which may not track promises. In zoneless, `whenStable` resolves immediately. Need robust test helper:
+      ```ts
+      async function settle(fixture: ComponentFixture<unknown>) {
+        await Promise.resolve();
+        await Promise.resolve();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+      }
+      ```
+      The service mock returns `Promise.resolve(data)`, so two microtasks enough. Or use `await fixture.whenStable()` after `await Promise.resolve()`.
+      Alternatively, make `SeriesDetail` load in `ngOnInit` and tests call `await fixture.whenStable()`; Angular's `whenStable` may work with zone? The app is zoneless, but TestBed may use zoneless. We'll see.
+
+      Could use `fixture.componentInstance` methods directly in tests to avoid async DOM timing? For detail render, call `await component.load()`? If method public. But plan says fetch on load; test can await `fixture.whenStable`. We can expose `load()` public and call it. But initial constructor also calls; double fetch. Better use `ngOnInit` and test `await fixture.whenStable()`. We'll adjust if tests fail.
+
+      Need maybe use `afterNextRender`? No.
+
+      Need Angular 22 template syntax: `@if`, `@for` supported. Use `@for (item of series(); track item.id)`. Good.
+      Need `input.required` from `@angular/core`.
+      Need `computed`, `signal`, `inject`.
+
+      Need CSS. Let's design global styles and component styles.
+
+      Global `styles.css`:
+      ```css
+      :root {
+        color-scheme: light;
+        --bg: #f6f7f9;
+        --surface: #ffffff;
+        --text: #17202a;
+        --muted: #5b6775;
+        --border: #d8dee6;
+        --accent: #0b5cad;
+        --accent-strong: #084887;
+        --danger: #a61b1b;
+        --danger-bg: #fff1f1;
+        --focus: #f0a202;
+        --radius: 10px;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.5;
+        color: var(--text);
+        background: var(--bg);
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-width: 320px; background: var(--bg); }
+      a { color: var(--accent); }
+      a:hover { color: var(--accent-strong); }
+      :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+      button, input, select, textarea { font: inherit; }
+      button { cursor: pointer; }
+      .page { width: min(1040px, calc(100% - 2rem)); margin: 0 auto; padding: 2rem 0 3rem; }
+      ...
+      ```
+      Need component styles for layout. Could put shared classes in global to reduce duplication:
+      - `.page-header`, `.eyebrow`, `.button`, `.button-secondary`, `.button-danger`, `.panel`, `.muted`, `.error`, `.empty-state`, `.table-wrap`, `.data-table`, `.field`, `.field-error`, `.form-actions`, `.badge`, `.stack`.
+      - But component styles can use global classes; Angular component CSS encapsulation doesn't prevent global class styling. Good.
+
+      Need app.css for shell header/footer:
+      ```css
+      .shell { min-height: 100vh; display: flex; flex-direction: column; }
+      .site-header { background: #0b2e4f; color: white; }
+      .header-inner { width: min(1040px, calc(100% - 2rem)); margin: 0 auto; display:flex; ...}
+      .brand { color: white; text-decoration:none; font-weight:700; }
+      .nav { display:flex; gap:1rem; }
+      .nav a { color: #d9e8f5; text-decoration:none; padding: .35rem .5rem; border-radius: 6px; }
+      .nav a.active { background: rgba(255,255,255,.15); color:white; }
+      main { flex:1; }
+      .site-footer { border-top:1px solid var(--border); background:white; color:var(--muted); font-size:.875rem; }
+      .footer-inner { width:min(...); margin:0 auto; padding:1.25rem 0; display:flex; flex-wrap:wrap; gap:.5rem 1rem; justify-content:space-between; }
+      ```
+      Need footer attribution.
+
+      SeriesList CSS:
+      - `.page-header` global; `.series-grid` maybe cards.
+      - Use table for desktop; responsive card? Plan says table or card list. Use table with `table-wrap`. Note preview. On small screens, table scrolls. Good.
+      - `.empty-state` global.
+      - `.series-name` etc.
+
+      SeriesForm CSS:
+      - `.form-panel`, `.field`, `.field-error`, `.form-actions`; global.
+      - `.form-grid` two columns for geo/sex.
+      - `.not-found`.
+
+      SeriesDetail CSS:
+      - `.detail-header`, `.meta-grid`, `.actions`, `.chart-panel`, `.table-wrap`, `.delete-panel`, `.source-line`.
+      - `.rate-value`.
+
+      RateChart CSS:
+      - `.chart`, `svg` width 100%, height auto; `.chart-labels`, `.chart-range`.
+      - `polyline` stroke; fill none; stroke width 2.5; vector-effect non-scaling-stroke.
+      - grid lines.
+
+      Need maybe avoid `any` in tests. Use `as unknown as`.
+
+      Let's create directories and files. First model/service/store/labels. Use `write` tool. Need ensure absolute paths.
+
+      Let's write `saved-series.model.ts`.
+    thinking_duration: 58.246s
+    thinking_duration_ms: 58246
+    tool_calls:
+      - tool: bash
+        args:
+          command: mkdir -p src/app/core/eurostat src/app/core/series src/app/features/series-list src/app/features/series-form src/app/features/series-detail src/app/shared/rate-chart
+          workdir: /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud
+        result: (no output)
+    time: 10/23/2026, 7:53:24.146 PM UTC
+    response: "\n\n"
+    duration: 60.032s
+    duration_ms: 60032
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    tool_calls:
+      - tool: write
+        args:
+          content: |
+            export const GEO_CODES = ['PL', 'DE', 'FR', 'ES', 'IT'] as const;
+            export type GeoCode = (typeof GEO_CODES)[number];
+
+            export const SEX_CODES = ['T', 'M', 'F'] as const;
+            export type SexCode = (typeof SEX_CODES)[number];
+
+            export interface SeriesFilters {
+              geo: GeoCode;
+              sex: SexCode;
+            }
+
+            export interface SavedSeries {
+              id: string;
+              name: string;
+              note: string;
+              filters: SeriesFilters;
+              createdAt: string;
+              updatedAt: string;
+            }
+
+            export interface SavedSeriesInput {
+              name: string;
+              note: string;
+              filters: SeriesFilters;
+            }
+
+            export interface Observation {
+              period: string;
+              rate: number;
+            }
+
+            export interface SeriesData {
+              datasetLabel: string;
+              source: string;
+              updated: string;
+              observations: Observation[];
+            }
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/core/series/saved-series.model.ts
+        result: Wrote file successfully.
+    time: 10/23/2026, 7:54:24.207 PM UTC
+    response: "\n\n"
+    duration: 2.249s
+    duration_ms: 2249
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    tool_calls:
+      - tool: write
+        args:
+          content: |
+            import type { GeoCode, SexCode } from './saved-series.model';
+
+            export const GEO_LABELS: Record<GeoCode, string> = {
+              PL: 'Poland',
+              DE: 'Germany',
+              FR: 'France',
+              ES: 'Spain',
+              IT: 'Italy',
+            };
+
+            export const SEX_LABELS: Record<SexCode, string> = {
+              T: 'Total',
+              M: 'Male',
+              F: 'Female',
+            };
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/core/series/series-labels.ts
+        result: Wrote file successfully.
+    time: 10/23/2026, 7:54:26.491 PM UTC
+    response: "\n\n"
+    duration: 1.534s
+    duration_ms: 1534
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Now Eurostat models.
+    thinking_duration: 13ms
+    thinking_duration_ms: 13
+    tool_calls:
+      - tool: write
+        args:
+          content: |
+            export interface JsonStatCategory {
+              index: Record<string, number>;
+              label: Record<string, string>;
+            }
+
+            export interface JsonStatDimension {
+              category: JsonStatCategory;
+              label: string;
+            }
+
+            export interface JsonStatDataset {
+              version: string;
+              class: 'dataset';
+              label: string;
+              source: string;
+              updated: string;
+              value: Record<string, number>;
+              status?: Record<string, string>;
+              id: string[];
+              size: number[];
+              dimension: Record<string, JsonStatDimension>;
+              extension?: {
+                status?: { label?: Record<string, string> };
+                'positions-with-no-data'?: { time?: number[] };
+              };
+            }
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/core/eurostat/eurostat.models.ts
+        result: Wrote file successfully.
+    time: 10/23/2026, 7:54:28.055 PM UTC
+    response: "\n\n"
+    duration: 1.687s
+    duration_ms: 1687
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Now service. Need careful TS.
+
+      Code:
+      ```ts
+      import { HttpClient } from '@angular/common/http';
+      import { Injectable, inject } from '@angular/core';
+      import { firstValueFrom } from 'rxjs';
+      import type { Observation, SeriesData, SeriesFilters } from '../series/saved-series.model';
+      import type { JsonStatDataset } from './eurostat.models';
+
+      const BASE_URL = ...
+      const CACHE_TTL_MS = 300_000;
+
+      interface CacheEntry { data: SeriesData; fetchedAt: number; }
+
+      export class EurostatDataError extends Error {
+        constructor(message: string, readonly cause?: unknown) { super(message); this.name='EurostatDataError'; }
+      }
+
+      @Injectable({ providedIn: 'root' })
+      export class EurostatService {
+        private readonly http = inject(HttpClient);
+        private readonly cache = new Map<string, CacheEntry>();
+
+        async getSeries(filters: SeriesFilters): Promise<SeriesData> {
+          const key = `${filters.geo}:${filters.sex}`;
+          const cached = this.cache.get(key);
+          if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) return cached.data;
+          const url = this.buildUrl(filters);
+          let response: JsonStatDataset;
+          try { response = await firstValueFrom(this.http.get<JsonStatDataset>(url)); }
+          catch (error) { throw new EurostatDataError(this.message(filters, 'could not be loaded'), error); }
+          const data = this.decode(response, filters);
+          this.cache.set(key, { data, fetchedAt: Date.now() });
+          return data;
+        }
+
+        private buildUrl(filters: SeriesFilters): string {
+          const params = new URLSearchParams({ format:'JSON', lang:'EN', freq:'M', s_adj:'SA', age:'TOTAL', unit:'PC_ACT', sex:filters.sex, geo:filters.geo });
+          return `${BASE_URL}?${params.toString()}`;
+        }
+
+        private decode(response: JsonStatDataset, filters: SeriesFilters): SeriesData {
+          if (!response || response.class !== 'dataset') throw new EurostatDataError(this.message(filters, 'returned an unexpected dataset class'));
+          if (!Array.isArray(response.id) || !Array.isArray(response.size)) throw ...
+          if (response.id.length !== response.size.length) throw ...
+          const timeDimension = response.id.indexOf('time');
+          if (timeDimension === -1) throw ...
+          const timeDimensionData = response.dimension?.['time'];
+          const timeIndex = timeDimensionData?.category?.index;
+          if (!timeIndex || typeof timeIndex !== 'object') throw ...
+          if (!response.value || typeof response.value !== 'object') throw ...
+          const strides = response.size.map((_, index) => response.size.slice(index + 1).reduce((product, size) => product * size, 1));
+          const base = response.id.map(() => 0);
+          const observations: Observation[] = [];
+          for (const [period, position] of Object.entries(timeIndex)) {
+            if (!Number.isInteger(position) || position < 0) continue; // or throw malformed? Better throw? A malformed index should be rejected. Use throw.
+            base[timeDimension] = position;
+            const flat = base.reduce((sum, categoryIndex, dimension) => sum + categoryIndex * strides[dimension], 0);
+            const value = response.value[String(flat)];
+            if (typeof value === 'number' && Number.isFinite(value)) observations.push({ period, rate: value });
+          }
+          if (observations.length === 0) throw new EurostatDataError(this.message(filters, 'returned no observations'));
+          observations.sort((left,right)=>left.period.localeCompare(right.period));
+          return { datasetLabel: response.label, source: response.source, updated: response.updated, observations };
+        }
+
+        private message(filters: SeriesFilters, detail: string): string {
+          return `Eurostat series ${filters.geo}/${filters.sex} ${detail}.`;
+        }
+      }
+      ```
+      Need `response.dimension?.['time']`: `dimension` is not optional; `response.dimension?.['time']` okay. `timeDimensionData?.category?.index` category not optional, okay. `response.value` type object; check `typeof response.value !== 'object'` but null passes typeof object; add `!response.value`. `timeIndex` null check. `Array.isArray(response.id)`.
+
+      `base` is `number[]`; `base[timeDimension] = position`; TypeScript with `noUncheckedIndexedAccess`? Not enabled. Fine. `strides[dimension]` may be `number | undefined`? `noUncheckedIndexedAccess` not set, so number. Good.
+      `position` from Object.entries is number typed as number; `Number.isInteger(position)`. If malformed, maybe throw instead of continue. Plan says malformed shapes throw. Use `throw new EurostatDataError(this.message(filters, 'has a malformed time index'))`. Good.
+      `response.label` etc. maybe undefined; return types string but runtime; validation could check. Add:
+      ```ts
+      if (typeof response.label !== 'string' || typeof response.source !== 'string' || typeof response.updated !== 'string') throw ...
+      ```
+      Plan says malformed shapes. Good.
+
+      Need error message includes country and sex. Yes.
+      `firstValueFrom` import.
+
+      Need maybe use `HttpParams` instead of URLSearchParams; URLSearchParams available. Good.
+
+      Let's write.
+    thinking_duration: 4.554s
+    thinking_duration_ms: 4554
+    tool_calls:
+      - tool: write
+        args:
+          content: |
+            import { HttpClient } from '@angular/common/http';
+            import { Injectable, inject } from '@angular/core';
+            import { firstValueFrom } from 'rxjs';
+            import type { Observation, SeriesData, SeriesFilters } from '../series/saved-series.model';
+            import type { JsonStatDataset } from './eurostat.models';
+
+            const BASE_URL = 'https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_m';
+            const CACHE_TTL_MS = 300_000;
+
+            interface CacheEntry {
+              data: SeriesData;
+              fetchedAt: number;
+            }
+
+            export class EurostatDataError extends Error {
+              constructor(message: string, readonly cause?: unknown) {
+                super(message);
+                this.name = 'EurostatDataError';
+              }
+            }
+
+            @Injectable({ providedIn: 'root' })
+            export class EurostatService {
+              private readonly http = inject(HttpClient);
+              private readonly cache = new Map<string, CacheEntry>();
+
+              async getSeries(filters: SeriesFilters): Promise<SeriesData> {
+                const cacheKey = `${filters.geo}:${filters.sex}`;
+                const cached = this.cache.get(cacheKey);
+
+                if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
+                  return cached.data;
+                }
+
+                let response: JsonStatDataset;
+
+                try {
+                  response = await firstValueFrom(this.http.get<JsonStatDataset>(this.buildUrl(filters)));
+                } catch (error) {
+                  throw new EurostatDataError(this.errorMessage(filters, 'could not be loaded'), error);
+                }
+
+                const data = this.decode(response, filters);
+                this.cache.set(cacheKey, { data, fetchedAt: Date.now() });
+                return data;
+              }
+
+              private buildUrl(filters: SeriesFilters): string {
+                const params = new URLSearchParams({
+                  format: 'JSON',
+                  lang: 'EN',
+                  freq: 'M',
+                  s_adj: 'SA',
+                  age: 'TOTAL',
+                  unit: 'PC_ACT',
+                  sex: filters.sex,
+                  geo: filters.geo,
+                });
+
+                return `${BASE_URL}?${params.toString()}`;
+              }
+
+              private decode(response: JsonStatDataset, filters: SeriesFilters): SeriesData {
+                if (!response || response.class !== 'dataset') {
+                  throw new EurostatDataError(this.errorMessage(filters, 'returned an unexpected dataset class'));
+                }
+
+                if (!Array.isArray(response.id) || !Array.isArray(response.size)) {
+                  throw new EurostatDataError(this.errorMessage(filters, 'returned an invalid dimension list'));
+                }
+
+                if (response.id.length !== response.size.length) {
+                  throw new EurostatDataError(this.errorMessage(filters, 'returned mismatched dimension sizes'));
+                }
+
+                if (
+                  typeof response.label !== 'string' ||
+                  typeof response.source !== 'string' ||
+                  typeof response.updated !== 'string'
+                ) {
+                  throw new EurostatDataError(this.errorMessage(filters, 'returned incomplete metadata'));
+                }
+
+                const timeDimension = response.id.indexOf('time');
+                if (timeDimension === -1) {
+                  throw new EurostatDataError(this.errorMessage(filters, 'returned no time dimension'));
+                }
+
+                const timeIndex = response.dimension?.['time']?.category?.index;
+                if (!timeIndex || typeof timeIndex !== 'object') {
+                  throw new EurostatDataError(this.errorMessage(filters, 'returned no time category index'));
+                }
+
+                if (!response.value || typeof response.value !== 'object') {
+                  throw new EurostatDataError(this.errorMessage(filters, 'returned no value object'));
+                }
+
+                const strides = response.size.map((_, index) =>
+                  response.size.slice(index + 1).reduce((product, size) => product * size, 1),
+                );
+                const base = response.id.map(() => 0);
+                const observations: Observation[] = [];
+
+                for (const [period, position] of Object.entries(timeIndex)) {
+                  if (!Number.isInteger(position) || position < 0) {
+                    throw new EurostatDataError(this.errorMessage(filters, 'returned a malformed time index'));
+                  }
+
+                  base[timeDimension] = position;
+                  const flatIndex = base.reduce(
+                    (sum, categoryIndex, dimension) => sum + categoryIndex * strides[dimension],
+                    0,
+                  );
+                  const value = response.value[String(flatIndex)];
+
+                  if (typeof value === 'number' && Number.isFinite(value)) {
+                    observations.push({ period, rate: value });
+                  }
+                }
+
+                if (observations.length === 0) {
+                  throw new EurostatDataError(this.errorMessage(filters, 'returned no observations'));
+                }
+
+                observations.sort((left, right) => left.period.localeCompare(right.period));
+
+                return {
+                  datasetLabel: response.label,
+                  source: response.source,
+                  updated: response.updated,
+                  observations,
+                };
+              }
+
+              private errorMessage(filters: SeriesFilters, detail: string): string {
+                return `Eurostat series ${filters.geo}/${filters.sex} ${detail}.`;
+              }
+            }
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/core/eurostat/eurostat.service.ts
+        result: Wrote file successfully.
+    time: 10/23/2026, 7:54:29.831 PM UTC
+    response: "\n\n"
+    duration: 8.952s
+    duration_ms: 8952
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Now store. Need careful. Use `DestroyRef`, `inject`, `signal`. Validation.
+
+      Design:
+      ```ts
+      import { DestroyRef, Injectable, inject, signal } from '@angular/core';
+      import { GEO_CODES, SEX_CODES, type ... } from './saved-series.model';
+
+      const STORAGE_KEY = ...
+      const CORRUPT_KEY = ...
+      const VERSION = 1;
+
+      interface Envelope { version: 1; items: unknown[]; }
+
+      export class SeriesValidationError extends Error { constructor(message: string, readonly field?: keyof SavedSeriesInput | 'filters') ... }
+
+      @Injectable({providedIn:'root'})
+      export class SeriesStoreService {
+        private readonly destroyRef = inject(DestroyRef);
+        readonly loadWarning = signal<string | null>(null);
+        private readonly _series = signal<SavedSeries[]>(this.load());
+        readonly series = this._series.asReadonly();
+
+        constructor() {
+          if (typeof window !== 'undefined') {
+            const onStorage = (event: StorageEvent) => {
+              if (event.key === STORAGE_KEY) this._series.set(this.load());
+            };
+            window.addEventListener('storage', onStorage);
+            this.destroyRef.onDestroy(() => window.removeEventListener('storage', onStorage));
+          }
+        }
+
+        create(input: SavedSeriesInput): SavedSeries {
+          const normalized = this.validateInput(input);
+          const now = new Date().toISOString();
+          const record: SavedSeries = { id: crypto.randomUUID(), ...normalized, createdAt: now, updatedAt: now };
+          const next = [...this._series(), record];
+          this.persist(next);
+          this._series.set(this.sort(next));
+          return record;
+        }
+
+        update(id: string, input: SavedSeriesInput): SavedSeries | undefined {
+          const existing = this._series().find(item => item.id === id);
+          if (!existing) return undefined;
+          const normalized = this.validateInput(input);
+          const updated: SavedSeries = { ...existing, ...normalized, updatedAt: new Date().toISOString() };
+          const next = this._series().map(item => item.id === id ? updated : item);
+          this.persist(next);
+          this._series.set(this.sort(next));
+          return updated;
+        }
+
+        delete(id: string): boolean {
+          const next = this._series().filter(item => item.id !== id);
+          if (next.length === this._series().length) return false;
+          this.persist(next);
+          this._series.set(this.sort(next));
+          return true;
+        }
+
+        private load(): SavedSeries[] {
+          this.loadWarning.set(null);
+          const raw = this.readRaw();
+          if (!raw) return [];
+          let parsed: unknown;
+          try { parsed = JSON.parse(raw); }
+          catch { this.backupCorrupt(raw); this.loadWarning.set('Saved series data was corrupt...'); return []; }
+          if (!this.isEnvelope(parsed)) { this.backupCorrupt(raw); this.loadWarning.set('Saved series data had an unexpected shape...'); return []; }
+          const items: SavedSeries[] = [];
+          let dropped = false;
+          for (const candidate of parsed.items) {
+            const valid = this.parseStored(candidate);
+            if (valid) items.push(valid); else dropped = true;
+          }
+          if (dropped) this.loadWarning.set('Some saved series were invalid and were ignored.');
+          return this.sort(items);
+        }
+
+        private readRaw(): string | null { try { return localStorage.getItem(STORAGE_KEY); } catch { return null; } } // localStorage may throw security error; set warning? If read fails, set warning? Could set.
+      ```
+      Need `loadWarning` set inside `load()`; but `loadWarning` initialized before `_series`. Good.
+      - `backupCorrupt`: `try { localStorage.setItem(CORRUPT_KEY, raw); } catch {}`. If fails, still warning. Good.
+      - `isEnvelope`: parsed object, version === 1, items array.
+      - `parseStored(value: unknown): SavedSeries | null`:
+        - object non-null.
+        - `id` string non-empty.
+        - `name` string, trim length 1-80.
+        - `note` string, trim length <=2000.
+        - `filters` object with geo in GEO_CODES, sex in SEX_CODES.
+        - `createdAt`, `updatedAt` strings valid dates.
+        - Return `{ id, name: name.trim(), note: note.trim(), filters: { geo, sex }, createdAt, updatedAt }`.
+        - Need type guards:
+      ```ts
+      private isRecord(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null; }
+      private isGeo(value: unknown): value is GeoCode { return typeof value === 'string' && (GEO_CODES as readonly string[]).includes(value); }
+      ```
+      `GEO_CODES.includes(value as GeoCode)` maybe. Use `(GEO_CODES as readonly string[]).includes(value)`.
+      - `validateInput(input)`:
+        - `if (!input || typeof input !== 'object') throw ...`
+        - `const name = typeof input.name === 'string' ? input.name.trim() : '';`
+        - if length 0 or >80 throw `SeriesValidationError('Name must be between 1 and 80 characters.', 'name')`.
+        - note: `typeof input.note === 'string' ? input.note.trim() : ''`; if >2000 throw.
+        - filters: `input.filters` object; geo/sex valid; else throw.
+        - return `{ name, note, filters: { geo, sex } }`.
+      - `persist(items)`:
+      ```ts
+      const envelope: Envelope = { version: 1, items };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(envelope));
+      ```
+      If localStorage throws, let error propagate. Component catches and shows. Could wrap in `SeriesStorageError` with message. Plan says storage failures form-level; any Error works. Better define `SeriesStorageError extends Error`. But not necessary. Could catch in `persist` and throw `new Error('Could not save...')`; tests might not care. Use `SeriesStorageError` for clarity:
+      ```ts
+      export class SeriesStorageError extends Error { ... }
+      ```
+      - `sort(items)`:
+      ```ts
+      return [...items].sort((a,b)=> b.updatedAt.localeCompare(a.updatedAt) || a.name.localeCompare(b.name));
+      ```
+      ISO timestamps lexicographic; good. If same timestamp, name ascending. Case-sensitive? `localeCompare` case-insensitive-ish. Fine.
+      - `crypto.randomUUID()`: use `globalThis.crypto.randomUUID()`. In some browsers, `crypto` available. If not, throw? App modern. Fine.
+      - `storage` event: `this._series.set(this.load())`; load sets warning. If event key is CORRUPT_KEY? ignore.
+      - Need `load()` called in field initializer before constructor body; `loadWarning` initialized. Good.
+      - If `localStorage` not available (SSR), `readRaw` catches and returns null; `persist` throws; app browser. Fine.
+      - Cross-tab storage event might fire with `key === null` on clear; ignore. Good.
+
+      One subtlety: `_series = signal<SavedSeries[]>(this.load())` calls `this.load()` which uses `this.loadWarning`; field initialization order: `destroyRef`, `loadWarning`, `_series`, `series`. Good.
+      - `load()` calls `this.sort`, which is a method; available.
+      - `readRaw` if localStorage throws: should set warning? Could do:
+      ```ts
+      private readRaw(): string | null {
+        try { return localStorage.getItem(STORAGE_KEY); }
+        catch { this.loadWarning.set('Saved series could not be read from this browser.'); return null; }
+      }
+      ```
+      But `loadWarning` exists. Good.
+      - `backupCorrupt` might throw; catch.
+      - `persist`:
+      ```ts
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify({version:1, items})); }
+      catch (error) { throw new SeriesStorageError('Could not save saved series in this browser.', error); }
+      ```
+      - If `create` persist fails, signal unchanged because we set after persist. Good.
+      - `update` persist fails, unchanged. Good.
+      - `delete` persist fails, unchanged. Good.
+
+      Need tests maybe `SeriesValidationError` field. Export.
+
+      Let's write.
+    thinking_duration: 7.756s
+    thinking_duration_ms: 7756
+    tool_calls:
+      - tool: write
+        args:
+          content: |
+            import { DestroyRef, Injectable, inject, signal } from '@angular/core';
+            import {
+              GEO_CODES,
+              SEX_CODES,
+              type GeoCode,
+              type SavedSeries,
+              type SavedSeriesInput,
+              type SexCode,
+            } from './saved-series.model';
+
+            const STORAGE_KEY = 'eurostat-crud.saved-series.v1';
+            const CORRUPT_KEY = 'eurostat-crud.saved-series.v1.corrupt';
+            const STORAGE_VERSION = 1;
+
+            interface StoredEnvelope {
+              version: number;
+              items: unknown[];
+            }
+
+            export class SeriesValidationError extends Error {
+              constructor(message: string, readonly field?: 'name' | 'note' | 'filters') {
+                super(message);
+                this.name = 'SeriesValidationError';
+              }
+            }
+
+            export class SeriesStorageError extends Error {
+              constructor(message: string, readonly cause?: unknown) {
+                super(message);
+                this.name = 'SeriesStorageError';
+              }
+            }
+
+            @Injectable({ providedIn: 'root' })
+            export class SeriesStoreService {
+              private readonly destroyRef = inject(DestroyRef);
+
+              readonly loadWarning = signal<string | null>(null);
+              private readonly _series = signal<SavedSeries[]>(this.load());
+              readonly series = this._series.asReadonly();
+
+              constructor() {
+                if (typeof window !== 'undefined') {
+                  const onStorage = (event: StorageEvent): void => {
+                    if (event.key === STORAGE_KEY) {
+                      this._series.set(this.load());
+                    }
+                  };
+
+                  window.addEventListener('storage', onStorage);
+                  this.destroyRef.onDestroy(() => window.removeEventListener('storage', onStorage));
+                }
+              }
+
+              create(input: SavedSeriesInput): SavedSeries {
+                const normalized = this.validateInput(input);
+                const now = new Date().toISOString();
+                const record: SavedSeries = {
+                  id: crypto.randomUUID(),
+                  ...normalized,
+                  createdAt: now,
+                  updatedAt: now,
+                };
+                const next = [...this._series(), record];
+
+                this.persist(next);
+                this._series.set(this.sort(next));
+                return record;
+              }
+
+              update(id: string, input: SavedSeriesInput): SavedSeries | undefined {
+                const existing = this._series().find((item) => item.id === id);
+                if (!existing) {
+                  return undefined;
+                }
+
+                const normalized = this.validateInput(input);
+                const updated: SavedSeries = {
+                  ...existing,
+                  ...normalized,
+                  updatedAt: new Date().toISOString(),
+                };
+                const next = this._series().map((item) => (item.id === id ? updated : item));
+
+                this.persist(next);
+                this._series.set(this.sort(next));
+                return updated;
+              }
+
+              delete(id: string): boolean {
+                const current = this._series();
+                const next = current.filter((item) => item.id !== id);
+
+                if (next.length === current.length) {
+                  return false;
+                }
+
+                this.persist(next);
+                this._series.set(this.sort(next));
+                return true;
+              }
+
+              private load(): SavedSeries[] {
+                this.loadWarning.set(null);
+                const raw = this.readRaw();
+
+                if (!raw) {
+                  return [];
+                }
+
+                let parsed: unknown;
+
+                try {
+                  parsed = JSON.parse(raw);
+                } catch {
+                  this.backupCorrupt(raw);
+                  this.loadWarning.set('Saved series data was corrupt. The original value was backed up.');
+                  return [];
+                }
+
+                if (!this.isEnvelope(parsed)) {
+                  this.backupCorrupt(raw);
+                  this.loadWarning.set('Saved series data had an unexpected shape. The original value was backed up.');
+                  return [];
+                }
+
+                const items: SavedSeries[] = [];
+                let dropped = false;
+
+                for (const candidate of parsed.items) {
+                  const record = this.parseStored(candidate);
+
+                  if (record) {
+                    items.push(record);
+                  } else {
+                    dropped = true;
+                  }
+                }
+
+                if (dropped) {
+                  this.loadWarning.set('Some saved series were invalid and were ignored.');
+                }
+
+                return this.sort(items);
+              }
+
+              private readRaw(): string | null {
+                try {
+                  return localStorage.getItem(STORAGE_KEY);
+                } catch {
+                  this.loadWarning.set('Saved series could not be read from this browser.');
+                  return null;
+                }
+              }
+
+              private backupCorrupt(raw: string): void {
+                try {
+                  localStorage.setItem(CORRUPT_KEY, raw);
+                } catch {
+                  // The warning still explains that the original could not be loaded.
+                }
+              }
+
+              private persist(items: SavedSeries[]): void {
+                const envelope: StoredEnvelope = { version: STORAGE_VERSION, items };
+
+                try {
+                  localStorage.setItem(STORAGE_KEY, JSON.stringify(envelope));
+                } catch (error) {
+                  throw new SeriesStorageError('Could not save saved series in this browser.', error);
+                }
+              }
+
+              private validateInput(input: SavedSeriesInput): Omit<SavedSeries, 'id' | 'createdAt' | 'updatedAt'> {
+                if (!input || typeof input !== 'object') {
+                  throw new SeriesValidationError('Saved series input is missing.', 'filters');
+                }
+
+                const name = typeof input.name === 'string' ? input.name.trim() : '';
+                if (name.length < 1 || name.length > 80) {
+                  throw new SeriesValidationError('Name must be between 1 and 80 characters.', 'name');
+                }
+
+                const note = typeof input.note === 'string' ? input.note.trim() : '';
+                if (note.length > 2000) {
+                  throw new SeriesValidationError('Note must be 2,000 characters or fewer.', 'note');
+                }
+
+                const filters = input.filters;
+                if (!filters || typeof filters !== 'object') {
+                  throw new SeriesValidationError('Choose a country and sex.', 'filters');
+                }
+
+                if (!this.isGeo(filters.geo) || !this.isSex(filters.sex)) {
+                  throw new SeriesValidationError('Choose a supported country and sex.', 'filters');
+                }
+
+                return {
+                  name,
+                  note,
+                  filters: {
+                    geo: filters.geo,
+                    sex: filters.sex,
+                  },
+                };
+              }
+
+              private parseStored(value: unknown): SavedSeries | null {
+                if (!this.isRecord(value)) {
+                  return null;
+                }
+
+                const id = value['id'];
+                const name = value['name'];
+                const note = value['note'];
+                const filters = value['filters'];
+                const createdAt = value['createdAt'];
+                const updatedAt = value['updatedAt'];
+
+                if (typeof id !== 'string' || id.length === 0) {
+                  return null;
+                }
+
+                if (typeof name !== 'string' || name.trim().length < 1 || name.trim().length > 80) {
+                  return null;
+                }
+
+                if (typeof note !== 'string' || note.trim().length > 2000) {
+                  return null;
+                }
+
+                if (!this.isRecord(filters) || !this.isGeo(filters['geo']) || !this.isSex(filters['sex'])) {
+                  return null;
+                }
+
+                if (!this.isTimestamp(createdAt) || !this.isTimestamp(updatedAt)) {
+                  return null;
+                }
+
+                return {
+                  id,
+                  name: name.trim(),
+                  note: note.trim(),
+                  filters: {
+                    geo: filters['geo'],
+                    sex: filters['sex'],
+                  },
+                  createdAt,
+                  updatedAt,
+                };
+              }
+
+              private isEnvelope(value: unknown): value is StoredEnvelope {
+                return (
+                  this.isRecord(value) &&
+                  value['version'] === STORAGE_VERSION &&
+                  Array.isArray(value['items'])
+                );
+              }
+
+              private isRecord(value: unknown): value is Record<string, unknown> {
+                return typeof value === 'object' && value !== null;
+              }
+
+              private isGeo(value: unknown): value is GeoCode {
+                return typeof value === 'string' && (GEO_CODES as readonly string[]).includes(value);
+              }
+
+              private isSex(value: unknown): value is SexCode {
+                return typeof value === 'string' && (SEX_CODES as readonly string[]).includes(value);
+              }
+
+              private isTimestamp(value: unknown): value is string {
+                return typeof value === 'string' && !Number.isNaN(Date.parse(value));
+              }
+
+              private sort(items: SavedSeries[]): SavedSeries[] {
+                return [...items].sort(
+                  (left, right) => right.updatedAt.localeCompare(left.updatedAt) || left.name.localeCompare(right.name),
+                );
+              }
+            }
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/core/series/series-store.service.ts
+        result: Wrote file successfully.
+    time: 10/23/2026, 7:54:38.813 PM UTC
+    response: "\n\n"
+    duration: 23.138s
+    duration_ms: 23138
+  - agent: compaction
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      We need produce structured summary combining prior summary + conversation. Need capture current work state: docs phase completed mostly, root config created, README/catalog edited, lint dossier 0, integration pre-existing lint 56 vs baseline 57, app scaffolded and implementation started. User now said "proceed with plan", so app implementation active. Need exact plan details from conversation. Need summarize all important facts, decisions, paths, commands, current state, blockers.
+
+      Let's parse conversation carefully. The conversation starts mid-work: assistant wrote zetaris-integration.md, data-quality.md, operations-runbook.md, license-and-attribution.md. Created root `.markdownlint-cli2.jsonc`. Linted dossier, fixed data-dictionary issues (MD038, MD024). Updated root README with docs/data-sources row and layout. Updated REST catalog section 7 license and full dossier. Lint: dossier 0; integration files 56 pre-existing issues vs baseline 57; exact combined command exits 1. Final response said docs done, no commit, app not started. Then user: "proceed with /home/.../implementation-plan_v1.md". Assistant began Phase 2: read AGENTS, plan sections, created todo list, scaffolded Angular 22.2.4 app successfully, npm install succeeded (2 vulnerabilities, install-scripts warnings), inspected generated files, started implementing: created directories, about to write model/service/store. Current active: app implementation, scaffold complete, no app files written yet beyond generated. Need note generated app state: `examples/eurostat-crud` created with Angular 22.2.4, package.json has Angular ^22.2.0, CLI ^22.2.4, TypeScript ~6.0.2, Vitest ^5.0.0, packageManager npm@11.19.1, jsdom ^30, prettier ^3.8.1. `npm install` up to date, 2 vulnerabilities (1 low, 1 high), install-scripts warnings for @parcel/watcher, esbuild, lmdb, msgpackr-extract. Generated `app.ts` has title signal, `app.config.ts` has `provideBrowserGlobalErrorListeners()` and `provideRouter(routes)`, routes empty, app.html placeholder huge, styles empty. Need mention `ng test --watch=false` unverified, build not run. Need note user approved plan execution, so app is now in scope.
+
+      Need include plan specifics for Phase 2: architecture, routes, models, service, store, components, tests, README, build, smoke test. The prior summary had many details; carry forward. Need not duplicate all docs facts? Important details should include key source facts and app scope. Since docs are done, still relevant for app service (dataset, filters, counts, license attribution). Need keep enough.
+
+      Need include exact file paths. Need include exact commands. Need include current todo list statuses. Need note root lint caveat and legacy debt. Need note docs completed: 8 files, 2038 lines, lint 0, 68 relative links checked 0 missing. Root README and REST catalog edits done; no commit. Root `.markdownlint-cli2.jsonc` created. Integration files lint 56 pre-existing issues (baseline 57), exact combined command exits 1. Need note `.env.example` and `key.txt` pre-existing. Need note no commit/push.
+
+      Need include app implementation decisions and exact plan snippets. Let's reconstruct plan Phase 2 details from conversation. We saw plan sections 7.1-7.3 partially and 5.3. Need more details from prior summary and conversation. We have:
+      - Angular 22.2.4 standalone, zoneless, strict, Vitest.
+      - routes `/series`, `/series/new`, `/series/:id`, `/series/:id/edit`.
+      - storage key `eurostat-crud.saved-series.v1`.
+      - models exact:
+      ```ts
+      export const GEO_CODES = ['PL', 'DE', 'FR', 'ES', 'IT'] as const;
+      export type GeoCode = (typeof GEO_CODES)[number];
+      export const SEX_CODES = ['T', 'M', 'F'] as const;
+      export type SexCode = (typeof SEX_CODES)[number];
+      export interface SeriesFilters { geo: GeoCode; sex: SexCode; }
+      export interface SavedSeries { id: string; name: string; note: string; filters: SeriesFilters; createdAt: string; updatedAt: string; }
+      export interface SavedSeriesInput { name: string; note: string; filters: SeriesFilters; }
+      export interface Observation { period: string; rate: number; } // likely
+      ```
+      Need exact Observation fields? Conversation cut at `rate`. Prior summary says models. We can state Observation `{ period: string; rate: number }` likely. Need maybe `SeriesData` interface? Plan likely defines `SeriesData` with `datasetLabel`, `source`, `updated`, `observations`. We saw service plan not fully. We can include as likely. But summary should preserve exact known. We know from plan: EurostatService fetch, cache 5 min, validate, decode, error. `SeriesData` maybe. We can mention.
+
+      - Store API: `_series` signal, `series` readonly, `loadWarning`, create/update/delete, localStorage envelope `{version:1, items}`, corrupt backup key, validation, sort updatedAt desc, storage event. Need include because active implementation.
+      - Components:
+        - `SeriesList`: list saved records, empty state, note preview, latest saved timestamp, link detail, create button, attribution.
+        - `SeriesForm`: create/edit reactive form, fields name (1-80), geo, sex, note (0-2000), validation, cancel, storage errors.
+        - `SeriesDetail`: fetch on load, loading/error, retry, chart, table, latest 24 newest first, show all, edit/delete, delete confirmation, attribution.
+        - `RateChart`: standalone SVG line chart, input observations required, aria label, min/max labels.
+        - App shell: header/nav/footer, brand, routes.
+      - Tests required: EurostatService 5 tests, SeriesStoreService 6, component tests for App, SeriesList, SeriesForm, SeriesDetail. Need mention exact counts from plan. We saw plan likely says 5, 6, etc. Prior summary mentions. We can carry.
+      - README app: setup/run/test/build, routes, storage key, filters, limitations, attribution, no secrets.
+      - Build: `npm run build`, pass criteria budgets. Smoke test: browser CRUD. Need maybe exact commands later. Not yet.
+
+      Need include `mise x node@26 -- ...` Node 26.10.0. Scaffold command exact. npm install exact. `ng version` not yet run? Scaffold output did not show `ng version`; plan pass criteria says `ng version` reports Angular CLI 22.2.4 and Node 26.x. Need note not yet verified. Maybe run later.
+
+      Need include current state: directories created:
+      `src/app/core/eurostat`, `core/series`, `features/series-list`, `features/series-form`, `features/series-detail`, `shared/rate-chart`. No files written yet. Generated files present. Active task "Scaffold Angular..." marked in_progress; actually scaffold done, need mark complete. In summary active: implementation of models/service/store, then components, tests, build, smoke.
+
+      Need include blockers:
+      - `ng test --watch=false` unverified; app implementation incomplete.
+      - Build not run; browser smoke not run.
+      - npm install warnings about install scripts may affect build (esbuild postinstall not approved); need watch. Is that a blocker? Potential. Mention as risk.
+      - Combined lint exact command exits 1 due pre-existing issues; docs dossier clean. Not a blocker for app but unresolved.
+      - No commit/push.
+
+      Need include security constraints: no secrets in app/docs, `.env.local`, `ZETARIS_API_KEY` never print. App uses public API no key.
+
+      Need include docs facts maybe condensed:
+      - Source: `une_rt_m`, dataset title, ESTAT, JSON-stat 2.0, DOI, timestamp.
+      - API endpoint and params.
+      - PL/T counts and status flags; five-country coverage; full dataset.
+      - Zetaris objects and views; series view 356 rows; snapshot 3 columns.
+      - License terms.
+      - Drift.
+      These are needed for app and docs. But summary can be long; desired oververbosity 5. Need be terse but complete. We can group.
+
+      Need include exact plan/task paths and local-only status. The user explicitly says proceed with plan path; include.
+
+      Need include root config exact content? We can state created with MD013 120 code_blocks false tables false, MD007 indent 2, MD029 ordered, MD046 fenced, MD033 br, trailing commas. Good.
+
+      Need include docs file names and statuses: all 8 written. Root README modifications: added `docs/data-sources/` table row and `data-sources/` layout line. REST catalog section 7 license replaced and full dossier bullet added. Note no `website/build.mjs` edit. Root README/catalog lint pre-existing debt 56 vs baseline 57. Link audit 68 relative links 0 missing. Dossier lint 0.
+
+      Need include app generated details:
+      - `package.json` name `eurostat-crud`, scripts ng/start/build/watch/test, private, packageManager npm@11.19.1, deps Angular ^22.2.0, rxjs ~7.8, tslib ^2.3; dev deps @angular/build ^22.2.4, CLI ^22.2.4, compiler-cli ^22.2.0, jsdom ^30, prettier ^3.8.1, typescript ~6.0.2, vitest ^5.0.0.
+      - generated `app.ts` imports RouterOutlet, signal title; `app.config.ts` providers `provideBrowserGlobalErrorListeners`, `provideRouter(routes)`; `app.routes.ts` empty; `app.html` placeholder; `styles.css` empty; `index.html` title EurostatCrud.
+      - Need replace app.html, app.css, app.ts, app.config.ts, routes, styles, index.
+      - `tsconfig` strict flags: noImplicitOverride, noPropertyAccessFromIndexSignature, noImplicitReturns, noFallthroughCasesInSwitch, skipLibCheck, isolatedModules, experimentalDecorators, importHelpers, target ES2022, module preserve. Important for coding: use bracket access for index signatures.
+      - Angular 22 zoneless, Vitest.
+
+      Need include app test strategy perhaps:
+      - Use `provideHttpClient()` + `provideHttpClientTesting()`, `HttpTestingController`.
+      - Mock store/router/ActivatedRoute in component tests.
+      - `convertToParamMap`.
+      - Need handle async `whenStable` in zoneless; potential issue. Mention as implementation note? Good to carry.
+
+      Need include docs corrections from conversation:
+      - `data-dictionary.md` fixed MD038 by removing backtick access example; renamed example headings to "Metadata view row", "Snapshot view row", "Series view rows".
+      - Changed "full dataset has no global positions-with-no-data.time list" to "reports an empty ... array" in data-dictionary and data-quality? Conversation edited data-dictionary only? It edited data-dictionary two places. Data-quality already said arrays empty. Good.
+      - README wording changed "Zetaris objects do not call API at query time in a browser sense" to "registered REST tables inside Zetaris, not a browser proxy." Citation updated to include databrowser link.
+      - License doc catalog correction actual catalog has full dossier bullet. Good.
+
+      Need include plan exact scaffold command and npm install. Also `mise x node@26 -- node --version` v26.10.0.
+
+      Need include user's directive: "proceed with plan" means app phase approved; implement Phase 2 and final lint/audit, no commit. The original objective now includes docs + Angular CRUD app. The prior objective said docs only; conversation supersedes: user approved plan. Update objective: "Complete the Eurostat dossier and Angular CRUD example per plan; docs done, now implement app." Good.
+
+      Need include "app not started" from previous final is now outdated; app scaffolded. Drop "app not started."
+
+      Need include "No commit or push" still.
+
+      Need include "docs phase completed" and "app phase active."
+
+      Need mention plan Phase 3 final lint/link audit after app. The task checklist phases:
+      1.1 baseline/scratch; 1.2 fetch; 1.3 coverage; 1.4 Zetaris; 1.5 eight docs; 1.6 integrate README/catalog; 1.7 lint config; 1.8 lint; 2.1 scaffold; 2.2 models/service/store; 2.3 routes/pages/chart/styles; 2.4 README; 2.5 unit tests; 2.6 build; 2.7 browser smoke; 3.1 root README/catalog edits; 3.2 final lint/link; 3.3 report no commit.
+      Completed 1.1-1.7, 1.8 dossier but integration lint caveat; 2.1 scaffold. 3.1 done. Active 2.2.
+
+      Need include exact docs files and line counts? Could mention 8 docs, 2,038 lines. Good.
+
+      Need include root status: `M .env.example` pre-existing, `M README.md`, `M open_data/rest_apis/rest-api-sources.md`, `?? .markdownlint-cli2.jsonc`, `?? docs/data-sources/`, `?? key.txt`. Now app directory likely untracked too. After scaffold, `examples/eurostat-crud/` untracked; node_modules ignored by generated .gitignore. Need state. `git status` not rerun after scaffold, but app dir untracked. Mention.
+
+      Need include exact `README` and catalog edits maybe:
+      - README row: `| [`docs/data-sources/`](docs/data-sources/) | Verified data-source dossiers, starting with the Eurostat unemployment-rate dataset |`
+      - layout line: `data-sources/    Verified data-source dossiers (Eurostat unemployment rate)`
+      - catalog section 7: license text with Decision 2011/833/EU, CC BY 4.0 editorial, commercial country exception, full dossier bullet. Good.
+
+      Need include lint commands and results:
+      - `markdownlint-cli2 "docs/data-sources/eurostat/*.md"` exit 0, 8 files, 0 issues.
+      - `markdownlint-cli2 "README.md" "open_data/rest_apis/rest-api-sources.md"` exit 1, 56 issues; baseline HEAD versions 57 issues. No new lint regressions. Exact combined command exits 1.
+      - Link audit: 10 files (8 docs + README + catalog), 68 relative links, 0 missing; code blocks skipped. Good.
+
+      Need include app test/verification not yet done. `ng version` not yet run. `npm install` exit 0; 2 vulnerabilities (1 low, 1 high), install-scripts warnings. Should we mention vulnerabilities? Yes, important. "Do not run npm audit fix --force" maybe. Good.
+
+      Need include source facts for app:
+      - Default filters? App allowlists PL/DE/FR/ES/IT and T/M/F; fixed `freq=M`, `age=TOTAL`, `unit=PC_ACT`, `s_adj=SA`.
+      - API URL.
+      - `SeriesData` likely includes datasetLabel, source, updated, observations. Need be precise. We can say "Plan defines `SeriesData` for label/source/updated/observations" without exact field names? We can infer. Let's read plan snippet maybe not available. Could state "EurostatService returns validated `SeriesData` with dataset label, source, updated timestamp, sorted observations; caches by geo/sex for 5 minutes." That's enough.
+      - Error class `EurostatDataError`; store `SeriesValidationError`? We invented in reasoning, not plan. Don't state as decided unless plan. Plan likely has error class names. We can mention "service error class and store validation errors" generically. But summary should carry decisions from reasoning? The assistant's reasoning proposed `EurostatDataError`, `SeriesValidationError`, `series-labels.ts`. These are not final code yet; but useful. We can list as planned implementation choices. Need avoid overcommitting if not in plan. We can say "Implementation plan from reasoning: ..." but summary should be factual. Maybe include "Planned implementation details: `EurostatDataError`, `SeriesValidationError`, `series-labels.ts` helper; use `inject(HttpClient)`." Since active work will follow. Good.
+
+      Need include Angular generated app uses `app.html` 20,144 bytes placeholder; replace. `app.spec.ts` generated tests title "Hello, eurostat-crud"; replace. `app.config.ts` needs `provideHttpClient(withFetch())`. `index.html` title. Good.
+
+      Need include `AGENTS.md` constraints: connect first/preflight, no secrets, ask before install. We already installed; user approved plan. But future agent should know. Maybe include "Repo AGENTS.md: run preflight before Zetaris work; never print API key; use `.env.local`." Good.
+
+      Need include plan path exact. Yes.
+
+      Need include task file path exact. Yes.
+
+      Need include "session slug/ID" maybe not necessary, but plan filenames include it. Keep.
+
+      Need include "No BFF, SQLite, Zetaris key" decisions. Yes.
+
+      Need include "Zetaris docs drift not fixed" maybe docs done; still relevant if app/README? Not much. But carry because docs content. Could condense.
+
+      Need output exact template with sections. No extra. Use terse bullets. Need keep all sections.
+
+      Let's draft.
+
+      Objective:
+      - "Complete the Eurostat data dossier and Angular CRUD example defined in the approved plan; docs are complete, now implement the Angular app and finish verification without committing."
+
+      Important Details:
+      - User directive: proceed with plan path; app now approved.
+      - Plan/task paths local-only.
+      - Docs target, app target, decisions.
+      - Source/API facts.
+      - Zetaris facts.
+      - License.
+      - App stack/routes/models/store/components/tests.
+      - Tooling/security.
+      - Lint caveat.
+      Need not include every count? Include key counts and coverage. Use compact bullets.
+
+      Work State Completed:
+      - Docs 8 files, 2,038 lines, lint 0.
+      - Root config, README/catalog edits, link audit.
+      - Scaffold app, npm install, generated files.
+      - Docs content corrections.
+      - No commit.
+      Active:
+      - Implement app core models/service/store, then components; current directories created, no app source files written beyond generated.
+      - Need replace generated app shell and routes; write tests/readme; build/smoke.
+      Blocked:
+      - `ng test --watch=false`, build, browser smoke not yet run.
+      - Combined lint exits 1 due pre-existing 56 issues (baseline 57); docs clean.
+      - npm install warnings/2 vulnerabilities; install scripts not approved may affect build.
+      - `ng version` not yet verified.
+
+      Next Move:
+      1. Write `saved-series.model.ts`, `eurostat.models.ts`, `eurostat.service.ts`, `series-store.service.ts`, labels.
+      2. Implement routes/app shell/components/chart/styles, then tests/readme/build/smoke/final audit.
+      3. Maybe run `ng version` and `ng test --watch=false`.
+
+      Relevant Files:
+      - plan, task, docs dir, app dir, generated key files, root config, README, catalog, package.json, tsconfig, app config, routes, app html/css, test files, scratch, env, git exclude.
+      Need include exact paths.
+
+      Let's ensure no old claim "app not started" remains. Completed includes scaffold. Active says implementation.
+
+      Need mention docs phase final response claimed "app not started"; now superseded.
+
+      Need mention root README/catalog lint 56 not 57. Good.
+
+      Need mention `docs/data-sources/eurostat/README.md` citation updated with databrowser URL. Maybe not necessary.
+
+      Need mention `data-dictionary.md` line count 353 and fixes. Good.
+
+      Need mention `license-and-attribution.md` official policy nuance: statistical data not CC BY 4.0; editorial CC BY 4.0; Decision 2011/833/EU; commercial country exception. Important for app footer attribution. Yes.
+
+      Need mention app footer attribution exact: "Source: Eurostat, une_rt_m (unemployment rate, monthly)" and link copyright notice. Good.
+
+      Need mention app no secrets; public API CORS. Good.
+
+      Need mention app `localStorage` key and envelope. Good.
+
+      Need mention tests count? Plan likely says 5 EurostatService, 6 store, component tests. We can state "Required tests: service (5), store (6), app/list/form/detail components." If exact counts uncertain, say "plan-required service/store/component tests." But prior summary says counts. Use.
+
+      Need mention `ng test --watch=false` command. Yes.
+
+      Need mention `npm run build` command. Yes.
+
+      Need mention smoke test "browser CRUD smoke test" not run. Yes.
+
+      Need mention `npm install` warnings: 2 vulnerabilities, install-scripts for esbuild etc. Maybe build may fail if esbuild postinstall not run. Actually `npm install` said up to date, audited; install-scripts warnings. The scaffold install likely ran scripts? `npm install` output warnings "not yet covered by allowScripts"; this is npm 11's new allow-scripts feature. It may have skipped scripts, but Angular build may use esbuild binary from optional package; likely works. Mention risk.
+
+      Need mention generated `app.html` is placeholder and `app.spec.ts` tests "Hello, eurostat-crud"; must replace. Good.
+
+      Need mention `app.config.ts` currently only `provideBrowserGlobalErrorListeners` and `provideRouter`; add `provideHttpClient(withFetch())`. Good.
+
+      Need mention `tsconfig` `noPropertyAccessFromIndexSignature` means bracket access for JSON-stat records. Useful.
+
+      Need mention `crypto.randomUUID()` planned. Good.
+
+      Need mention `SeriesStoreService` field initialization order issue? We reasoned loadWarning must precede `_series`. Could include as implementation note: "Declare `loadWarning` before `_series` because `load()` sets it during field init." This is a useful detail. Include under app details. Also storage event listener with DestroyRef. Maybe too detailed but helpful. Desired oververbosity 5; include key implementation notes.
+
+      Need mention `RateChart` min/max/aria. Good.
+
+      Need mention `SeriesDetail` latest 24 newest first, show all. Good.
+
+      Need mention `SeriesList` empty state copy and attribution. Good.
+
+      Need mention form validation 1-80, 0-2000, allowlists. Good.
+
+      Need mention store sort updatedAt desc then name asc, corrupt backup key, drops invalid items. Good.
+
+      Need mention service cache 5 min, validate class/id/size/time/value, empty error, flat index formula. Good.
+
+      Need mention no Zetaris API in app. Good.
+
+      Need mention docs source facts: PL/T latest 3.4, 356 values; five-country. App default maybe PL/T. Good.
+
+      Let's compose with bullets, keep concise but comprehensive. Use exact paths. No markdown code fences? Template uses bullets; can include inline code. Avoid huge code blocks. Fine.
+
+      Need ensure "Objective" one/two sentences. "Complete the approved Eurostat documentation dossier and Angular CRUD example; docs are complete, now implement and verify the Angular app per plan, with no commit/push." Good.
+
+      Important Details bullet count maybe 20. Fine.
+
+      Work State Completed: include docs all 8, lint, README/catalog, scaffold. Active: app implementation. Blocked: tests/build/smoke, lint caveat, npm warnings.
+
+      Relevant Files: include many. Good.
+
+      Let's produce final.
+    thinking_duration: 39.401s
+    thinking_duration_ms: 39401
+    time: 10/23/2026, 7:55:02.050 PM UTC
+    response: |-
+      ## Objective
+      - Complete the approved Eurostat documentation dossier and Angular CRUD example defined in `/home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md`. The 8-file dossier is complete; now implement, test, build, and smoke-test the Angular app, then run the final audit. No commit or push.
+
+      ## Important Details
+      - User directive: “proceed with” the plan above. The app phase is now approved and active.
+      - Plan/task are local-only via `.git/info/exclude`, never commit:
+        - `/home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md`
+        - `/home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_task.md`
+      - Docs target: `docs/data-sources/eurostat/` with 8 files: `README.md`, `dataset-profile.md`, `data-dictionary.md`, `api-reference.md`, `zetaris-integration.md`, `data-quality.md`, `operations-runbook.md`, `license-and-attribution.md`.
+      - App target: `examples/eurostat-crud/`; pure Angular + `localStorage`, calls public Eurostat API directly; no BFF, SQLite, Zetaris key, or secrets.
+      - App stack: Angular 22.2.4, standalone, zoneless, strict, Vitest, CSS, routing, no SSR, prefix `app`.
+      - Routes: `/series`, `/series/new`, `/series/:id`, `/series/:id/edit`.
+      - Storage key: `eurostat-crud.saved-series.v1`; envelope `{ version: 1, items: SavedSeries[] }`; corrupt raw JSON backed up under a separate corrupt key.
+      - Allowlists: geo `PL|DE|FR|ES|IT`; sex `T|M|F`; fixed `freq=M`, `age=TOTAL`, `unit=PC_ACT`, `s_adj=SA`.
+      - Models: `GEO_CODES`, `GeoCode`, `SEX_CODES`, `SexCode`, `SeriesFilters`, `SavedSeries`, `SavedSeriesInput`, `Observation`; `Observation` is `{ period: string; rate: number }`.
+      - `EurostatService`: fetches `https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_m`, validates JSON-stat `class=dataset`, `id`/`size` alignment, time dimension, and `value`; decodes flat indices with strides; sorts periods ascending; drops non-finite values; throws on empty/malformed responses; caches successful responses by `geo:sex` for 5 minutes.
+      - `SeriesStoreService`: signals `_series`, `series`, `loadWarning`; create/update/delete; trims name to 1–80 chars, note 0–2000; validates filters/timestamps; drops invalid loaded items; sorts by `updatedAt` desc then name asc; persists on every mutation; listens for cross-tab `storage` events. Declare `loadWarning` before `_series` because `load()` sets it during field initialization.
+      - Components: `SeriesList`, `SeriesForm`, `SeriesDetail`, `RateChart`; app shell with header/nav/footer and Eurostat attribution.
+      - `SeriesDetail`: fetch on load, loading/error/retry states, SVG chart, table, latest 24 newest first, “Show all”, edit/delete, delete confirmation, source timestamp, attribution.
+      - `RateChart`: standalone SVG line chart, required `observations` input, aria label, min/max and first/last period labels.
+      - Required tests: `EurostatService` (5), `SeriesStoreService` (6), plus app shell/list/form/detail component tests. Use `provideHttpClient()` + `provideHttpClientTesting()`, `HttpTestingController`, mocked stores/router/`ActivatedRoute`, `convertToParamMap`.
+      - Generated `tsconfig` has `noPropertyAccessFromIndexSignature`; use bracket access for JSON-stat records, e.g. `dataset.dimension['time']`.
+      - Source facts: `une_rt_m`, “Unemployment by sex and age - monthly data”, `ESTAT`, JSON-stat `2.0`, DOI `10.2908/UNE_RT_M`, updated `2026-10-21T11:00:00+0200`.
+      - PL/T slice: 356 values, `1997-01`..`2026-08`, 169 missing; latest `2026-08` = 3.4; snapshot `11.8`/`3.1`/`3.4`; status `2009-01=b`, `2009-12=d`.
+      - Five-country coverage: PL 356, DE 428, FR 524, ES 485, IT 524; all end `2026-08`, `2026-09` empty.
+      - Full dataset: 38 geo categories, 525 months, 757,828 values; status counts `b` 1,307, `d` 846, `p` 5,832, `u` 3,306.
+      - Zetaris: `EUROSTAT_REST` id 917, container `eurostat`, table `EUROSTAT_REST.une_rt_m_pl`, views `une_rt_m_pl_metadata_table`, `une_rt_m_pl_snapshot_table`, `une_rt_m_pl_series_table`; series view 356 rows, snapshot 3 columns.
+      - License: editorial content CC BY 4.0; statistical data reuse authorised with attribution under Decision 2011/833/EU; commercial reuse restricted for countries outside EU/EFTA/candidates. App must include attribution/link, not call the data “CC BY 4.0”.
+      - Lint config `.markdownlint-cli2.jsonc`: MD013 120 with code blocks/tables exempt, MD007 indent 2, MD029 ordered, MD046 fenced, MD033 allows `br`, JSONC trailing commas.
+      - Docs dossier lint is clean; root README and REST catalog retain pre-existing lint debt (56 issues, baseline 57), so exact combined lint command exits 1.
+      - Tooling: `mise x node@26` → Node v26.10.0; `markdownlint-cli2` v0.23.3; Python 3 helpers available.
+      - Security: never print/log `ZETARIS_API_KEY`; `.env.local` is the only env file; app uses no key.
+
+      ## Work State
+      ### Completed
+      - All 8 dossier docs written, total 2,038 lines; `markdownlint-cli2 "docs/data-sources/eurostat/*.md"` exits 0 with 0 issues.
+      - Dossier fixes applied: removed invalid backtick code span, renamed duplicate example headings, corrected empty `positions-with-no-data.time` wording, updated README citation to include the Eurostat databrowser URL, clarified Zetaris is not a browser proxy.
+      - Root `.markdownlint-cli2.jsonc` created.
+      - Root `README.md` updated with `docs/data-sources/` documentation-table row and `data-sources/` layout line.
+      - REST catalog section 7 updated with Decision 2011/833/EU license wording, CC BY 4.0 editorial distinction, commercial country exception, and full-dossier bullet.
+      - Relative-link audit: 10 files, 68 links checked, 0 missing.
+      - Angular app scaffolded successfully with exact plan command; `npm install` exits 0.
+      - Generated app files inspected: `app.ts` placeholder, `app.config.ts` has only global error listeners/router, empty routes, placeholder `app.html`, empty `styles.css`, generated `app.spec.ts` tests “Hello, eurostat-crud”.
+      - App directories created: `src/app/core/eurostat`, `core/series`, `features/series-list`, `features/series-form`, `features/series-detail`, `shared/rate-chart`.
+      - No commit or push.
+
+      ### Active
+      - Implementing app core: `saved-series.model.ts`, Eurostat models/service, `SeriesStoreService`, label helpers.
+      - Then replace app shell/routes, implement four components and styles, write app README, tests, run build and browser CRUD smoke test.
+      - Current todo list: scaffold marked in progress but effectively complete; core/models, components, README, tests, build, smoke, final audit pending.
+
+      ### Blocked
+      - `ng test --watch=false` not yet run; app implementation incomplete.
+      - `npm run build` and browser CRUD smoke test not yet run.
+      - `ng version` not yet confirmed for CLI 22.2.4/Node 26.x.
+      - `npm install` reported 2 vulnerabilities (1 low, 1 high) and install-script warnings for `@parcel/watcher`, `esbuild`, `lmdb`, `msgpackr-extract`; build may be affected if scripts were skipped.
+      - Exact combined lint command still exits 1 due to 56 pre-existing README/catalog issues; no new lint regressions (baseline 57). Dossier remains clean.
+      - No commit/push by design.
+
+      ## Next Move
+      1. Write `src/app/core/series/saved-series.model.ts`, Eurostat models/service, `SeriesStoreService`, and shared label helpers; then implement app shell, routes, list/form/detail/chart components, and styles.
+      2. Write app README and all required Vitest tests; run `mise x node@26 -- npx ng test --watch=false`, `npm run build`, and the browser CRUD smoke test.
+      3. Run final lint/link audit, report results, and leave changes uncommitted.
+
+      ## Relevant Files
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md`: approved plan; Phase 2 app design and acceptance criteria.
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_task.md`: checklist; local-only.
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/data-sources/eurostat/`: completed 8-file dossier.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/`: scaffolded Angular app; implementation target.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/package.json`: Angular ^22.2.0, CLI ^22.2.4, TypeScript ~6.0.2, Vitest ^5.0.0.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/app.ts`: generated placeholder; replace.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/app.config.ts`: add `provideHttpClient(withFetch())`.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/app.routes.ts`: empty; add four routes.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/app.html`: 20 KB placeholder; replace.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/app.css`, `src/styles.css`, `src/index.html`: replace/update.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/app.spec.ts`: generated title test; replace.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/tsconfig.json`: strict flags, `noPropertyAccessFromIndexSignature`.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/core/`: planned models/service/store.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/features/`: planned list/form/detail components.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/shared/rate-chart/`: planned chart component.
+      - `/home/ext_root/lab-data/zetaris-getting-started/.markdownlint-cli2.jsonc`: root lint config.
+      - `/home/ext_root/lab-data/zetaris-getting-started/README.md`: updated folder map/table; has pre-existing lint debt.
+      - `/home/ext_root/lab-data/zetaris-getting-started/open_data/rest_apis/rest-api-sources.md`: updated section 7; has pre-existing lint debt.
+      - `/home/ext_root/lab-data/zetaris-getting-started/open_data/rest_apis/sql/non_rate_limited/07_eurostat_create.sql`: DDL baseline; do not edit.
+      - `/home/ext_root/lab-data/zetaris-getting-started/open_data/rest_apis/sql/non_rate_limited/07_eurostat_select.sql`: verification examples; do not edit.
+      - `/home/ext_root/lab-data/zetaris-getting-started/scripts/preflight.py`, `run_sql.py`, `onboard.py`: Zetaris helpers.
+      - `/home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/`: local-only fixtures, lint logs, baseline files.
+      - `/home/ext_root/lab-data/zetaris-getting-started/.env.local`: credentials; never print or commit.
+      - `/home/ext_root/lab-data/zetaris-getting-started/.git/info/exclude`: local-only plan/task/scratch ignores.
+      - `/home/ext_root/lab-data/zetaris-getting-started/AGENTS.md`: repo operating rules.
+    duration: 63.575s
+    duration_ms: 63575
+

@@ -1,0 +1,624 @@
+---
+user:
+  text: |
+    .env.example change is ours
+    AGENTS.md change is also ours (partially). it only tells about java spring crud - need to tell about angualr crud too.
+  time: 10/23/2026, 10:09:32.680 PM UTC
+assistant:
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      We need update scope: include .env.example and AGENTS.md. AGENTS partially ours, only Java mention; need add Angular CRUD too. Need inspect AGENTS.md content and maybe .env.example diff. Need update AGENTS.md to mention both examples. Then update commit preview. Need decide commit grouping: .env.example config change likely belongs with app? It sets ZETARIS_ORG_ID=1, relevant to Zetaris connection. Could include with app commit (config coupled) or docs? Since .env.example supports Zetaris API scripts and app defaults; the app README says ORG_ID defaults to 1. The change makes example value 1. Could be app commit or docs commit. AGENTS.md mentions examples (Java + Angular) and repo overview. It should likely go with app commit because it introduces Angular example. But AGENTS.md also mentions Java pre-existing. The hunk partially ours (add Angular) and partially pre-existing (Java). We can stage the whole hunk? User says AGENTS change partially ours, need tell about Angular too. The whole hunk is one line block; we can update and include in app commit. But it also commits pre-existing Java mention; user now says AGENTS change is ours (partially), so okay. We should include whole AGENTS.md in app commit? It mentions examples/ and Java and Angular. Yes.
+
+      .env.example: user says ours. Include. Which commit? Maybe Commit 1 docs? It's a config change. Could be app commit because Zetaris ORG_ID default. But `.env.example` is general repo config, not specific to app. The app README says ORG_ID defaults to 1. Could include in app commit with rationale. Or separate `chore(env): default Zetaris org id` commit. The user asked "proper structure" and atomic. `.env.example` change is a single logical config default. Could be a separate commit:
+      `chore(env): default ZETARIS_ORG_ID to 1`
+      But commit rules: config changes coupled to functional changes. It may support the app and existing scripts. The change from empty to 1 is small. Could include in app commit as config coupling. However app doesn't read `.env.example`; dev proxy reads only ZETARIS_REST_URL; settings defaults orgId to 1. The .env.example change is more for existing scripts. But user says ours, maybe from prior setup. It might be independent. We need decide.
+
+      Need inspect AGENTS.md full to edit. Also .env.example. Then update. Need maybe update preview artifact: add files to commit(s), add hunks. Need maybe rerun lint? AGENTS.md lint? Markdownlint maybe. `.env.example` no lint. Need check AGENTS line length. We'll edit carefully.
+
+      First read AGENTS.md.
+    thinking_duration: 2.448s
+    thinking_duration_ms: 2448
+    tool_calls:
+      - tool: read
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/AGENTS.md
+        result: |-
+          <path>/home/ext_root/lab-data/zetaris-getting-started/AGENTS.md</path>
+          <type>file</type>
+          <content>
+          1: # Agent instructions
+          2: 
+          3: This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages
+          4: (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, SQL references in `docs/guides/`, and
+          5: runnable examples in `examples/` (`examples/eurostat-crud-java/` is a Spring Boot JDBC demo). You are acting as a
+          6: data engineer against a Zetaris instance.
+          7: 
+          8: ## Connect first
+          9: 
+          10: The user's first prompt names a protocol (JDBC or REST) and a goal. Which instance you talk to is set in `.env.local` (`ZETARIS_REST_URL`, `ZETARIS_JDBC_URL` and the rest; local is the default), not in the prompt. Before running anything else, read the connection guide for your harness in `docs/connections/` (`claude-code-connection.md`, `codex-connection.md`, `cursor-connection.md`) for the settings table and troubleshooting, run the preflight below, and confirm the connection with `SELECT 1` and `SHOW LIGHTNING DATABASES`. Over REST, also call `GET /datasource/datasources`. Then work on the user's goal.
+          11: 
+          12: - **JDBC:** use `ZETARIS_JDBC_JAR` if set; otherwise ask the user for the full path to the driver JAR. Do not assume or search for it.
+          13: - **REST:** the key is `ZETARIS_API_KEY` in `.env.local`, created by the user in the Zetaris GUI. Never create, request, print, log or put it in a URL.
+          14: - **OpenAPI spec:** fetch it fresh from `/redoc/docs.yaml` using Basic auth (`ZETARIS_USERNAME` and `ZETARIS_PASSWORD` from `.env.local`), not the bearer key. See section 6.4 of the connection guide.
+          15: - **Finding `.env.local`:** it is the only env file; do not use `.env`. It is gitignored, so a git worktree has none. Every script in `scripts/` (Python and Deno) already looks in the repo root and then the top-level checkout. For your own shell commands, use the snippet in the preflight section.
+          16: 
+          17: ## Preflight check
+          18: 
+          19: Run this before any Zetaris work in a new session, and report what is missing. Do not install anything, create credentials, or start work until the user has seen the result. Ask before installing.
+          20: 
+          21: Run `python3 scripts/preflight.py` (add `--jdbc --jar <path>` for JDBC). It is read-only and covers the checklist below; the list is what it checks and why. Run SQL files with `python3 scripts/run_sql.py FILE` (`--dry-run` first, `--skip-exists` to re-run, `--channel jdbc` for JDBC); see `scripts/HOWTO.md`.
+          22: 
+          23: 1. **Credentials.** Find `.env.local` (see "Connect first"). Check that these names are set, without printing values: `ZETARIS_API_KEY` for REST, and `ZETARIS_USERNAME` / `ZETARIS_PASSWORD` for the OpenAPI spec and for JDBC. Also note `ZETARIS_JDBC_JAR` (driver path, JDBC only) and `ZETARIS_USER_AGENT` (needed by any create script containing the `YOUR_APP_NAME YOUR_CONTACT_EMAIL` placeholder).
+          24:    ```bash
+          25:    ENV="$(dirname "$(cd "$(git rev-parse --git-common-dir)" && pwd)")/.env.local"
+          26:    set -a; . "$ENV"; set +a
+          27:    for v in ZETARIS_API_KEY ZETARIS_USERNAME ZETARIS_PASSWORD; do [ -n "$(printenv "$v")" ] && echo "$v set" || echo "$v MISSING"; done
+          28:    ```
+          29: 2. **REST.** `GET /datasource/datasources` returns 200, and `SELECT 1` through `/sql-editor/sqls/run` returns `1`. A 401 means a bad key; a 400 means a bad `X-Org-ID` or a non-UUID `X-Request-ID`. If localhost fails with `Operation not permitted` before an HTTP response, treat it as a possible command-environment network restriction, not an API or credential failure. Request approved/elevated execution for the same read-only preflight and retry when available. If access is unavailable or denied, report the blocker and stop; do not change the endpoint or credentials to work around it.
+          30: 3. **JDBC** (only if the user wants JDBC):
+          31:    - **Endpoint:** `nc -z localhost 10000` succeeds.
+          32:    - **Java:** JDK 11 or later. On macOS `java` can be a stub that reports "Unable to locate a Java Runtime" even when a Homebrew JDK exists. Check `/usr/libexec/java_home`, then `/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home`, and export `JAVA_HOME`. If none exists, offer `brew install openjdk@17`. The `temurin` cask needs `sudo`, which the agent cannot enter.
+          33:    - **Python:** a venv (`.venv` is gitignored) with `jaydebeapi` importable.
+          34:    - **Driver JAR:** ask the user for the full path and confirm the file exists. Never assume a location.
+          35:    - **Query:** connect with `jdbc:zetaris:lightning@localhost:10000` and class `com.zetaris.lightning.jdbc.LightningDriver`, then run `SELECT 1`.
+          36: 4. **Instance state.** `SHOW DATASOURCES` does not list Lightning-registered sources (REST, file). Also run `SHOW LIGHTNING DATABASES`. For USL, run `SHOW NAMESPACES OR TABLES IN lightning.metastore`; an empty result is normal on a clean instance, but a failing `CREATE NAMESPACE` on a missing parent means `lightning.metastore` is not initialized (see the USL note under "Writing SQL").
+          37: 5. **Report** a short pass/fail list, and stop on any failure.
+          38: 
+          39: ## Writing SQL
+          40: 
+          41: - Zetaris Lightning SQL only. Not Spark SQL or Hive SQL, and never start a local Spark session.
+          42: - One statement per call, no trailing semicolon, qualified names (`<source>.<table>`). A `_create.sql` script holds many statements; `scripts/run_sql.py` splits and sends them for you.
+          43: - **USL:** `lightning.metastore` must exist before `CREATE NAMESPACE IF NOT EXISTS lightning.metastore.<name>` works; check with `SHOW NAMESPACES OR TABLES IN lightning.metastore` (on an uninitialized instance the statement fails with "parent namespace : metastore is not existing"). A multi-table `COMPILE USL` must be sent as one whole statement, so do not split it on `;`. It works over JDBC and REST that way. Use `SHOW DQ ALL INVALID TABLE <namespace.usl.table>` (the `TABLE` clause is required).
+          44: - Read `docs/guides/zetaris-lightning-sql-commands.md` for syntax and `docs/guides/zetaris-lightning-sql-companion.md` for confirmed gotchas and platform limitations before writing new SQL.
+          45: 
+          46: ## Running scripts
+          47: 
+          48: Use `scripts/onboard.py` to onboard sources and USL models with their dependencies, and `scripts/run_sql.py` to run any single `_create.sql` / `_select.sql` file or ad hoc SQL. Do not hand-roll a splitter. See `scripts/HOWTO.md` for options.
+          49: 
+          50: - **Dry-run first** (`--dry-run`) and show the user the statement list. Create scripts change the instance, so get a clear go-ahead before running one for real.
+          51: - **User-agent.** `ZETARIS_USER_AGENT` must be `app_name user@domain.tld`: an app name and a contact e-mail. `company_dns` V4 gives anything vaguer (a bare name, a library default, none) a very strict rate limit, and SEC EDGAR needs a real contact. Never send the `YOUR_APP_NAME YOUR_CONTACT_EMAIL` placeholder, and do not invent or reuse a contact email. If `ZETARIS_USER_AGENT` is not set, or is not in that form, ask the user which value to send, then pass it for the run or have them add it to `.env.local`. The runner refuses the placeholder and any value without a contact e-mail.
+          52: - **Re-runs.** `--skip-exists` skips "already exists" errors, so a script can be run again on an instance that already has some of its objects. Without it the run stops at the first duplicate.
+          53: - **JDBC.** `--channel jdbc` needs the driver JAR from `--jar` or `ZETARIS_JDBC_JAR`. Ask the user for the path; never assume one. The runner finds a Homebrew JDK and hops into `.venv` itself.
+          54: - **Order and dependencies.** The approach is: onboard the data sources first, then create and activate a USL over them. Every source and USL model, with the sources it `requires`, is declared once in `open_data/manifest.json`. Use `python3 scripts/onboard.py --list` to see them, `plan <id>...` to see the resolved order, and `run <id>... --dry-run` then `run <id>...` to onboard them with their dependencies first. Never work out the order by hand or from HOWTO prose. A `known_to_fail` source needs `--allow-known-to-fail`. When you add a create script, add it to the manifest (`onboard.py --check` validates it).
+          55: - **Teardown and restarts.** When the user asks to clean up or start over, confirm the scope first (instance objects, local setup such as `.venv`, any published viewer), then use `python3 scripts/onboard.py teardown <id>...`. Do not hand-write DROP statements. Show the plan (it also pulls in sources that `require` the target), wait for a go-ahead, then re-run with `--yes`. Do not pipe a script that changes the instance through a filter such as `grep` on its first run; a filter error hides the output while the statements still run. After it finishes, report what only the Zetaris Data Explorer can remove (REST and file tables, Lightning databases, containers) and say that a re-run needs `--skip-exists` if they are left. `--drop-namespace` also removes every USL in the namespace, so only use it when asked.
+          56: - **Verify after creating**, as in `open_data/rest_apis/HOWTO.md` section 2: compare Zetaris row counts with an independent check against the source API.
+          57: 
+          58: ## Safety
+          59: 
+          60: - Start read-only (`SHOW`, `DESCRIBE`, `SELECT`). Ask before anything that creates, drops, grants or writes.
+          61: - Keep passwords and keys out of prompts, logs, source files and commits.
+          62: - Do not call port 8889 on a local instance.
+          63: - Least privilege: an agent that only reads should run as a non-administrator user, with creating, updating and deleting left to administrators. If a statement is refused for lack of privilege, report it and ask for the right access; do not switch to an administrator login unless the user tells you to. See `docs/guides/permissions.md`.
+          64: - Sources under `known_to_fail/` are documented failures, and `rate_limited/` sources should be run deliberately, not repeatedly.
+          65: 
+          66: ## Adding or changing sources
+          67: 
+          68: Follow `CONTRIBUTING.md`: the `_create.sql` / `_select.sql` pattern, the `known_to_fail/` write-up format, and license verification. Source HOWTOs live in `open_data/*/HOWTO.md`.
+
+          (End of file - total 68 lines)
+          </content>
+      - tool: read
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/.env.example
+          limit: 40
+        result: |-
+          <path>/home/ext_root/lab-data/zetaris-getting-started/.env.example</path>
+          <type>file</type>
+          <content>
+          1: # Copy this file to .env.local and fill in your own values -- .env.local is
+          2: # gitignored, .env.example is not. .env.local is the only env file the scripts
+          3: # and coding-harness guides read. In a git worktree the scripts also look in the
+          4: # top-level checkout, so you keep one copy. Never put real credentials here.
+          5: #
+          6: # PostgreSQL connection check: deno task ping:postgres or python3 scripts/ping_postgres.py
+          7: PGHOST=
+          8: PGPORT=5432
+          9: PGDATABASE=
+          10: PGUSER=
+          11: PGPASSWORD=
+          12: # Use verify-full for TLS with certificate verification, or disable without TLS.
+          13: PGSSLMODE=disable
+          14: 
+          15: # Zetaris HTTP API scripts (TypeScript and Python versions in scripts/).
+          16: ZETARIS_BASE_URL=http://localhost:3000
+          17: ZETARIS_ORG_ID=1
+          18: # Set either an API key or a username and password for POST /api/auth/login.
+          19: # Create the key in the Zetaris GUI (never ask an agent to create it). Coding
+          20: # harness sessions (docs/connections/) read ZETARIS_API_KEY from .env.local.
+          21: # ZETARIS_USERNAME/ZETARIS_PASSWORD are also used for Basic auth to fetch the
+          22: # OpenAPI spec from /redoc/docs.yaml (docs/connections/, section 6.4).
+          23: ZETARIS_API_KEY=
+          [REDACTED] ZETARIS_USERNAME=
+          25: ZETARIS_PASSWORD=
+          [REDACTED] # Optional: choose a compute engine and cap rows returned by run-query.
+          27: ZETARIS_ENGINE_ID=
+          28: ZETARIS_QUERY_LIMIT=1000
+          29: 
+          30: # run_sql.py and preflight.py (scripts/). These use the documented REST API on
+          31: # port 8888 and the JDBC endpoint, not the UI proxy on port 3000 used above.
+          32: ZETARIS_REST_URL=http://localhost:8888/api/v1.0
+          33: ZETARIS_JDBC_URL=jdbc:zetaris:lightning@localhost:10000
+          34: # Full path to the Zetaris JDBC driver JAR (JDBC only; ask where it lives, do not guess).
+          35: ZETARIS_JDBC_JAR=
+          36: # Replaces the YOUR_APP_NAME YOUR_CONTACT_EMAIL placeholder in the create scripts.
+          37: # Required form: "app_name user@domain.tld" (an app name, a space, a contact e-mail),
+          38: # quoted so the file can also be sourced by a shell. company_dns V4 and SEC EDGAR need
+          39: # it; without it company_dns applies a very strict rate limit, and scripts/run_sql.py
+          40: # rejects a value with no contact e-mail.
+
+          (Showing lines 1-40 of 41. Use offset=41 to continue.)
+          </content>
+      - tool: bash
+        args:
+          command: PAGER=cat git -C /home/ext_root/lab-data/zetaris-getting-started diff -- AGENTS.md .env.example
+          workdir: /home/ext_root/lab-data/ai-suite
+          timeout: 30000
+        result: |
+          diff --git a/.env.example b/.env.example
+          index 853dd37..39bcd3f 100644
+          --- a/.env.example
+          +++ b/.env.example
+          @@ -14,7 +14,7 @@ PGSSLMODE=disable
+           
+           # Zetaris HTTP API scripts (TypeScript and Python versions in scripts/).
+           ZETARIS_BASE_URL=http://localhost:3000
+          -ZETARIS_ORG_ID=
+          +ZETARIS_ORG_ID=1
+           # Set either an API key or a username and password for POST /api/auth/login.
+           # Create the key in the Zetaris GUI (never ask an agent to create it). Coding
+           # harness sessions (docs/connections/) read ZETARIS_API_KEY from .env.local.
+          diff --git a/AGENTS.md b/AGENTS.md
+          index 0009ba4..546524f 100644
+          --- a/AGENTS.md
+          +++ b/AGENTS.md
+          @@ -1,6 +1,9 @@
+           # Agent instructions
+           
+          -This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`. You are acting as a data engineer against a Zetaris instance.
+          +This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages
+          +(`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, SQL references in `docs/guides/`, and
+          +runnable examples in `examples/` (`examples/eurostat-crud-java/` is a Spring Boot JDBC demo). You are acting as a
+          +data engineer against a Zetaris instance.
+           
+           ## Connect first
+           
+    time: 10/23/2026, 10:09:33.020 PM UTC
+    response: "\n\n"
+    duration: 7.181s
+    duration_ms: 7181
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Need update AGENTS.md to mention Angular CRUD too. Could phrase:
+      "runnable examples in `examples/` (`examples/eurostat-crud-java/` is a Spring Boot JDBC demo; `examples/eurostat-crud/` is an Angular browser CRUD example)."
+      Need line wrap ~120? AGENTS.md line length existing is long; markdownlint config applies 120 but AGENTS maybe not linted. We can wrap cleanly. Need edit lines 3-6. Use edit. Then update preview artifact scope, commit files, messages, hunks. Also decide commit placement.
+
+      Maybe create a separate Commit 3 for repo config/agent docs? User says .env.example and AGENTS are ours. We could add them to Commit 2 (app) because they mention/configure the app. `.env.example` ZETARIS_ORG_ID=1 is app-related. AGENTS.md describes examples including app. This keeps docs commit focused on dossier. Commit 2 becomes "feat(eurostat): add Zetaris-backed CRUD example" with app + AGENTS + .env.example. But `.env.example` is not in app dir; still config coupling. Alternatively, add `.env.example` and AGENTS.md to Commit 1 (docs/config) since they are repo-level docs/config. But AGENTS mentions app, and `.env.example` default org id supports app. Commit 2 seems better. However, commit 2's title "feat(eurostat): add ... example" and body can mention "Document the example in AGENTS.md and default ZETARIS_ORG_ID to 1." That's fine. It makes commit 2 include repo-level config, but they are coupled to the example. Good.
+
+      Could also create Commit 3:
+      `chore(examples): document Angular CRUD and default org id`
+      But that splits AGENTS/.env from app, and commit 3 references app from commit 2. That is logically coherent. Yet user asked "proper structure"; a separate `docs(agents)`/`chore(env)` commit might be more atomic. But `.env.example` and AGENTS are two different concerns: env default vs agent docs. Could be two commits. That would make 4 commits. The rules say configuration coupling: `.env.example` should be with functional change that necessitates it. The app defaults ORG_ID to 1; setting `.env.example` to 1 is coupled. AGENTS doc update should be with app artifact per interleaving/registry? AGENTS is an index/registry. The app addition requires AGENTS update, so same commit. So include both in Commit 2. Good.
+
+      Need update AGENTS.md now. Use edit.
+    thinking_duration: 2.635s
+    thinking_duration_ms: 2635
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/AGENTS.md
+          oldString: |-
+            This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages
+            (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, SQL references in `docs/guides/`, and
+            runnable examples in `examples/` (`examples/eurostat-crud-java/` is a Spring Boot JDBC demo). You are acting as a
+            data engineer against a Zetaris instance.
+          newString: |-
+            This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages
+            (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, SQL references in `docs/guides/`, and
+            runnable examples in `examples/` (`examples/eurostat-crud-java/` is a Spring Boot JDBC demo;
+            `examples/eurostat-crud/` is an Angular browser CRUD example). You are acting as a data engineer against a
+            Zetaris instance.
+        result: Edit applied successfully.
+    time: 10/23/2026, 10:09:40.297 PM UTC
+    response: "\n\n"
+    duration: 4.835s
+    duration_ms: 4835
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: 'Need maybe run markdownlint on AGENTS.md? It may have many pre-existing long lines. We can check just first lines; no need. But maybe line length 120: line 4-6? Let''s check lengths.'
+    thinking_duration: 207ms
+    thinking_duration_ms: 207
+    tool_calls:
+      - tool: bash
+        args:
+          command: awk 'NR>=3 && NR<=6 {print NR, length($0), $0}' /home/ext_root/lab-data/zetaris-getting-started/AGENTS.md
+          workdir: /home/ext_root/lab-data/ai-suite
+          timeout: 30000
+        result: |
+          3 105 This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages
+          4 108 (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, SQL references in `docs/guides/`, and
+          5 92 runnable examples in `examples/` (`examples/eurostat-crud-java/` is a Spring Boot JDBC demo;
+          6 106 `examples/eurostat-crud/` is an Angular browser CRUD example). You are acting as a data engineer against a
+      - tool: bash
+        args:
+          command: PAGER=cat git -C /home/ext_root/lab-data/zetaris-getting-started diff -- AGENTS.md .env.example
+          workdir: /home/ext_root/lab-data/ai-suite
+          timeout: 30000
+        result: |
+          diff --git a/.env.example b/.env.example
+          index 853dd37..39bcd3f 100644
+          --- a/.env.example
+          +++ b/.env.example
+          @@ -14,7 +14,7 @@ PGSSLMODE=disable
+           
+           # Zetaris HTTP API scripts (TypeScript and Python versions in scripts/).
+           ZETARIS_BASE_URL=http://localhost:3000
+          -ZETARIS_ORG_ID=
+          +ZETARIS_ORG_ID=1
+           # Set either an API key or a username and password for POST /api/auth/login.
+           # Create the key in the Zetaris GUI (never ask an agent to create it). Coding
+           # harness sessions (docs/connections/) read ZETARIS_API_KEY from .env.local.
+          diff --git a/AGENTS.md b/AGENTS.md
+          index 0009ba4..6904714 100644
+          --- a/AGENTS.md
+          +++ b/AGENTS.md
+          @@ -1,6 +1,10 @@
+           # Agent instructions
+           
+          -This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`. You are acting as a data engineer against a Zetaris instance.
+          +This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages
+          +(`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, SQL references in `docs/guides/`, and
+          +runnable examples in `examples/` (`examples/eurostat-crud-java/` is a Spring Boot JDBC demo;
+          +`examples/eurostat-crud/` is an Angular browser CRUD example). You are acting as a data engineer against a
+          +Zetaris instance.
+           
+           ## Connect first
+           
+    time: 10/23/2026, 10:09:45.205 PM UTC
+    response: "\n\n"
+    duration: 2.394s
+    duration_ms: 2394
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Need update preview artifact. We can edit sections:
+      - Scope Decisions: move `.env.example` and `AGENTS.md` from excluded to included, with note "partially ours; AGENTS updated to mention Angular example."
+      - Commit 2 files add `.env.example`, `AGENTS.md`.
+      - Commit 2 message add bullets for AGENTS and env default.
+      - Commit 2 hunks add diffs.
+      - Excluded remove those.
+      - Maybe Commit 1 unchanged.
+      - Execution Plan Gate 1 confirm no `.env.example`/AGENTS staged? Must change to confirm they ARE staged in Commit 2, and no Java example/plans/scratch. Update.
+      - Staging Commit 2: `git add examples/eurostat-crud AGENTS.md .env.example`.
+      - Verification: `git diff --cached --name-only` includes those.
+      - Maybe author gate already resolved.
+      - Scope decisions "Included" list.
+
+      Need edit carefully. Could rewrite relevant chunks. Let's open preview around scope and commit 2.
+    thinking_duration: 853ms
+    thinking_duration_ms: 853
+    tool_calls:
+      - tool: bash
+        args:
+          command: rg -n "Scope Decisions|Included|Excluded|Commit 2|Files|Message|Hunks|Gate 1|Commit 1|Commit 2|Post-Commit|git add" /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          workdir: /home/ext_root/lab-data/ai-suite
+          timeout: 30000
+        result: |
+          11:## Scope Decisions
+          13:Included (our changes):
+          19:Excluded (pre-existing, not ours):
+          28:Sequencing note: Commit 1 adds the dossier before the example. Three dossier
+          29:links point to `examples/eurostat-crud/README.md` and resolve when Commit 2
+          35:## Commit 1: docs(eurostat): add verified data-source dossier
+          37:- **Files**:
+          50:- **Message**:
+          68:- **Hunks/Preview**:
+          125:## Commit 2: feat(eurostat): add Zetaris-backed CRUD example
+          127:- **Files**: all 52 untracked files under `examples/eurostat-crud/`:
+          181:- **Message**:
+          200:- **Hunks/Preview**:
+          228:### Gate 1 — Preflight
+          243:### Commit 1
+          253:### Commit 2
+          263:### Post-Commit Verification
+    time: 10/23/2026, 10:09:47.681 PM UTC
+    response: "\n\n"
+    duration: 2.663s
+    duration_ms: 2663
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    tool_calls:
+      - tool: read
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          offset: 11
+          limit: 28
+        result: |-
+          <path>/home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md</path>
+          <type>file</type>
+          <content>
+          11: ## Scope Decisions
+          12: 
+          13: Included (our changes):
+          14: 
+          15: - `docs/data-sources/eurostat/` and its root index/catalog entries
+          16: - `.markdownlint-cli2.jsonc`
+          17: - `examples/eurostat-crud/`
+          18: 
+          19: Excluded (pre-existing, not ours):
+          20: 
+          21: - `.env.example` (`ZETARIS_ORG_ID=1`)
+          22: - `AGENTS.md` (examples paragraph)
+          23: - `examples/eurostat-crud-java/` (untracked Spring Boot demo)
+          24: - `docs/plans/` task and implementation-plan files
+          25: - `scratch/` smoke scripts, screenshots, logs, and captured data
+          26: - `.env.local`, `node_modules/`, `dist/`, and other ignored artifacts
+          27: 
+          28: Sequencing note: Commit 1 adds the dossier before the example. Three dossier
+          29: links point to `examples/eurostat-crud/README.md` and resolve when Commit 2
+          30: lands. The final tree is link-clean. If every intermediate commit must also be
+          31: link-clean, authorize a 3-commit split that defers those three link lines.
+          32: 
+          33: ---
+          34: 
+          35: ## Commit 1: docs(eurostat): add verified data-source dossier
+          36: 
+          37: - **Files**:
+          38:   - `.markdownlint-cli2.jsonc` (new, 22 lines)
+
+          (Showing lines 11-38 of 284. Use offset=39 to continue.)
+          </content>
+    time: 10/23/2026, 10:09:50.406 PM UTC
+    response: "\n\n"
+    duration: 3.558s
+    duration_ms: 3558
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Edit scope.
+    thinking_duration: 11ms
+    thinking_duration_ms: 11
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          oldString: |-
+            Included (our changes):
+
+            - `docs/data-sources/eurostat/` and its root index/catalog entries
+            - `.markdownlint-cli2.jsonc`
+            - `examples/eurostat-crud/`
+
+            Excluded (pre-existing, not ours):
+
+            - `.env.example` (`ZETARIS_ORG_ID=1`)
+            - `AGENTS.md` (examples paragraph)
+            - `examples/eurostat-crud-java/` (untracked Spring Boot demo)
+            - `docs/plans/` task and implementation-plan files
+            - `scratch/` smoke scripts, screenshots, logs, and captured data
+            - `.env.local`, `node_modules/`, `dist/`, and other ignored artifacts
+          newString: |-
+            Included (our changes):
+
+            - `docs/data-sources/eurostat/` and its root index/catalog entries
+            - `.markdownlint-cli2.jsonc`
+            - `examples/eurostat-crud/`
+            - `.env.example` (`ZETARIS_ORG_ID=1`)
+            - `AGENTS.md` (examples paragraph, extended to name the Angular example)
+
+            Excluded (not ours):
+
+            - `examples/eurostat-crud-java/` (untracked Spring Boot demo)
+            - `docs/plans/` task and implementation-plan files
+            - `scratch/` smoke scripts, screenshots, logs, and captured data
+            - `.env.local`, `node_modules/`, `dist/`, and other ignored artifacts
+        result: Edit applied successfully.
+    time: 10/23/2026, 10:09:54.121 PM UTC
+    response: "\n\n"
+    duration: 2.531s
+    duration_ms: 2531
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Need update commit 2 files/message/hunks. Let's view section.
+    thinking_duration: 87ms
+    thinking_duration_ms: 87
+    tool_calls:
+      - tool: read
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          offset: 124
+          limit: 110
+        result: |-
+          <path>/home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md</path>
+          <type>file</type>
+          <content>
+          124: 
+          125: ## Commit 2: feat(eurostat): add Zetaris-backed CRUD example
+          126: 
+          127: - **Files**: all 52 untracked files under `examples/eurostat-crud/`:
+          128:   - `.editorconfig`
+          129:   - `.gitignore`
+          130:   - `.prettierrc`
+          131:   - `.vscode/extensions.json`
+          132:   - `.vscode/launch.json`
+          133:   - `.vscode/tasks.json`
+          134:   - `README.md`
+          135:   - `angular.json`
+          136:   - `mise.toml`
+          137:   - `package-lock.json`
+          138:   - `package.json`
+          139:   - `proxy.conf.cjs`
+          140:   - `public/favicon.ico`
+          141:   - `src/app/app.config.ts`
+          142:   - `src/app/app.css`
+          143:   - `src/app/app.html`
+          144:   - `src/app/app.routes.ts`
+          145:   - `src/app/app.spec.ts`
+          146:   - `src/app/app.ts`
+          147:   - `src/app/core/series/saved-series.model.ts`
+          148:   - `src/app/core/series/series-labels.ts`
+          149:   - `src/app/core/series/series-store.service.spec.ts`
+          150:   - `src/app/core/series/series-store.service.ts`
+          151:   - `src/app/core/zetaris/zetaris-connection.service.spec.ts`
+          152:   - `src/app/core/zetaris/zetaris-connection.service.ts`
+          153:   - `src/app/core/zetaris/zetaris.models.ts`
+          154:   - `src/app/core/zetaris/zetaris.service.spec.ts`
+          155:   - `src/app/core/zetaris/zetaris.service.ts`
+          156:   - `src/app/features/series-detail/series-detail.css`
+          157:   - `src/app/features/series-detail/series-detail.html`
+          158:   - `src/app/features/series-detail/series-detail.spec.ts`
+          159:   - `src/app/features/series-detail/series-detail.ts`
+          160:   - `src/app/features/series-form/series-form.css`
+          161:   - `src/app/features/series-form/series-form.html`
+          162:   - `src/app/features/series-form/series-form.spec.ts`
+          163:   - `src/app/features/series-form/series-form.ts`
+          164:   - `src/app/features/series-list/series-list.css`
+          165:   - `src/app/features/series-list/series-list.html`
+          166:   - `src/app/features/series-list/series-list.spec.ts`
+          167:   - `src/app/features/series-list/series-list.ts`
+          168:   - `src/app/features/zetaris-settings/zetaris-settings.css`
+          169:   - `src/app/features/zetaris-settings/zetaris-settings.html`
+          170:   - `src/app/features/zetaris-settings/zetaris-settings.ts`
+          171:   - `src/app/shared/rate-chart/rate-chart.css`
+          172:   - `src/app/shared/rate-chart/rate-chart.html`
+          173:   - `src/app/shared/rate-chart/rate-chart.ts`
+          174:   - `src/index.html`
+          175:   - `src/main.ts`
+          176:   - `src/styles.css`
+          177:   - `tsconfig.app.json`
+          178:   - `tsconfig.json`
+          179:   - `tsconfig.spec.json`
+          180: 
+          181: - **Message**:
+          182: 
+          183:   ```text
+          184:   feat(eurostat): add Zetaris-backed CRUD example
+          185: 
+          186:   - Add an Angular 22 example under examples/eurostat-crud that
+          187:     stores saved-series metadata in the browser and reads the PL/T
+          188:     observations from the registered Zetaris views.
+          189:   - Keep the example Zetaris-only; it does not call the public
+          190:     Eurostat API.
+          191:   - Add a connection page that keeps the API key in sessionStorage
+          192:     and a dev proxy that keeps browser requests same-origin.
+          193:   - Add list, form, detail, and settings routes, an SVG trend
+          194:     chart, unit tests, build configuration, and usage notes.
+          195:   - Document the Zetaris CORS limitation and the production
+          196:     reverse-proxy and credential-boundary requirements.
+          197:   - Verify 27 unit tests and the production build before commit.
+          198:   ```
+          199: 
+          200: - **Hunks/Preview**:
+          201:   - Entire directory is new; no mixed-concern hunks.
+          202:   - Key behavior:
+          203:     - `ZetarisService` posts SQL to `/zetaris-api/sql-editor/sqls/run`.
+          204:     - Queries `eurostat.une_rt_m_pl_series_table` and `eurostat.une_rt_m_pl_metadata_table`.
+          205:     - `ZetarisConnectionService` stores the connection in `sessionStorage` under `eurostat-crud.zetaris-connection.v1`.
+          206:     - `SeriesStoreService` stores saved metadata in `localStorage` under `eurostat-crud.saved-series.v1`.
+          207:     - `proxy.conf.cjs` reads only `ZETARIS_REST_URL` from the repo root `.env.local`.
+          208:     - `/settings` saves, tests, and clears the Zetaris connection.
+          209: 
+          210: - **Verification**:
+          211:   - `npm test -- --watch=false`: 27/27 tests pass.
+          212:   - `npm run build`: success; `main 341.47 kB`, `styles 6.81 kB`.
+          213:   - Browser smoke: connection test/save, 356-row read, reload persistence, update, delete, and no API key in `localStorage`.
+          214:   - Dangling-link audit: 2 app README links checked, all `EXISTS`.
+          215:   - Secret scan: only test fixture `test-key`; no real key or `.env.local` content.
+          216:   - `git diff --check`: clean for tracked files.
+          217: 
+          218: ---
+          219: 
+          220: ## Execution Plan
+          221: 
+          222: ### Gate 0 — Author identity
+          223: 
+          224: - Resolved: local `user.name` and `user.email` are set from the ai-suite repo.
+          225: - Verified: `Banee Ishaque K <Baneeishaque@gmail.com>`.
+          226: - No machine fallback remains.
+          227: 
+          228: ### Gate 1 — Preflight
+          229: 
+          230: 1. `git -C /home/ext_root/lab-data/zetaris-getting-started status --short`
+          231: 2. `git -C /home/ext_root/lab-data/zetaris-getting-started fetch origin`
+          232: 3. Compare `HEAD` with `origin/main`; stop if behind.
+          233: 4. Confirm the index is empty.
+
+          (Showing lines 124-233 of 284. Use offset=234 to continue.)
+          </content>
+    time: 10/23/2026, 10:09:56.743 PM UTC
+    response: "\n\n"
+    duration: 1.644s
+    duration_ms: 1644
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Need edit files header to include `.env.example`, `AGENTS.md`. Could change:
+      `- **Files**: 52 untracked files under examples/... plus ...`
+      Then list app files; after list add `.env.example`, `AGENTS.md`. Or put before. Let's edit line 127 and after line 179. Also message add bullets. Hunks add diffs for .env and AGENTS. Let's do.
+
+      Message:
+      ```
+      - Add an Angular 22 example...
+      - Keep ...
+      - Add ...
+      - Add ...
+      - Document ...
+      - Add the example to AGENTS.md and default ZETARIS_ORG_ID to 1
+        in .env.example so the documented local setup matches the app.
+      - Verify ...
+      ```
+      Need keep line lengths. Good.
+
+      Hunks:
+      Add `~~~diff` for .env and AGENTS. We have diff. Use exact headers. Note AGENTS diff now 4 lines added. Good.
+
+      Let's apply edits.
+    thinking_duration: 819ms
+    thinking_duration_ms: 819
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          oldString: '- **Files**: all 52 untracked files under `examples/eurostat-crud/`:'
+          newString: |-
+            - **Files**: all 52 untracked files under `examples/eurostat-crud/`, plus
+              `.env.example` and `AGENTS.md`:
+        result: Edit applied successfully.
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          oldString: |2-
+              - `tsconfig.app.json`
+              - `tsconfig.json`
+              - `tsconfig.spec.json`
+
+            - **Message**:
+          newString: |2-
+              - `tsconfig.app.json`
+              - `tsconfig.json`
+              - `tsconfig.spec.json`
+              - `.env.example` (modified)
+              - `AGENTS.md` (modified)
+
+            - **Message**:
+        result: Edit applied successfully.
+    time: 10/23/2026, 10:09:58.477 PM UTC
+    response: ''
+    duration: 3.343s
+    duration_ms: 3343
+

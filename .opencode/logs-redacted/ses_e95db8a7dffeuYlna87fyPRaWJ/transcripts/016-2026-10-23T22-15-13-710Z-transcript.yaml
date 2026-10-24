@@ -1,0 +1,18 @@
+user:
+  text: since env.local is git ignored - we need .env.example file in /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud.
+assistant:
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: |-
+      Created `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/.env.example` with the proxy’s required `ZETARIS_REST_URL`. It is not gitignored.
+
+      Updated the app README to copy that local template to `examples/eurostat-crud/.env.local`, and updated the Commit 2 preview to include it. No commits yet.

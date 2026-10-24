@@ -1,0 +1,111 @@
+user:
+  text: Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+assistant:
+  - response: "\n\n"
+  - response: |+
+      One architectural decision is needed: Zetaris requires `ZETARIS_API_KEY`, which must not be exposed in the Angular browser bundle. Also, the existing Zetaris registration is **PL/T only**.
+
+  - response: |+
+      I’ll wire the app to the existing Zetaris PL/T series view and remove the public Eurostat path. First I’m checking the Zetaris REST response and whether browser CORS permits direct calls, because that determines whether “direct browser” is actually viable.
+
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: |+
+      Direct browser calls are not currently possible: the Zetaris REST response has **no CORS headers** (`Access-Control-Allow-Origin` absent), so a page on `localhost:4200` calling `localhost:8888` will be blocked by the browser. I’ll use a same-origin Angular dev proxy for local use, while keeping the app’s data source Zetaris-only. The API key will be entered at runtime, not committed.
+
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: |-
+      The app now uses Zetaris only.
+
+      - `ZetarisService` posts SQL to `/zetaris-api/sql-editor/sqls/run` and queries `eurostat.une_rt_m_pl_series_table` plus the metadata view.
+      - `/settings` lets you enter the Zetaris base path, organisation ID, and API key, then test/save/clear it.
+      - The key is stored only in `sessionStorage` for the tab, never in `localStorage`, source, or saved series.
+      - Existing Zetaris registration is PL/T only, so the app now exposes only Poland + Total.
+      - Direct cross-origin browser calls are blocked because Zetaris sends no CORS headers. `proxy.conf.cjs` provides a same-origin `/zetaris-api` dev proxy to `ZETARIS_REST_URL`. Production needs a reverse proxy or BFF.
+      - The public Eurostat API is no longer called.
+
+      Verified: 27 tests pass, production build passes, browser smoke test loaded 356 rows (latest `2026-08` = `3.4`), connection test passed, and the API key was confirmed absent from `localStorage`. Markdown lint and link checks pass. No commit was made.
+
+      Run with `npm start`, open `/settings`, and paste the key. Keep the browser-key pattern local-only; a public deployment must not expose a Zetaris key.

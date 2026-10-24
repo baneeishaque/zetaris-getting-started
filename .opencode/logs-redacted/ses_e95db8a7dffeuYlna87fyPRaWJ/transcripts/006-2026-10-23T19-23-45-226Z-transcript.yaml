@@ -1,0 +1,153 @@
+user:
+  text: Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+assistant:
+  - response: ​
+  - response: ​
+  - response: ​
+  - response: ​
+  - response: ​
+  - agent: compaction
+    response: |-
+      ​## Objective
+      - Analyse the onboarded Eurostat database and produce a maximum-detail, structured documentation dossier plus a simple Angular CRUD app.
+      - First produce a maximum-detail implementation plan per `/home/ext_root/lab-data/ai-suite/ai-agent-rules/ai-agent-planning-rules.md`; implementation starts only after explicit approval.
+
+      ## Important Details
+      - **User decisions (locked):**
+        - Docs location: `docs/data-sources/eurostat/`.
+        - App architecture: pure Angular + `localStorage`, calling the Eurostat public REST API directly; no Node BFF, SQLite, or Zetaris key.
+        - CRUD scope: saved series + notes; Eurostat observations stay read-only.
+        - App location: `examples/eurostat-crud/`.
+      - **Docs dossier (8 files):** `README.md`, `dataset-profile.md`, `data-dictionary.md`, `api-reference.md`,
+        `zetaris-integration.md`, `data-quality.md`, `operations-runbook.md`, `license-and-attribution.md`.
+      - **App scope:** Angular 22.2.4, standalone, zoneless, strict, Vitest; saved-series CRUD in `localStorage`; observations from
+        `une_rt_m`; allowlist `geo` = PL/DE/FR/ES/IT and `sex` = T/M/F; fixed `freq=M`, `age=TOTAL`, `unit=PC_ACT`, `s_adj=SA`.
+      - **CRUD model:** `SavedSeries { id, name, note, filters: { geo, sex }, createdAt, updatedAt }`; storage key
+        `eurostat-crud.saved-series.v1`; envelope `{ version: 1, items: [...] }`; corrupt payload backed up to
+        `eurostat-crud.saved-series.v1.corrupt`.
+      - **App routes:** `''` → `/series`, `/series`, `/series/new`, `/series/:id`, `/series/:id/edit`, wildcard redirect.
+      - **Planned app files:** `core/eurostat/eurostat.models.ts|eurostat.service.ts|eurostat.service.spec.ts|eurostat.fixture.ts`,
+        `core/series/saved-series.model.ts|series-store.service.ts|series-store.service.spec.ts`,
+        `features/series-list/`, `features/series-form/`, `features/series-detail/`, `shared/rate-chart/` (inline SVG, no chart dependency),
+        plus app shell, README, styles, and generated config.
+      - **Exact scaffold command:**
+        ```sh
+        cd /home/ext_root/lab-data/zetaris-getting-started
+        mise x node@26 -- npx --yes @angular/cli@22.2.4 new eurostat-crud \
+          --directory examples/eurostat-crud \
+          --defaults --skip-git --style=css --routing --ssr=false \
+          --zoneless --strict --test-runner=vitest --package-manager=npm --prefix=app
+        ```
+        Then `cd examples/eurostat-crud && mise x node@26 -- npm install`.
+      - **Angular 22 scaffold verified** (probe at `/tmp/opencode/probe`, `--skip-install`): generated `app.ts`, `app.html`, `app.css`,
+        `app.config.ts`, `app.routes.ts`, `app.spec.ts`; `package.json` scripts `ng`, `start`, `build`, `watch`, `test`;
+        deps `@angular/* ^22.2.0`, `rxjs ~7.8.0`, `tslib ^2.3.0`; devDeps `@angular/build ^22.2.4`, `@angular/cli ^22.2.4`,
+        `@angular/compiler-cli ^22.2.0`, `jsdom ^30.0.0`, `prettier ^3.8.1`, `typescript ~6.0.2`, `vitest ^5.0.0`;
+        `packageManager: npm@11.19.1`; generated `.gitignore` covers `/.angular/cache`, `/dist`, `/node_modules`, `/coverage`.
+      - **Angular app config:** add `provideHttpClient(withFetch())`; default is `provideBrowserGlobalErrorListeners()` + `provideRouter(routes)`;
+        `app.ts` uses signal title + `RouterOutlet`; `tsconfig.spec.json` uses `vitest/globals`; spec pattern uses `TestBed` and `await fixture.whenStable()`.
+      - **Eurostat API:** `https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_m`; params
+        `format=JSON&lang=EN&geo=<GEO>&sex=<SEX>&age=TOTAL&unit=PC_ACT&s_adj=SA`; CORS open; public/no key.
+      - **JSON-stat parsing:** invert `dimension.time.category.index`, compute the flat index with `id`/`size`, read numeric `value` entries,
+        sort by `YYYY-MM`; `2026-09` is the latest overall period but has no value.
+      - **Verified coverage (all sexes identical per country):** PL 356 values 1997-01..2026-08, 169 missing;
+        DE 428 1991-01..2026-08, 97 missing; FR 524 1983-01..2026-08, 1 missing; ES 485 1986-04..2026-08, 40 missing;
+        IT 524 1983-01..2026-08, 1 missing.
+      - **PL/T statistics:** first 1997-01 = 11.8; latest 2026-08 = 3.4; previous month 3.4; YoY 2025-08 = 3.2 (+0.2);
+        min 2.6 (2023-02); max 20.5 (2002-08); mean 9.47; median 9.5; change since first -8.4.
+      - **Status codes:** PL `2009-01 b`, `2009-12 d`; DE `2005-03 d`, `2009-01 b`; FR `1995-12 d`, `2003-01 b`, `2021-01 d`;
+        ES `1995-12 d`; IT `1983-01..1991-12 p`, `2004-01 b`. PL top-level status is `{"312":"b","323":"d"}`; `extension.status`
+        only carries labels. `extension.positions-with-no-data.time` for PL is indexes `0..167` and `524`.
+      - **Dataset metadata:** label `Unemployment by sex and age - monthly data`; source `ESTAT`; JSON-stat version `2.0`;
+        updated `2026-10-21T11:00:00+0200`; DOI `10.2908/UNE_RT_M`; DSD version `156.0`.
+      - **Zetaris objects:** `EUROSTAT_REST` DB id 917; `EUROSTAT_REST.une_rt_m_pl` REST table; views
+        `une_rt_m_pl_metadata_table`, `une_rt_m_pl_snapshot_table`, `une_rt_m_pl_series_table`.
+      - **Zetaris metadata view columns:** `dataset_label string`, `dataset_source string`, `last_updated string`,
+        `geo_labels struct<PL:string>`, `time_index_map struct<1983-01:bigint,...525 fields>`.
+      - **Snapshot view is only 3 columns:** `rate_1997_01`, `rate_2025_07`, `rate_2026_07`; it is a spot-check view, not a full wide table,
+        and is one month behind the series view. `07_eurostat_create.sql` lines 90-94 define it; header says 355 values as of 2026-09-19.
+      - **Documented drift to record, not fix:** onboarding script header/caveat 2 says 355 values / 2026-08 unpublished, but live source now has
+        356 values through 2026-08 (index 523); `07_eurostat_select.sql` examples 2/3 use 2026-07. Do **not** edit the onboarding SQL in this task.
+      - **Series view verification:** `eurostat.une_rt_m_pl_series_table` = 356 rows, 1997-01..2026-08, matching source 356/356.
+      - **License correction:** official page is `https://ec.europa.eu/eurostat/en/help/copyright-notice` (old
+        `https://ec.europa.eu/eurostat/about-us/policies/copyright` returns 404). Editorial content is CC BY 4.0; statistical data reuse is
+        authorised with source acknowledgement under Decision 2011/833/EU — do not claim blanket CC BY 4.0 for the data.
+      - **Catalog correction planned:** `open_data/rest_apis/rest-api-sources.md` section 7 currently says license
+        "commonly understood to align with CC-BY 4.0 ... not independently confirmed"; update to official wording + dossier link.
+      - **Discoverability edits planned:** root `README.md` folder map; `examples/eurostat-crud/README.md`; no `docs/README.md` or
+        `examples/README.md` currently exists. Website publishing via `website/build.mjs` is explicitly out of scope.
+      - **Markdownlint:** zetaris has no `.markdownlint.jsonc`/`.markdownlint-cli2.jsonc`; default `markdownlint-cli2 README.md` fails
+        MD013 (80), MD060, MD040. Plan: add a minimal root `.markdownlint-cli2.jsonc` with MD013 120, `code_blocks: false`, `tables: false`,
+        MD007 indent 4, MD046 fenced; do not copy ai-suite’s custom `markdownlint-rule-relative-links` rule (not installed in zetaris).
+        ai-suite is on branch `work/mise-github-throttling`; rules files are clean/unmodified.
+      - **Artifact identity:** session `ses_e95db8a7dffeuYlna87fyPRaWJ`; plan
+        `docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md`;
+        task `..._task.md`; both local-only and must never be committed.
+      - **Local ignore entries added:** `.git/info/exclude` now contains `docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_*` and
+        `scratch/`; verified with `git check-ignore`.
+      - **Plan format requirements:** H1 `# [Eurostat database analysis, dossier, and Angular CRUD application] (v1)`;
+        `## Rule Compliance Reference` immediately after H1; Change History row `[2026-10-23 19:20]`; User Questions & Answers section;
+        literal commands, absolute file paths, verification matrix, risks, checklist, approval gate; no implementation before approval.
+      - **Current time:** `2026-10-23 19:20 UTC`.
+      - **Repo state:** workdir `/home/ext_root/lab-data/zetaris-getting-started`, branch `main`, pre-existing `M .env.example` and `?? key.txt`
+        (not ours); `docs/` has `connections/`, `guides/`, `install/`, `plans/` only.
+      - **Tooling:** no global Node default; Node `26.10.0` via mise satisfies Angular 22.2.4; use `mise x node@26 -- ...`.
+        `markdownlint-cli2` at `/home/linuxbrew/.linuxbrew/bin/markdownlint-cli2`.
+      - **Path substitution:** user’s `/Users/dk/lab-data/ai-suite/...` does not exist; Linux equivalent is
+        `/home/ext_root/lab-data/ai-suite/...`, and plan links can use `../../../ai-suite/...` from `docs/plans/`.
+      - **Security:** never print/log `ZETARIS_API_KEY`; `.env.local` is the only env file; do not commit artifacts or secrets.
+      - **Git hygiene:** no commits/pushes unless explicitly requested.
+
+      ## Work State
+      ### Completed
+      - Read and followed `AGENTS.md`; preflight READY; REST confirmed; Eurostat onboarding succeeded 6/6 statements.
+      - Confirmed `une_rt_m_pl_series_table` matches source 356/356; recorded exact coverage, status flags, PL/T statistics, and license wording.
+      - Read planning rules, planning-artifact-naming skill, markdown-generation skill/additions, and verified session ID.
+      - Probed Angular CLI 22.2.4 scaffold (`/tmp/opencode/probe`) and captured exact generated files, package versions, and default config.
+      - Verified app data allowlist (5 countries × 3 sexes) and exact coverage counts.
+      - Inspected Zetaris metadata/snapshot/series views and `07_eurostat_create.sql`; identified snapshot-view and stale-comment drift.
+      - Confirmed no ignore rules block `docs/data-sources/eurostat/` or `examples/eurostat-crud/`.
+      - Added local-only `.git/info/exclude` entries for plan/task artifacts and `scratch/`.
+      - Resolved all four user decisions (docs location, architecture, CRUD scope, app location).
+
+      ### Active
+      - Drafting the v1 implementation plan artifact and task file; neither file has been written yet.
+      - Plan structure/content is largely designed: 8-doc dossier outline, pure Angular app design, exact scaffold and verification commands,
+        integration edits, non-goals, risks, and Appendix A coverage-analysis script.
+      - Need to decide exact `ng test` invocation; `ng test --help` in the probe failed because dependencies were not installed
+        (`Error: Could not find the '@angular/build:unit-test' builder's node package.`), so `--watch=false` is unverified.
+
+      ### Blocked
+      - Explicit user approval of the plan is required before creating docs/app files.
+      - `ng test --watch=false` support remains unverified until dependencies are installed in `examples/eurostat-crud/`.
+      - Session title is null; slug `eurostat-data-dossier-and-angular-crud` is an assumption.
+
+      ## Next Move
+      1. Write the v1 plan and task file at the session-scoped paths, including exact H1, Rule Compliance Reference, Change History,
+         User Questions & Answers, absolute file maps, commands, verification matrix, and approval gate.
+      2. Present a concise summary of the plan and ask for explicit approval; do not create docs or app files until approved.
+
+      ## Relevant Files
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md`: plan to create.
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_task.md`: task file to create.
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/data-sources/eurostat/`: target dossier folder (8 files).
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/`: target Angular app folder.
+      - `/home/ext_root/lab-data/ai-suite/ai-agent-rules/ai-agent-planning-rules.md`: mandatory planning protocol.
+      - `/home/ext_root/lab-data/ai-suite/.agents/skills/general/planning/planning-artifact-naming/SKILL.md`: artifact filename formula.
+      - `/home/ext_root/lab-data/ai-suite/.agents/skills/markdown-generation/SKILL.md`: markdown/lint standards.
+      - `/home/ext_root/lab-data/ai-suite/.agents/skills/general/markdown-lint-workflow/SKILL.md`: lint pipeline.
+      - `/home/ext_root/lab-data/zetaris-getting-started/AGENTS.md`: repo operating rules.
+      - `/home/ext_root/lab-data/zetaris-getting-started/CONTRIBUTING.md`: source/package conventions.
+      - `/home/ext_root/lab-data/zetaris-getting-started/README.md`: folder map to update.
+      - `/home/ext_root/lab-data/zetaris-getting-started/open_data/rest_apis/rest-api-sources.md`: Eurostat catalog row/license to correct.
+      - `/home/ext_root/lab-data/zetaris-getting-started/open_data/rest_apis/sql/non_rate_limited/07_eurostat_create.sql`: onboarding DDL; do not edit, document drift.
+      - `/home/ext_root/lab-data/zetaris-getting-started/open_data/rest_apis/sql/non_rate_limited/07_eurostat_select.sql`: verification examples; do not edit.
+      - `/home/ext_root/lab-data/zetaris-getting-started/open_data/rest_apis/HOWTO.md`: onboarding/verification procedure.
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/guides/zetaris-lightning-sql-companion.md`: JSON-stat coercion caveats.
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/guides/project-paths.md`: app/credential guidance.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/pudl-chart/README.md`: runnable-example conventions.
+      - `/home/ext_root/lab-data/zetaris-getting-started/scripts/preflight.py`, `run_sql.py`, `zetaris_sql.py`, `onboard.py`: verification/REST helpers.
+      - `/home/ext_root/lab-data/zetaris-getting-started/website/build.mjs`: hardcoded docs list; out of scope.
+      - `/home/ext_root/lab-data/zetaris-getting-started/.git/info/exclude`: local-only plan/scratch ignore entries.
+      - `/home/ext_root/lab-data/zetaris-getting-started/.env.local`: credentials; never print/commit.
+      - `/tmp/opencode/probe/`: temporary Angular scaffold used for recon; can be removed.

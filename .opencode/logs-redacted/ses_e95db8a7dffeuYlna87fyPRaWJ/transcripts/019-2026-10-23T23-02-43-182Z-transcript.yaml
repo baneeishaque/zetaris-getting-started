@@ -1,0 +1,20 @@
+user:
+  text: Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+assistant:
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: |-
+      Preview updated to 4 commits: dossier, Angular example, Java example, and sanitized plans. The 8 plan files lint clean, contain no local links, host paths, or real session IDs, and pass `git diff --check`; the index is empty.
+
+      No commit or push has run. Say `start` to execute the four commits.

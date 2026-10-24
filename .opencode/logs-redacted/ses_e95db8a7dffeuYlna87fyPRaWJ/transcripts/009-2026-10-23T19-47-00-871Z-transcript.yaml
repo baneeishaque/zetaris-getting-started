@@ -1,0 +1,122 @@
+user:
+  text: |-
+    analyse eur stat database. doc in maximum details.
+    create a structured maximum detailed doc & place in the correct folder structure folder with correct industry std file names & folder names.
+assistant:
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n\n\n\n\n"
+  - agent: compaction
+    response: |-
+      ## Objective
+      - Analyse the Eurostat database and produce a maximum-detail, structured documentation dossier under `docs/data-sources/eurostat/` with industry-standard file and folder names.
+      - The planned Angular CRUD example at `examples/eurostat-crud/` remains a separate follow-on; the user's latest message was treated as approval to execute the documentation phase only.
+
+      ## Important Details
+      - User's latest message restated the docs request: "analyse eur stat database. doc in maximum details. create a structured maximum detailed doc & place in the correct folder structure folder with correct industry std file names & folder names."
+      - Locked decisions: docs `docs/data-sources/eurostat/`; app `examples/eurostat-crud/`; pure Angular + `localStorage` calling the public Eurostat API directly; no BFF, SQLite, or Zetaris key; CRUD entity is saved series + notes; observations stay read-only.
+      - Plan v1 and task file are written and lint-clean; both are local-only via `.git/info/exclude` and must never be committed:
+        - `/home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md`
+        - `/home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_task.md`
+      - Dossier has 8 files; 4 are written (`README.md`, `dataset-profile.md`, `data-dictionary.md`, `api-reference.md`); 4 remain (`zetaris-integration.md`, `data-quality.md`, `operations-runbook.md`, `license-and-attribution.md`).
+      - Docs are written but not yet linted; root `.markdownlint-cli2.jsonc` is not yet created. Final planned config: MD013 120 with `code_blocks: false` and `tables: false`; MD007 `indent: 2`; MD029 `style: "ordered"`; MD046 `style: "fenced"`; MD033 `allowed_elements: ["br"]`; JSONC trailing commas. Scratch config at `scratch/e95db8a7dffeuYlna87fyPRaWJ/markdownlint-cli2.jsonc` verified 0 issues on plan/task.
+      - Source: `une_rt_m`, "Unemployment by sex and age - monthly data", agency `ESTAT`, JSON-stat `2.0`, DSD `UNE_RT_M`/`ESTAT`/`156.0`, DOI `10.2908/UNE_RT_M`, source timestamp `2026-10-21T11:00:00+0200`.
+      - API: `https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_m`; params `format=JSON&lang=EN&geo=<GEO>&sex=<SEX>&age=TOTAL&unit=PC_ACT&s_adj=SA`; CORS `Access-Control-Allow-Origin: *`; no key; invalid codes return HTTP 200 with empty category/value; full dataset is about 10 MB.
+      - Verified coverage (all sexes identical per country): PL 356 values `1997-01`..`2026-08`, missing 169; DE 428 `1991-01`..`2026-08`, missing 97; FR 524 `1983-01`..`2026-08`, missing 1; ES 485 `1986-04`..`2026-08`, missing 40; IT 524 `1983-01`..`2026-08`, missing 1.
+      - PL/T stats: first `1997-01` = 11.8; latest `2026-08` = 3.4; min 2.6 (`2023-02`); max 20.5 (`2002-08`); mean 9.47; median 9.5; `2025-07` 3.1 vs `2026-07` 3.4; `2025-08` 3.2 (+0.2 YoY).
+      - Status flags: PL `2009-01 b`, `2009-12 d`; DE `2005-03 d`, `2009-01 b`; FR `1995-12 d`, `2003-01 b`, `2021-01 d`; ES `1995-12 d`; IT `1983-01`..`1991-12` = `p` (108 months), `2004-01 b`. Full dataset status counts: `b` 1,307; `d` 846; `p` 5,832; `u` 3,306 (11,291 total).
+      - Full dataset: 38 geo categories (2 aggregates + 36 countries), 525 months `1983-01`..`2026-09`, 757,828 values out of 1,077,300 possible cells (70.3%); IE/NL/SE have `2026-09` values; the five-country comparison ends `2026-08`.
+      - Zetaris: database `EUROSTAT_REST` id 917; container `eurostat`; table `EUROSTAT_REST.une_rt_m_pl`; views `une_rt_m_pl_metadata_table`, `une_rt_m_pl_snapshot_table`, `une_rt_m_pl_series_table`.
+      - Zetaris metadata row: dataset label, `ESTAT`, `last_updated` `2026-10-21T11:00:00+0200`, `geo_labels` `{"PL":"Poland"}`; `time_index_map` is a struct with 525 `bigint` fields.
+      - Zetaris snapshot view is exactly 3 columns: `rate_1997_01` 11.8, `rate_2025_07` 3.1, `rate_2026_07` 3.4. It is a spot check, not a full wide table, and ends `2026-07`.
+      - Zetaris series view has 356 rows, `period string`, `unemployment_rate_pct double`, `1997-01`..`2026-08`, and does not carry status flags.
+      - `EUROSTAT_REST.une_rt_m_pl` has 11 top-level fields (corrected from 12 in the plan); `value` has 356 populated dynamic keys; `dimension.time.category.index` has 525 keys.
+      - SQL decode uses `from_json(to_json(value), 'map<string,double>')` plus `from_json(to_json(dimension.time.category.index), 'map<string,bigint>')` and an equality join; plain `explode()` fails because both are inferred as structs.
+      - Drift to document, not fix: `07_eurostat_create.sql` header says 355 values through `2026-07`; live source has 356 through `2026-08`; the script says `2026-08` was unpublished; `07_eurostat_select.sql` examples 2/3 use the snapshot view ending `2026-07`. Treat the `2026-09-19` scripts as a historical baseline.
+      - License: official page `https://ec.europa.eu/eurostat/en/help/copyright-notice`; editorial content is CC BY 4.0; statistical data reuse is authorised with source acknowledgement under Commission Decision 2011/833/EU; exceptions apply; commercial reuse of data for countries outside the EU/EFTA/candidates is not allowed (e.g., US, JP); citation formats include `Source: 10.2908/UNE_RT_M, 2026-10-23.` and customised `Source: Eurostat, une_rt_m (unemployment rate, monthly), accessed 2026-10-23.`; modifications need a disclaimer.
+      - Methodology/revisions: EU-LFS and ILO definitions (15–74); Regulation (EU) 2019/1700 and Implementing Regulation (EU) 2019/2241; Poland uses Denton temporal disaggregation plus seasonal ARIMA; seasonal adjustment uses TRAMO/SEATS; Germany uses X-13; timeliness about 31 days; metadata last certified `2026-01-08`; major revisions: PL Census 2021 `2024-03-01`, DE Census 2021 `2025-06-03`, FR Mayotte `2026-10-01`, ES Census 2021 `2024-05-03`.
+      - App future scope: Angular 22.2.4, standalone, zoneless, strict, Vitest; routes `/series`, `/series/new`, `/series/:id`, `/series/:id/edit`; storage key `eurostat-crud.saved-series.v1`; models `SavedSeries`; allowlist PL/DE/FR/ES/IT and T/M/F; fixed `freq=M`, `age=TOTAL`, `unit=PC_ACT`, `s_adj=SA`; planned files under `src/app/core/eurostat`, `core/series`, `features/series-list|series-form|series-detail`, `shared/rate-chart`; scaffold with `mise x node@26 -- npx --yes @angular/cli@22.2.4 new eurostat-crud --directory examples/eurostat-crud --defaults --skip-git --style=css --routing --ssr=false --zoneless --strict --test-runner=vitest --package-manager=npm --prefix=app`.
+      - `ng test --watch=false` remains unverified; app dependencies are not installed and no `examples/eurostat-crud/` directory exists yet.
+      - Integration planned: root `README.md` folder map row for `docs/data-sources/` plus a documentation-table row; `open_data/rest_apis/rest-api-sources.md` section 7 license correction and full-dossier link; do not change the `Verified` status or script path; do not edit `website/build.mjs`.
+      - Repo: workdir `/home/ext_root/lab-data/zetaris-getting-started`, branch `main`; pre-existing `M .env.example` and `?? key.txt`; new docs are untracked; no commit or push.
+      - Tooling: `mise` Node `26.10.0`; `markdownlint-cli2` v0.23.3 at `/home/linuxbrew/.linuxbrew/bin/markdownlint-cli2`; Python 3 and `scripts/preflight.py`, `run_sql.py`, `onboard.py` available.
+      - Security: never print/log `ZETARIS_API_KEY`; `.env.local` is the only env file; no secrets in docs or app.
+      - Artifact identity: session `ses_e95db8a7dffeuYlna87fyPRaWJ`; slug `eurostat-data-dossier-and-angular-crud` (session title is null, so the slug is an assumption).
+
+      ## Work State
+      ### Completed
+      - Plan v1 and task file written at the exact session-scoped paths; lint-clean with the scratch config.
+      - Plan fixes applied: MD007 changed to indent 2, MD029 `ordered` added, top-level field count corrected 12 → 11, §7.10 list numbering fixed, JSONC trailing commas added.
+      - Preflight `READY`; SQL verified: metadata row, series 356/356, snapshot `11.8`/`3.1`/`3.4`, `DESCRIBE` types, min/max, decade averages, `1998-02` first month below 10, `2025-07` vs `2026-07`.
+      - Fetched PL/T JSON and full dataset to `scratch/e95db8a7dffeuYlna87fyPRaWJ/`; parsed dimensions, full geo coverage, status counts, and five-country statistics.
+      - Fetched official license page and ESMS metadata; verified CORS headers and invalid-code behaviour.
+      - Created `docs/data-sources/eurostat/` and wrote 4 of 8 docs.
+      - Verified plan/task are ignored via `.git/info/exclude`; last `git status` before docs showed only pre-existing `M .env.example` and `?? key.txt`.
+
+      ### Active
+      - Writing the remaining four dossier docs: `zetaris-integration.md`, `data-quality.md`, `operations-runbook.md`, `license-and-attribution.md`.
+      - Need to create root `.markdownlint-cli2.jsonc`; lint all dossier docs, root `README.md`, and `open_data/rest_apis/rest-api-sources.md`; fix line-length/link/backtick issues.
+      - Need to update root README map and REST catalog section 7; run final link audit; report changed files and verification results; no commit.
+      - App implementation not started.
+
+      ### Blocked
+      - `ng test --watch=false` unverified because app dependencies are not installed; app is not explicitly approved/started.
+      - Root lint config not yet created; docs not yet linted.
+      - No blocker for docs content.
+
+      ## Next Move
+      1. Write the four remaining dossier docs using the verified facts above.
+      2. Create root `.markdownlint-cli2.jsonc`; run `markdownlint-cli2 "docs/data-sources/eurostat/*.md" "README.md" "open_data/rest_apis/rest-api-sources.md"`; fix lint and link issues.
+      3. Update root `README.md` map/table and `open_data/rest_apis/rest-api-sources.md` section 7; run final audit; report; no commit.
+      4. If the user requests the app, execute plan Phase 2 and confirm `ng test --watch=false`.
+
+      ## Relevant Files
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md`: approved docs plan and app Phase 2 design.
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_task.md`: task checklist; local-only.
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/data-sources/eurostat/`: dossier target; `README.md`, `dataset-profile.md`, `data-dictionary.md`, `api-reference.md` written.
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/data-sources/eurostat/zetaris-integration.md`: remaining doc; object inventory, DDL, verification queries, drift, limits.
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/data-sources/eurostat/data-quality.md`: remaining doc; ledger, coverage, missingness, status flags, revisions, quirks.
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/data-sources/eurostat/operations-runbook.md`: remaining doc; preflight, verification, refresh, teardown, troubleshooting.
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/data-sources/eurostat/license-and-attribution.md`: remaining doc; official policy, exceptions, citation, catalog correction.
+      - `/home/ext_root/lab-data/zetaris-getting-started/.markdownlint-cli2.jsonc`: root lint config to create.
+      - `/home/ext_root/lab-data/zetaris-getting-started/README.md`: root folder map and documentation table to update.
+      - `/home/ext_root/lab-data/zetaris-getting-started/open_data/rest_apis/rest-api-sources.md`: Eurostat license/dossier correction in section 7.
+      - `/home/ext_root/lab-data/zetaris-getting-started/open_data/rest_apis/sql/non_rate_limited/07_eurostat_create.sql`: onboarding DDL; do not edit, document drift.
+      - `/home/ext_root/lab-data/zetaris-getting-started/open_data/rest_apis/sql/non_rate_limited/07_eurostat_select.sql`: verification examples; do not edit.
+      - `/home/ext_root/lab-data/zetaris-getting-started/open_data/manifest.json`: Eurostat manifest id `eurostat` for `onboard.py`.
+      - `/home/ext_root/lab-data/zetaris-getting-started/scripts/preflight.py`: connection check; last run `READY`.
+      - `/home/ext_root/lab-data/zetaris-getting-started/scripts/run_sql.py`: SQL verification helper.
+      - `/home/ext_root/lab-data/zetaris-getting-started/scripts/onboard.py`: refresh/teardown commands.
+      - `/home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/`: local-only `eurostat_pl_t.json`, `eurostat_full.json`, `markdownlint-cli2.jsonc`.
+      - `/home/ext_root/lab-data/zetaris-getting-started/.git/info/exclude`: local-only plan/task and `scratch/` ignore entries.
+      - `/home/ext_root/lab-data/zetaris-getting-started/.env.local`: credentials; never print or commit.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/`: future Angular app; not created.
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/guides/zetaris-lightning-sql-companion.md`: JSON-stat coercion caveats.
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/guides/project-paths.md`: app/credential guidance.
+      - `/home/ext_root/lab-data/zetaris-getting-started/CONTRIBUTING.md`: source/package and license conventions.
+      - `/home/ext_root/lab-data/zetaris-getting-started/AGENTS.md`: repo operating rules.

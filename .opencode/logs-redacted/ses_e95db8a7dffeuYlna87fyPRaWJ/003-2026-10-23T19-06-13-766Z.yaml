@@ -1,0 +1,355 @@
+---
+user:
+  text: |-
+    on /home/ext_root/lab-data/zetaris-getting-started: Read AGENTS.md and follow it. Run python3 scripts/prefl ight.py and show me the 
+    result. Then connect over REST to the instance confi gured in .env.local and 
+    confi rm with SELECT 1 and SHOW LIGHTNING DATABASES. 
+    Goal: onboard eurostat
+    Dry-run before creating anything and wait for my go-ahead.
+  time: 10/23/2026, 7:05:32.515 PM UTC
+assistant:
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      User now wants goal: onboard eurostat. Same flow. Already ran preflight and connection confirmation in this session, but they explicitly ask again. Let me re-run preflight and the REST confirmations (cheap), then plan/dry-run eurostat, inspect existing state for collisions (EESTI? eurostat may create EUROSTAT database? Let's see). Then wait.
+
+      Let me run preflight + plan eurostat in parallel, then dry-run with run_sql.py --dry-run after identifying the script.
+
+      First: preflight, `onboard.py plan eurostat`, and `onboard.py run eurostat --dry-run`. But dry-run needs the manifest; safe. Do all three in parallel? plan and dry-run both read manifest. Fine.
+
+      Also need explicit SELECT 1 and SHOW LIGHTNING DATABASES. Preflight includes them. The user asks "connect over REST ... confirm with SELECT 1 and SHOW LIGHTNING DATABASES" — I'll run run_sql calls too. Let me batch: preflight, run_sql SELECT 1, run_sql SHOW LIGHTNING DATABASES, plan eurostat. Then dry-run + script listing.
+
+      Avoid too many parallel tool calls? It's fine, small outputs.
+
+      Let me first do preflight + plan + list check. Then dry-run with run_sql. Actually one batch: preflight, SELECT 1, SHOW LIGHTNING DATABASES, plan eurostat, run eurostat --dry-run. 5 calls. Output small.
+
+      Then inspect the SQL file for statement list (run_sql --dry-run file) and existing state (SHOW TABLE in EUROSTAT db etc.).
+
+      Let me go.
+    thinking_duration: 1.812s
+    thinking_duration_ms: 1812
+    tool_calls:
+      - tool: bash
+        args:
+          command: python3 scripts/preflight.py 2>&1
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          [PASS] env file: /home/ext_root/lab-data/zetaris-getting-started/.env.local
+          [PASS] ZETARIS_API_KEY: [REDACTED]
+          [PASS] ZETARIS_USERNAME: set
+          [PASS] ZETARIS_PASSWORD: [REDACTED]
+          [PASS] ZETARIS_USER_AGENT: set, in the form app_name user@domain.tld
+          [PASS] REST datasources: HTTP 200, 0 listed: 
+          [PASS] REST SELECT 1
+          [INFO] datasources: none
+          [INFO] lightning databases: NY_TAXI, POKEAPI_REST, TPCDS_DB
+          [INFO] USL namespaces: none
+
+          READY
+      - tool: bash
+        args:
+          command: python3 scripts/onboard.py plan eurostat 2>&1; echo "---"; python3 scripts/onboard.py run eurostat --dry-run 2>&1
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |2
+           1. eurostat               rest      open_data/rest_apis/sql/non_rate_limited/07_eurostat_create.sql
+          ---
+           1. eurostat               rest      open_data/rest_apis/sql/non_rate_limited/07_eurostat_create.sql
+          (dry run: nothing sent)
+      - tool: bash
+        args:
+          command: python3 scripts/run_sql.py -e "SELECT 1" 2>&1; python3 scripts/run_sql.py -e "SHOW LIGHTNING DATABASES" 2>&1
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          channel=rest env=/home/ext_root/lab-data/zetaris-getting-started/.env.local statements=1
+            1. SELECT 1
+                ['1']
+          done: 1/1 statements ok
+          channel=rest env=/home/ext_root/lab-data/zetaris-getting-started/.env.local statements=1
+            1. SHOW LIGHTNING DATABASES
+                ['NY_TAXI', 'NY Taxi sample data', '6']
+                ['POKEAPI_REST', 'PokeAPI REST source', '806']
+                ['TPCDS_DB', 'TPC-DS benchmark sample data', '308']
+          done: 1/1 statements ok
+    time: 10/23/2026, 7:05:32.559 PM UTC
+    duration: 6.137s
+    duration_ms: 6137
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: Now show the statement list via run_sql.py --dry-run on 07_eurostat_create.sql. Also inspect existing objects to detect collisions (eurostat DB probably named EUROSTAT). Let me run dry-run and look at the SQL header.
+    thinking_duration: 267ms
+    thinking_duration_ms: 267
+    tool_calls:
+      - tool: bash
+        args:
+          command: python3 scripts/run_sql.py --dry-run open_data/rest_apis/sql/non_rate_limited/07_eurostat_create.sql 2>&1
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |2
+            1. CREATE LIGHTNING DATABASE EUROSTAT_REST DESCRIBE BY "Eurostat REST API JSON-stat source"
+            2. CREATE SCHEMASTORE CONTAINER eurostat
+            3. CREATE LIGHTNING REST TABLE une_rt_m_pl FROM EUROSTAT_REST REQUEST( endpoint "https://ec.europa.e...
+            4. CREATE SCHEMASTORE VIEW une_rt_m_pl_metadata_table WITH CONTAINER eurostat AS SELECT label AS dat...
+            5. CREATE SCHEMASTORE VIEW une_rt_m_pl_snapshot_table WITH CONTAINER eurostat AS SELECT value.`168` ...
+            6. CREATE SCHEMASTORE VIEW une_rt_m_pl_series_table WITH CONTAINER eurostat AS SELECT time_label AS ...
+          6 statements (dry run, nothing sent)
+      - tool: bash
+        args:
+          command: sed -n '1,80p' open_data/rest_apis/sql/non_rate_limited/07_eurostat_create.sql
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          -- =============================================================================
+          -- Source: Eurostat REST API (Statistics API) -- unemployment rate example.
+          --
+          -- License: Eurostat's "Copyright notice and free re-use of data" policy
+          -- is generally understood to align with CC-BY 4.0 --
+          -- https://ec.europa.eu/eurostat/about/policies/copyright -- worth
+          -- reading directly, not independently confirmed as a hard match.
+          --
+          -- Format: REST/JSON -- JSON-stat 2.0, a sparse, dynamic-key format, not
+          -- array-of-structs. See the SQL companion guide for the general decode
+          -- technique this script uses (from_json(to_json(...)) coercion); the
+          -- caveats below cover only what's specific to this dataset.
+          --
+          -- Docs: https://wikis.ec.europa.eu/display/EUROSTATHELP/API+Statistics+-+data+query
+          -- https://json-stat.org/ (the underlying open JSON-stat format spec)
+          --
+          -- Rate limit: fully public, no key, no registration, CORS-enabled.
+          --
+          -- Before running: sanity-check the endpoint returns something sane:
+          --   curl -s "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_m?format=JSON&geo=PL&sex=T&age=TOTAL&unit=PC_ACT&s_adj=SA&lang=EN" | python3 -m json.tool | head -40
+          --
+          -- Status: live-tested and confirmed working end to end (2026-09-19) --
+          -- the base REST table, the metadata view, the snapshot view, and the
+          -- full value-decode view (355 rows, matching curl) are all confirmed,
+          -- and every example query has been run and verified.
+          -- =============================================================================
+          --
+          -- Caveats:
+          --   1. An earlier version of this script used `age=Y15-74`, which is
+          --      not a valid age code for the une_rt_m dataset -- Eurostat
+          --      doesn't error on an invalid code, it silently returns a
+          --      dimension with zero valid categories
+          --      (`dimension.age.category.index: {}`) and therefore an empty
+          --      `value: {}` for the whole query, which looked like "no data
+          --      available" rather than "wrong parameter." The actual valid age
+          --      codes for this dataset are `TOTAL`, `Y_LT25` (under 25), and
+          --      `Y25-74` (25 to 74) -- confirmed by querying without an age
+          --      filter and reading back `dimension.age.category.index`. Fixed
+          --      below to use `age=TOTAL`. See the SQL companion guide for the
+          --      general lesson this confirms about JSON-stat sources.
+          --   2. With that fix, this combination (Poland, total population,
+          --      seasonally adjusted unemployment rate, monthly) returns 355
+          --      populated values out of a possible 524 time slots, confirmed
+          --      contiguous from index 168 (period "1997-01") through index 522
+          --      (period "2026-07") -- index 523 ("2026-08") is simply not
+          --      published yet, a normal reporting lag, not a gap or a bug.
+          --   3. `label`, `source`, `updated`, `dimension`, `value` are all
+          --      lowercase, ordinary field names -- no backtick-quoting needed
+          --      for the top-level fields used in the metadata view. The dynamic
+          --      keys are one level down, inside `value` and inside each
+          --      dimension's `category.index`/`category.label` objects.
+          --   4. `dimension.time.category.index` maps a period label (e.g.
+          --      "2026-07") to its integer offset. For time, the label is
+          --      already a human-readable period string, so decoding time only
+          --      needs `category.index`, not `category.label`.
+          -- =============================================================================
+
+          -- Step 0: Lightning database for this source.
+          CREATE LIGHTNING DATABASE EUROSTAT_REST DESCRIBE BY "Eurostat REST API JSON-stat source";
+
+          -- Step 1: schemastore container. Run once -- comment out on a re-run
+          -- if it already exists in your environment.
+          CREATE SCHEMASTORE CONTAINER eurostat;
+
+          -- Unemployment rate -- Poland, total population, monthly, seasonally
+          -- adjusted (une_rt_m). Uses age=TOTAL, not the originally-tried
+          -- Y15-74 -- see caveat 1.
+          CREATE LIGHTNING REST TABLE une_rt_m_pl FROM EUROSTAT_REST REQUEST(
+              endpoint "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_m?format=JSON&geo=PL&sex=T&age=TOTAL&unit=PC_ACT&s_adj=SA&lang=EN",
+              method "get",
+              response_type "json",
+              http_encoding "URLENCODED"
+          ) HEADER (
+          ) BODY ();
+
+          -- The dataset's own descriptive metadata and axis labels (a normal
+          -- nested-struct shape), not the actual data values.
+          CREATE SCHEMASTORE VIEW une_rt_m_pl_metadata_table WITH CONTAINER eurostat AS
+          SELECT
+              label AS dataset_label,
+    time: 10/23/2026, 7:05:38.706 PM UTC
+    duration: 4.656s
+    duration_ms: 4656
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      Now check whether EUROSTAT_REST already exists. SHOW LIGHTNING DATABASES showed only NY_TAXI, POKEAPI_REST, TPCDS_DB. So EUROSTAT_REST does not exist. Container eurostat? Need to check container existence. `SHOW VIEWS IN eurostat` may fail if container doesn't exist, that's fine read-only. Also `SHOW TABLES IN EUROSTAT_REST` would fail. The dry run says 6 statements. Nothing to collide with likely.
+
+      Per AGENTS.md, "Check that an existing object matches the recipe definition before reusing it" — no existing EUROSTAT_REST DB. Container `eurostat` could exist independently. Let me check read-only: `SHOW VIEWS IN eurostat`. If it errors "not exists", then clear. Also confirm nothing named EUROSTAT_REST. Already confirmed via SHOW LIGHTNING DATABASES.
+
+      Do it quickly.
+    thinking_duration: 929ms
+    thinking_duration_ms: 929
+    tool_calls:
+      - tool: bash
+        args:
+          command: python3 scripts/run_sql.py -e "SHOW VIEWS IN eurostat" 2>&1
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          channel=rest env=/home/ext_root/lab-data/zetaris-getting-started/.env.local statements=1
+            1. SHOW VIEWS IN eurostat
+                ['ALL_POKEMON_ABILITIES_TABLE', 'Schema Store View', 'query_builder', None]
+                ['ALL_POKEMON_STATS_TABLE', 'Schema Store View', 'query_builder', None]
+                ['ALL_POKEMON_TYPES_TABLE', 'Schema Store View', 'query_builder', None]
+                ['CHARIZARD_ABILITIES_TABLE', 'Schema Store View', 'query_builder', None]
+                ['CHARIZARD_STATS_TABLE', 'Schema Store View', 'query_builder', None]
+                ['CHARIZARD_TYPES_TABLE', 'Schema Store View', 'query_builder', None]
+                ['PIKACHU_ABILITIES_TABLE', 'Schema Store View', 'query_builder', None]
+                ['PIKACHU_STATS_TABLE', 'Schema Store View', 'query_builder', None]
+                ['PIKACHU_TYPES_TABLE', 'Schema Store View', 'query_builder', None]
+          done: 1/1 statements ok
+    time: 10/23/2026, 7:05:43.371 PM UTC
+    duration: 4.483s
+    duration_ms: 4483
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      Interesting: SHOW VIEWS IN eurostat returned pokeapi's views. That suggests the container argument is ignored / it lists all views. So that check doesn't tell us whether the `eurostat` container exists. Let me check docs for listing containers, e.g. `SHOW CONTAINERS`? grep the commands doc.
+
+      Earlier grep didn't show a LIST SCHEMASTORE CONTAINER command. Section 12.2 create container only. Maybe `SHOW CONTAINERS` exists. Let me grep for "SHOW " in the doc around schemastore.
+
+      Also, since SHOW VIEWS IN eurostat returns pokeapi views, it likely ignores the container name entirely. So can't confirm container. But the CREATE SCHEMASTORE CONTAINER will error if exists. Dry-run doesn't check. The user just wants dry-run, so I can note the container check isn't available via this command.
+
+      Let me search docs for listing containers.
+    thinking_duration: 967ms
+    thinking_duration_ms: 967
+    tool_calls:
+      - tool: bash
+        args:
+          command: grep -n -i "SHOW.*CONTAINER\|LIST.*CONTAINER\|CONTAINER.*LIST" docs/guides/zetaris-lightning-sql-commands.md docs/guides/zetaris-lightning-sql-companion.md | head -20
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          docs/guides/zetaris-lightning-sql-commands.md:2188:### 16.3 LIST PIPELINE CONTAINER
+          docs/guides/zetaris-lightning-sql-commands.md:2193:LIST PIPELINE CONTAINER
+          docs/guides/zetaris-lightning-sql-commands.md:2196:Lists accessible pipeline containers.
+          docs/guides/zetaris-lightning-sql-commands.md:2203:LIST PIPELINE CONTAINER
+          docs/guides/zetaris-lightning-sql-commands.md:2211:LIST PIPELINE RELATION <container>
+          docs/guides/zetaris-lightning-sql-commands.md:2214:Lists the pipelines in a container.
+      - tool: bash
+        args:
+          command: grep -n "CREATE SCHEMASTORE CONTAINER" -A 20 docs/guides/zetaris-lightning-sql-commands.md | head -40
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          1621:### 12.2 CREATE SCHEMASTORE CONTAINER
+          1622-
+          1623-**Syntax**
+          1624-
+          1625-```sql
+          1626:CREATE SCHEMASTORE CONTAINER <name>
+          1627-```
+          1628-
+          1629-Creates a schema-store view container, the folder Query Builder views live in.
+          1630-
+          1631-**Privileges:** Administrators only.
+          1632-
+          1633-**Example**
+          1634-
+          1635-```sql
+          1636:CREATE SCHEMASTORE CONTAINER analysis
+          1637-```
+          1638-
+          1639-### 12.3 PREVIEW SCHEMASTORE SQL
+          1640-
+          1641-**Syntax**
+          1642-
+          1643-```sql
+          1644-PREVIEW SCHEMASTORE SQL AS <SELECT query …>
+          1645-```
+          1646-
+          1647-Runs a Spark SQL query and returns up to 10 rows.
+          1648-
+          1649-**Privileges:** Administrators only.
+          1650-
+          1651-**Remarks**
+          1652-
+          1653-- Begin the statement with `PREVIEW SCHEMASTORE SQL AS`.
+          1654-
+          1655-**Example**
+          1656-
+    time: 10/23/2026, 7:05:47.862 PM UTC
+    duration: 4.900s
+    duration_ms: 4900
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      No SQL listing of containers. Note: "Privileges: Administrators only" for CREATE SCHEMASTORE CONTAINER. Our user may or may not be admin. The preflight doesn't check privileges. It's a risk to report.
+
+      Also container name `eurostat`: since `SHOW VIEWS IN eurostat` lists all views regardless, can't confirm. But note if container already exists, statement 2 fails. Re-run uses --skip-exists.
+
+      Let me check manifest entry for eurostat status verified. It is. Fine.
+
+      Now the response: preflight PASS, REST confirm, dry-run plan + 6 statements, existing state (EUROSTAT_REST absent; container status unknown via SQL; pokeapi container exists separately), privilege caveat (CREATE SCHEMASTORE CONTAINER is admin-only), and ask for go-ahead with proposed command `python3 scripts/onboard.py run eurostat`.
+
+      Should I mention statement 3 makes an outbound HTTP call to Eurostat during create? Yes, that's what creates the table. It also pulls data at query time (REST table). The create doesn't fetch? CREATE LIGHTNING REST TABLE registers; data is fetched on query. The script's status says live-tested.
+
+      Keep concise. Do not run the create.
+
+      Note that dry-run was run via both onboard.py and run_sql.py (to list statements). Nothing sent.
+
+      Final answer with wait for go-ahead.
+    thinking_duration: 2.043s
+    thinking_duration_ms: 2043
+    time: 10/23/2026, 7:05:52.771 PM UTC
+    response: |-
+      **Preflight** (`scripts/preflight.py`, read-only) — READY:
+
+      ```
+      [PASS] env file, ZETARIS_API_KEY, ZETARIS_USERNAME, ZETARIS_PASSWORD
+      [PASS] ZETARIS_USER_AGENT: valid app_name user@domain.tld
+      [PASS] REST datasources: HTTP 200, 0 listed
+      [PASS] REST SELECT 1
+      [INFO] lightning databases: NY_TAXI, POKEAPI_REST, TPCDS_DB
+      [INFO] USL namespaces: none
+      ```
+
+      **REST confirmation** (direct `/api/v1.0`): `SELECT 1` → `1`; `SHOW LIGHTNING DATABASES` → `NY_TAXI`, `POKEAPI_REST`, `TPCDS_DB`; `GET /datasource/datasources` → `[]`.
+
+      **Dry-run** (`onboard.py run eurostat --dry-run`, nothing sent) — 1 source, no dependencies:
+
+      ```
+      plan: eurostat  rest  open_data/rest_apis/sql/non_rate_limited/07_eurostat_create.sql
+      ```
+
+      Statement list (`run_sql.py --dry-run`, 6 statements):
+
+      ```
+      1. CREATE LIGHTNING DATABASE EUROSTAT_REST DESCRIBE BY "Eurostat REST API JSON-stat source"
+      2. CREATE SCHEMASTORE CONTAINER eurostat
+      3. CREATE LIGHTNING REST TABLE une_rt_m_pl FROM EUROSTAT_REST
+           endpoint: Eurostat une_rt_m — Poland, total, monthly, SA unemployment rate
+      4. CREATE SCHEMASTORE VIEW une_rt_m_pl_metadata_table  (dataset metadata/axis labels)
+      5. CREATE SCHEMASTORE VIEW une_rt_m_pl_snapshot_table  (decoded JSON-stat values)
+      6. CREATE SCHEMASTORE VIEW une_rt_m_pl_series_table    (series rows)
+      ```
+
+      **Pre-create checks (read-only):** `EUROSTAT_REST` does not exist on the instance, so no name collisions there. Caveats:
+      - `CREATE SCHEMASTORE CONTAINER` is documented as **administrators only**; if your account is not an admin, statement 2 may be refused (AGENTS.md says report and ask for access, not escalate).
+      - SQL has no command to list SchemaStore containers (`SHOW VIEWS IN eurostat` ignores the container name and lists all views), so whether a `eurostat` container already exists is unverified; if it does, statement 2 errors and a re-run needs `--skip-exists`.
+
+      Nothing has been created. Proposed run command on your go-ahead:
+
+      ```
+      python3 scripts/onboard.py run eurostat
+      ```
+    duration: 7.639s
+    duration_ms: 7639
+

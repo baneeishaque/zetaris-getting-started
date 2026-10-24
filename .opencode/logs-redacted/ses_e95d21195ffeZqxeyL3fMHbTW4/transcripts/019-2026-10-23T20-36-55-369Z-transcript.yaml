@@ -1,0 +1,56 @@
+user:
+  text: Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+assistant:
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: |-
+      Phase 8/9 complete.
+
+      - E2E: all routes `200`; note create/update/delete `302`; restart reset to the 3 seed notes; no H2 files; app stopped and port `8090` free.
+      - Final `mvn -q verify` exit `0`, 21 tests passing.
+      - README, plan, and task lint: `0 issues`; `AGENTS.md` updated for `examples/`.
+      - Driver install script now strips bundled Log4j/SLF4J/commons-logging and installs a minimal POM, so the executable JAR uses Boot's Logback.
+      - Root cause fixed: admin `activated_at` was `NULL`; `legacy-login` returns `200` and JDBC works.
+      - No commit, push, or PR.

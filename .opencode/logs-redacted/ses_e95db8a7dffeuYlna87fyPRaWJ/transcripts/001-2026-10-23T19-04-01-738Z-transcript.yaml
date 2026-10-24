@@ -1,0 +1,36 @@
+user:
+  text: |-
+    on /home/ext_root/lab-data/zetaris-getting-started: Read AGENTS.md and follow it. Run python3 scripts/prefl ight.py and show me the 
+    result. Then connect over REST to the instance confi gured in .env.local and 
+    confi rm with SELECT 1 and SHOW LIGHTNING DATABASES. 
+    Goal: <for example: onboard pokeapi> 
+    Dry-run before creating anything and wait for my go-ahead.
+assistant:
+  - response: I'll start by reading the AGENTS.md in that directory.
+  - response: No opencode-specific guide exists; let me read the connections README plus the closest generic harness guide.
+  - response: |-
+      **Preflight** (`python3 scripts/preflight.py`, read-only) — all pass:
+
+      ```
+      [PASS] env file: .../zetaris-getting-started/.env.local
+      [PASS] ZETARIS_API_KEY / ZETARIS_USERNAME / ZETARIS_PASSWORD: [REDACTED]
+      [PASS] ZETARIS_USER_AGENT: set, valid app_name user@domain.tld form
+      [PASS] REST datasources: HTTP 200, 0 listed
+      [PASS] REST SELECT 1
+      [INFO] datasources: none
+      [INFO] lightning databases: NY_TAXI, POKEAPI_REST, TPCDS_DB
+      [INFO] USL namespaces: none
+      READY
+      ```
+
+      **REST connection confirmation** (direct `/api/v1.0`, bearer key + `X-Org-ID`):
+
+      | Check | Result |
+      |---|---|
+      | `SELECT 1` | `1` |
+      | `SHOW LIGHTNING DATABASES` | `NY_TAXI` (NY Taxi sample data, 6), `POKEAPI_REST` (PokeAPI REST source, 806), `TPCDS_DB` (TPC-DS benchmark sample data, 308) |
+      | `GET /datasource/datasources` | `[]` (HTTP 200, no `CREATE DATASOURCE` registrations) |
+
+      No opencode-specific guide exists in `docs/connections/`, so I followed the shared `client-setup.md` REST settings.
+
+      Your `Goal:` line is still the template placeholder (`<for example: onboard pokeapi>`), so I have made no changes and run no dry-run. What is the actual goal — e.g. onboard `pokeapi` (note `POKEAPI_REST` already exists), query NY_TAXI, or build a USL? Once you name it, I'll show the `--dry-run` statement list and wait for your go-ahead.

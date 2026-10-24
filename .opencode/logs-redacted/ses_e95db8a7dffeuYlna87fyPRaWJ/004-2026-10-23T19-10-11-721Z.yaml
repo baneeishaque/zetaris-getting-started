@@ -1,0 +1,334 @@
+---
+user:
+  text: go-ahead
+  time: 10/23/2026, 7:06:13.760 PM UTC
+assistant:
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      The user gave go-ahead. Run `python3 scripts/onboard.py run eurostat`. This creates objects. Then verify per AGENTS.md: "Verify after creating, as in open_data/rest_apis/HOWTO.md section 2: compare Zetaris row counts with an independent check against the source API."
+
+      Let me first run the onboard command. Output could be moderate (6 statements). Fine.
+
+      Note: the run may fail at statement 2 if container exists or lack privilege. Handle.
+
+      After creation, verification: run_select.sql? Let me check the _select.sql file for eurostat. open_data/rest_apis/sql/non_rate_limited/07_eurostat_select.sql probably. We should run verification queries and compare with curl counts.
+
+      The source data: une_rt_m_pl series has 355 rows populated (per header). The snapshot view returns 355 rows? Let's inspect select file. Then compare with independent API check: curl the endpoint and count value keys with jq. Use ZETARIS_USER_AGENT? Eurostat doesn't need UA. But use curl with UA maybe not required. We can use python.
+
+      Let me run onboard first.
+
+      Wait — the command may take a while (REST table creation may fetch? Usually registration is quick). Give generous timeout.
+
+      Run it.
+    thinking_duration: 1.867s
+    thinking_duration_ms: 1867
+    tool_calls:
+      - tool: bash
+        args:
+          command: python3 scripts/onboard.py run eurostat 2>&1
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+          timeout: 300000
+        result: |2
+           1. eurostat               rest      open_data/rest_apis/sql/non_rate_limited/07_eurostat_create.sql
+
+          channel=rest env=/home/ext_root/lab-data/zetaris-getting-started/.env.local
+
+          === eurostat (6 statements)
+            1. ok       CREATE LIGHTNING DATABASE EUROSTAT_REST DESCRIBE BY "Eurostat REST API JSON-stat source"
+            2. ok       CREATE SCHEMASTORE CONTAINER eurostat
+            3. ok       CREATE LIGHTNING REST TABLE une_rt_m_pl FROM EUROSTAT_REST REQUEST( endpoint "https://ec.e
+            4. ok       CREATE SCHEMASTORE VIEW une_rt_m_pl_metadata_table WITH CONTAINER eurostat AS SELECT label
+            5. ok       CREATE SCHEMASTORE VIEW une_rt_m_pl_snapshot_table WITH CONTAINER eurostat AS SELECT value
+            6. ok       CREATE SCHEMASTORE VIEW une_rt_m_pl_series_table WITH CONTAINER eurostat AS SELECT time_la
+              6 ok
+
+          done
+    time: 10/23/2026, 7:06:13.782 PM UTC
+    response: ​Running the onboarding now (6 statements, REST channel).
+    duration: 8.889s
+    duration_ms: 8889
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      All 6 statements ok. Now verify per AGENTS.md and HOWTO section 2: run the verification query in its _select.sql; count rows in Zetaris view and independently from the API.
+
+      Let me look at 07_eurostat_select.sql.
+    thinking_duration: 333ms
+    thinking_duration_ms: 333
+    tool_calls:
+      - tool: bash
+        args:
+          command: cat open_data/rest_apis/sql/non_rate_limited/07_eurostat_select.sql
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          -- =============================================================================
+          -- Verification / example queries for 07_eurostat_create.sql
+          -- Assumes 07_eurostat_create.sql has already been run.
+          --
+          -- The verification queries below are commented out by default so that
+          -- running this whole file doesn't automatically fire read queries
+          -- against every view. Uncomment what you want to run, or run it
+          -- directly in the SQL Editor. The example queries further down are
+          -- left live, same as before -- all confirmed working against Zetaris
+          -- (2026-09-19).
+          -- =============================================================================
+
+          -- === Verification ===
+          -- SELECT * FROM eurostat.une_rt_m_pl_metadata_table;
+          -- SELECT * FROM eurostat.une_rt_m_pl_snapshot_table;
+          -- SELECT * FROM eurostat.une_rt_m_pl_series_table ORDER BY period;
+
+          -- === Diagnostics === (kept for reference -- une_rt_m_pl_series_table
+          -- is confirmed working now, but this is useful if the same pattern
+          -- fails on a different JSON-stat/SDMX dataset elsewhere)
+          -- SELECT * FROM eurostat_rest.une_rt_m_pl;
+          -- DESCRIBE eurostat_rest.une_rt_m_pl;
+          -- `value` and `dimension.time.category.index` are both inferred as a
+          -- struct with one field per dynamic key, not a map -- the
+          -- to_json/from_json coercion, applied to both exploded fields,
+          -- resolves this (confirmed by 355 correct rows being returned). See
+          -- the SQL companion guide for the general lesson: check whether every
+          -- dynamic-key object being exploded in the same query has the
+          -- coercion applied, not just the first one you notice.
+
+          -- === Example queries ===
+          -- Queries 1-3 use the metadata and snapshot views (no explode() involved);
+          -- queries 4-8 use the fully-decoded une_rt_m_pl_series_table.
+
+          -- 1. Dataset descriptive metadata -- confirms which dataset, which
+          -- region, and when it was last updated at the source:
+          SELECT dataset_label, dataset_source, last_updated
+          FROM eurostat.une_rt_m_pl_metadata_table;
+
+          -- 2. Long-run change -- Poland's unemployment rate in the earliest
+          -- available month on record (1997-01) versus the most recent published
+          -- month (2026-07), using only the low-risk snapshot view:
+          SELECT
+              rate_1997_01,
+              rate_2026_07,
+              ROUND(rate_2026_07 - rate_1997_01, 1) AS change_percentage_points
+          FROM eurostat.une_rt_m_pl_snapshot_table;
+
+          -- 3. Year-over-year change -- July 2026 versus July 2025, same
+          -- low-risk technique:
+          SELECT
+              rate_2025_07,
+              rate_2026_07,
+              ROUND(rate_2026_07 - rate_2025_07, 1) AS year_over_year_change_pct_points
+          FROM eurostat.une_rt_m_pl_snapshot_table;
+
+          -- 4. Full decoded time series, chronological -- only works if
+          -- une_rt_m_pl_series_table (in the create script) succeeded:
+          SELECT * FROM eurostat.une_rt_m_pl_series_table ORDER BY period;
+
+          -- 5. The highest and lowest unemployment rate ever recorded in this
+          -- series, and which month each occurred:
+          SELECT period, unemployment_rate_pct
+          FROM eurostat.une_rt_m_pl_series_table
+          ORDER BY unemployment_rate_pct DESC
+          LIMIT 1;
+
+          SELECT period, unemployment_rate_pct
+          FROM eurostat.une_rt_m_pl_series_table
+          ORDER BY unemployment_rate_pct ASC
+          LIMIT 1;
+
+          -- 6. The most recent 12 published months, most recent first -- a normal
+          -- "recent trend" view now that the data is in proper row form:
+          SELECT period, unemployment_rate_pct
+          FROM eurostat.une_rt_m_pl_series_table
+          ORDER BY period DESC
+          LIMIT 12;
+
+          -- 7. Average unemployment rate per decade -- extracting the year from
+          -- the period string and bucketing it, a simple aggregate that only makes
+          -- sense once the sparse value data is in real rows:
+          SELECT
+              CONCAT(SUBSTR(period, 1, 3), '0s') AS decade,
+              ROUND(AVG(unemployment_rate_pct), 1) AS avg_unemployment_rate_pct,
+              COUNT(*) AS months_counted
+          FROM eurostat.une_rt_m_pl_series_table
+          GROUP BY 1
+          ORDER BY decade;
+
+          -- 8. First month the rate dropped to single digits (below 10%) --
+          -- a milestone-style query, ordered chronologically and taking the
+          -- earliest match:
+          SELECT period, unemployment_rate_pct
+          FROM eurostat.une_rt_m_pl_series_table
+          WHERE unemployment_rate_pct < 10
+          ORDER BY period ASC
+          LIMIT 1;
+
+          -- ---------------------------------------------------------------------------
+          -- Attribution reminder -- carry this into any README or demo that
+          -- displays data from this source:
+          --   "Source: Eurostat, une_rt_m (unemployment rate, monthly)."
+          -- ---------------------------------------------------------------------------
+    time: 10/23/2026, 7:06:22.691 PM UTC
+    response: ​All 6 statements succeeded. Now verifying data per `open_data/rest_apis/HOWTO.md` §2.
+    duration: 5.016s
+    duration_ms: 5016
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      Verification:
+      1. Count rows in series view (expect 355).
+      2. Independent count from API: fetch JSON and count keys in "value" object.
+
+      Let me run Zetaris queries:
+      - SELECT COUNT(*) FROM eurostat.une_rt_m_pl_series_table
+      - metadata select
+      - maybe earliest/latest
+
+      Independent: curl the same endpoint, parse with python, count value keys. Use curl -s with the exact URL.
+
+      Let me run these in parallel. Zetaris query via run_sql.py -e. The URL in SQL is:
+      https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_m?format=JSON&geo=PL&sex=T&age=TOTAL&unit=PC_ACT&s_adj=SA&lang=EN
+
+      Independent count with python urllib (avoid curl | python pipeline? bash guides say avoid chaining, but it's fine). Use python one-liner? Better: python3 - <<'PY' heredoc — but AGENTS.md warns about nested heredocs; simple heredoc is okay though. Rule says never nest heredocs; a single heredoc with no triple-quoted content is fine. Alternatively use jq. Let's use curl -s URL | python3 -c '...'. That's a pipeline; acceptable. But reminder says avoid bash chaining that can hang. It's a simple pipe, likely fine. Could use python3 -c with urllib directly — cleaner, no pipe.
+
+      Let me do:
+      python3 -c "import json,urllib.request; u='...'; d=json.load(urllib.request.urlopen(u)); print('value keys:', len(d.get('value',{})), 'updated:', d.get('updated')); print('id:', d.get('id'))"
+
+      Careful quoting. Use single quotes outside and double inside.
+
+      Also note count of series rows may equal len(value) = 355. Zetaris view series table should have 355 rows.
+
+      Run three things in parallel:
+      1. COUNT(*) series + metadata
+      2. independent API count
+      3. SHOW VIEWS / TABLES maybe not needed.
+
+      Let me run.
+    thinking_duration: 2.407s
+    thinking_duration_ms: 2407
+    tool_calls:
+      - tool: bash
+        args:
+          command: |-
+            python3 -c '
+            import json, urllib.request
+            u = "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_m?format=JSON&geo=PL&sex=T&age=TOTAL&unit=PC_ACT&s_adj=SA&lang=EN"
+            d = json.load(urllib.request.urlopen(u, timeout=60))
+            v = d.get("value", {})
+            print("source value keys:", len(v))
+            print("id:", d.get("id"))
+            print("updated:", d.get("updated"))
+            print("first/last index:", min(map(int, v)), max(map(int, v)))
+            ' 2>&1
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          source value keys: 356
+          id: ['freq', 's_adj', 'age', 'unit', 'sex', 'geo', 'time']
+          updated: 2026-10-21T11:00:00+0200
+          first/last index: 168 523
+      - tool: bash
+        args:
+          command: python3 scripts/run_sql.py -e "SELECT dataset_label, dataset_source, last_updated FROM eurostat.une_rt_m_pl_metadata_table" 2>&1
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          channel=rest env=/home/ext_root/lab-data/zetaris-getting-started/.env.local statements=1
+            1. SELECT dataset_label, dataset_source, last_updated FROM eurostat.une_rt_m_pl_metadata_table
+                ['Unemployment by sex and age - monthly data', 'ESTAT', '2026-10-21T11:00:00+0200']
+          done: 1/1 statements ok
+      - tool: bash
+        args:
+          command: python3 scripts/run_sql.py -e "SELECT COUNT(*) AS row_count FROM eurostat.une_rt_m_pl_series_table" 2>&1
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          channel=rest env=/home/ext_root/lab-data/zetaris-getting-started/.env.local statements=1
+            1. SELECT COUNT(*) AS row_count FROM eurostat.une_rt_m_pl_series_table
+                ['356']
+          done: 1/1 statements ok
+    time: 10/23/2026, 7:06:27.717 PM UTC
+    response: ​
+    duration: 15.891s
+    duration_ms: 15891
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      Counts match: 356 rows both sides. Note the create script header said 355 as of 2026-09-19; now index 523 (2026-08) is published, so 356. Consistent.
+
+      Now report completion. Also verify SHOW VIEWS or SHOW TABLES in EUROSTAT_REST? Quick final state. Also maybe mention attribution. Let me run a final state check:
+      - SHOW LIGHTNING DATABASES (now includes EUROSTAT_REST)
+      - SHOW TABLES IN EUROSTAT_REST
+
+      Do it in one run_sql each. Also check a sample row? The metadata did. Enough.
+
+      Also DOX: AGENTS.md instructions say update docs after editing? This repo has AGENTS.md (DOX framework from our workspace root, but is zetaris-getting-started part of the DOX repo? The workspace root is ai-suite; zetaris is a sibling repo. The user's AGENTS.md in zetaris is its own instruction set, not DOX). We ran commands; no file edits. No DOX updates needed.
+
+      Report concise: onboarding done, verification matched 356, objects created. No failures. Include command to re-run? Not needed.
+
+      Let me get final state.
+    thinking_duration: 1.439s
+    thinking_duration_ms: 1439
+    tool_calls:
+      - tool: bash
+        args:
+          command: python3 scripts/run_sql.py -e "SHOW LIGHTNING DATABASES" 2>&1; python3 scripts/run_sql.py -e "SHOW TABLES IN EUROSTAT_REST" 2>&1
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          channel=rest env=/home/ext_root/lab-data/zetaris-getting-started/.env.local statements=1
+            1. SHOW LIGHTNING DATABASES
+                ['EUROSTAT_REST', 'Eurostat REST API JSON-stat source', '917']
+                ['NY_TAXI', 'NY Taxi sample data', '6']
+                ['POKEAPI_REST', 'PokeAPI REST source', '806']
+                ['TPCDS_DB', 'TPC-DS benchmark sample data', '308']
+          done: 1/1 statements ok
+          channel=rest env=/home/ext_root/lab-data/zetaris-getting-started/.env.local statements=1
+            1. SHOW TABLES IN EUROSTAT_REST
+                ['EUROSTAT_REST.une_rt_m_pl', 'EUROSTAT_REST', 'Lightning Database']
+          done: 1/1 statements ok
+    time: 10/23/2026, 7:06:43.618 PM UTC
+    response: ​
+    duration: 6.284s
+    duration_ms: 6284
+  - agent: build
+    model:
+      id: deepseek-v4.1-flash-free
+      provider: opencode
+    thinking: |-
+      Done. Final report:
+
+      - Onboard: 6/6 statements ok.
+      - Created: EUROSTAT_REST DB, eurostat container, une_rt_m_pl REST table, 3 views.
+      - Verification: Zetaris series view 356 rows vs source `value` keys 356 → match. Metadata matches (ESTAT, updated 2026-10-21T11:00:00+0200), and the source count now includes 2026-08 (index 523), hence 356 vs the script header's 355 as of 2026-09-19 — not truncation.
+
+      Attribution note: "Source: Eurostat, une_rt_m (unemployment rate, monthly)." The select file asks to carry that.
+
+      Keep concise. Maybe mention sample endpoint. Final answer under ~15 lines. No need for more tools.
+    thinking_duration: 1.930s
+    thinking_duration_ms: 1930
+    time: 10/23/2026, 7:06:49.913 PM UTC
+    response: |-
+      ​Onboarding complete — 6/6 statements succeeded.
+
+      **Created**
+      - `EUROSTAT_REST` Lightning database
+      - `eurostat` SchemaStore container
+      - `EUROSTAT_REST.une_rt_m_pl` REST table (Poland, total, monthly, seasonally adjusted)
+      - Views: `une_rt_m_pl_metadata_table`, `une_rt_m_pl_snapshot_table`, `une_rt_m_pl_series_table`
+
+      **Verification** (`HOWTO.md` §2 — Zetaris vs independent source check)
+
+      | Check | Zetaris | Eurostat API |
+      |---|---|---|
+      | Row count | 356 (`series_table`) | 356 `value` keys |
+      | Dataset updated | `2026-10-21T11:00:00+0200` | `2026-10-21T11:00:00+0200` |
+
+      Counts match exactly. Note the script header cites 355 as of 2026-09-19; the source now publishes index 523 (2026-08), so 356 is expected, not truncation.
+
+      Attribution for any downstream use: "Source: Eurostat, une_rt_m (unemployment rate, monthly)."
+    duration: 7.206s
+    duration_ms: 7206
+

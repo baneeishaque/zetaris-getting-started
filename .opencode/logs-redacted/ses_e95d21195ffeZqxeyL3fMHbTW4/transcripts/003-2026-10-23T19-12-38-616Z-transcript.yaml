@@ -1,0 +1,49 @@
+user:
+  text: |-
+    on /home/ext_root/lab-data/zetaris-getting-started: Read AGENTS.md and follow it. Run python3 scripts/prefl ight.py and show me the 
+    result. Then connect over REST to the instance confi gured in .env.local and 
+    confi rm with SELECT 1 and SHOW LIGHTNING DATABASES. 
+    Goal: onboard eurostat
+    Dry-run before creating anything and wait for my go-ahead.
+assistant:
+  - response: |-
+      **Preflight** (`scripts/preflight.py`, read-only) — READY:
+
+      ```
+      [PASS] env file, ZETARIS_API_KEY, ZETARIS_USERNAME, ZETARIS_PASSWORD
+      [PASS] ZETARIS_USER_AGENT: valid app_name user@domain.tld
+      [PASS] REST datasources: HTTP 200, 0 listed
+      [PASS] REST SELECT 1
+      [INFO] lightning databases: NY_TAXI, POKEAPI_REST, TPCDS_DB
+      [INFO] USL namespaces: none
+      ```
+
+      **REST confirmation** (direct `/api/v1.0`): `SELECT 1` → `1`; `SHOW LIGHTNING DATABASES` → `NY_TAXI`, `POKEAPI_REST`, `TPCDS_DB`; `GET /datasource/datasources` → `[]`.
+
+      **Dry-run** (`onboard.py run eurostat --dry-run`, nothing sent) — 1 source, no dependencies:
+
+      ```
+      plan: eurostat  rest  open_data/rest_apis/sql/non_rate_limited/07_eurostat_create.sql
+      ```
+
+      Statement list (`run_sql.py --dry-run`, 6 statements):
+
+      ```
+      1. CREATE LIGHTNING DATABASE EUROSTAT_REST DESCRIBE BY "Eurostat REST API JSON-stat source"
+      2. CREATE SCHEMASTORE CONTAINER eurostat
+      3. CREATE LIGHTNING REST TABLE une_rt_m_pl FROM EUROSTAT_REST
+           endpoint: Eurostat une_rt_m — Poland, total, monthly, SA unemployment rate
+      4. CREATE SCHEMASTORE VIEW une_rt_m_pl_metadata_table  (dataset metadata/axis labels)
+      5. CREATE SCHEMASTORE VIEW une_rt_m_pl_snapshot_table  (decoded JSON-stat values)
+      6. CREATE SCHEMASTORE VIEW une_rt_m_pl_series_table    (series rows)
+      ```
+
+      **Pre-create checks (read-only):** `EUROSTAT_REST` does not exist on the instance, so no name collisions there. Caveats:
+      - `CREATE SCHEMASTORE CONTAINER` is documented as **administrators only**; if your account is not an admin, statement 2 may be refused (AGENTS.md says report and ask for access, not escalate).
+      - SQL has no command to list SchemaStore containers (`SHOW VIEWS IN eurostat` ignores the container name and lists all views), so whether a `eurostat` container already exists is unverified; if it does, statement 2 errors and a re-run needs `--skip-exists`.
+
+      Nothing has been created. Proposed run command on your go-ahead:
+
+      ```
+      python3 scripts/onboard.py run eurostat
+      ```

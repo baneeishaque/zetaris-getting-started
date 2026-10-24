@@ -1,0 +1,84 @@
+user:
+  text: |-
+    commit the files in proper structure.
+    only handle the changes by us. strictly & deeply follow /Users/dk/lab-data/ai-suite/ai-agent-rules/git-atomic-commit-construction-rules.md instructions & /Users/dk/lab-data/ai-suite/.agents/skills/git-atomic-commit-construction/SKILL.md instructions. give me complete arranged commits preview. you must add Execution Plan too. (please normalize paths first (if needed) - these were mac paths)
+assistant:
+  - response: "\n\n"
+  - response: "\n\n"
+  - agent: compaction
+    response: |-
+      ## Objective
+      - Commit only the Eurostat dossier and Zetaris-backed Angular app changes in atomic commits, following the normalized ai-suite commit rules and skill.
+      - Provide a complete arranged-commits preview with an Execution Plan before execution.
+
+      ## Important Details
+      - Normalize Mac paths:
+        - `/Users/dk/lab-data/ai-suite/...` → `/home/ext_root/lab-data/ai-suite/...`
+        - `/Users/dk/lab-data/zetaris-getting-started` → `/home/ext_root/lab-data/zetaris-getting-started`
+      - Required rules:
+        - `/home/ext_root/lab-data/ai-suite/ai-agent-rules/git-atomic-commit-construction-rules.md`
+        - `/home/ext_root/lab-data/ai-suite/ai-agent-rules/git-operation-rules.md` prerequisite
+        - `/home/ext_root/lab-data/ai-suite/.agents/skills/git-atomic-commit-construction/SKILL.md`
+      - Commit protocol requires absolute `git -C <path>` commands, hunk-based staging, formatting isolation, config coupled to functional change, independent/buildable commits, mandatory preview, and explicit `start` authorization.
+      - User asked for only changes made by us; exclude unrelated pre-existing working-tree changes/untracked files.
+      - Never commit:
+        - `/home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md`
+        - `/home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_task.md`
+        - `/home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/`
+      - Repo under commit review: `/home/ext_root/lab-data/zetaris-getting-started`.
+      - Limited status check showed `?? docs/data-sources/eurostat/zetaris-integration.md` and `?? examples/eurostat-crud/`; full status/diff still must be classified.
+      - Final app is Zetaris-only; public Eurostat API calls removed. Existing Zetaris registration is PL/T only, so app filters are `GEO_CODES = ['PL']` and `SEX_CODES = ['T']`.
+      - Zetaris SQL endpoint: `POST /zetaris-api/sql-editor/sqls/run`; views `eurostat.une_rt_m_pl_series_table` and `eurostat.une_rt_m_pl_metadata_table`; 356 rows, latest `2026-08` = `3.4`.
+      - Zetaris sends no CORS headers; `proxy.conf.cjs` provides same-origin dev proxy to `ZETARIS_REST_URL`. Production needs reverse proxy/BFF.
+      - API key is entered at runtime in `/settings`, stored only in `sessionStorage` key `eurostat-crud.zetaris-connection.v1`; never in source, localStorage, or saved series.
+      - Saved-series storage remains `eurostat-crud.saved-series.v1`.
+      - Do not commit `.env.local`, Playwright scratch scripts, screenshots, logs, or generated `dist/`/`node_modules/`.
+      - Only test fixture string `Bearer test-key` appears in source; no real Zetaris key is present.
+      - `examples/eurostat-crud-java` untouched.
+      - Prior root README, REST catalog, and `.markdownlint-cli2.jsonc` changes were made by us; root README/catalog retain 56 pre-existing lint issues (baseline 57).
+      - No commit or push has been made.
+
+      ## Work State
+      ### Completed
+      - Eurostat dossier completed in `docs/data-sources/eurostat/` (8 documents, 2,038 lines); dossier lint clean; relative-link audit 70/0 before latest edits.
+      - Root `README.md` updated with docs table/folder map; REST catalog Eurostat section updated; `.markdownlint-cli2.jsonc` created.
+      - Angular 22 app completed at `examples/eurostat-crud/`; converted from public Eurostat API to Zetaris-only SQL.
+      - Added `ZetarisConnectionService`, `ZetarisService`, Zetaris SQL models/specs, `/settings` UI, app-shell connection banner, and `proxy.conf.cjs`.
+      - Updated app routing, filters, labels, list/form/detail copy, source attribution, and README.
+      - Updated `docs/data-sources/eurostat/README.md`, `zetaris-integration.md`, and `operations-runbook.md` for Zetaris browser example, CORS, and credential boundary.
+      - Verified `27/27` Vitest tests pass; production build passes (`main 341.47 kB`, `styles 6.81 kB`).
+      - Browser smoke passed: connection test/save, create/read 356 rows, reload persistence, update, delete, key absent from localStorage.
+      - Markdown lint 0 issues for 4 changed docs; latest changed-doc link audit 24 checked/0 missing.
+      - Dev server stopped; no commit/push.
+
+      ### Active
+      - Preparing the arranged-commit preview and Execution Plan.
+      - Must inspect full `git status --porcelain=v2`, diffs, and untracked files to isolate only our changes.
+      - No commit has been executed yet.
+
+      ### Blocked
+      - None.
+
+      ## Next Move
+      1. Run `git -C /home/ext_root/lab-data/zetaris-getting-started status --porcelain=v2`, inspect diffs/untracked files, and classify our dossier/app/root-doc changes versus unrelated pre-existing changes.
+      2. Finish reading any truncated rule/skill sections, then produce the complete arranged-commits preview with commit messages, file/hunk groups, order, verification gates, and Execution Plan.
+      3. Wait for explicit `start` authorization before staging/committing; then execute atomic commits, verify each, report hashes, and do not push unless asked.
+
+      ## Relevant Files
+      - `/home/ext_root/lab-data/ai-suite/ai-agent-rules/git-atomic-commit-construction-rules.md`: governing commit rules.
+      - `/home/ext_root/lab-data/ai-suite/ai-agent-rules/git-operation-rules.md`: prerequisite git safety rules.
+      - `/home/ext_root/lab-data/ai-suite/.agents/skills/git-atomic-commit-construction/SKILL.md`: required preview/authorization workflow.
+      - `/home/ext_root/lab-data/zetaris-getting-started/`: target repository.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/`: entire app directory currently untracked.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/core/zetaris/zetaris.service.ts`: Zetaris SQL client.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/core/zetaris/zetaris-connection.service.ts`: sessionStorage connection state.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/features/zetaris-settings/`: connection settings UI.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/proxy.conf.cjs`: dev proxy to `ZETARIS_REST_URL`.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/angular.json`: serve proxy configuration.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/README.md`: Zetaris-only app documentation.
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/data-sources/eurostat/`: dossier directory, including `zetaris-integration.md`.
+      - `/home/ext_root/lab-data/zetaris-getting-started/README.md`: root docs index changes.
+      - `/home/ext_root/lab-data/zetaris-getting-started/open_data/rest_apis/rest-api-sources.md`: Eurostat catalog changes.
+      - `/home/ext_root/lab-data/zetaris-getting-started/.markdownlint-cli2.jsonc`: root lint config.
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/plans/...`: local-only plan/task, never commit.
+      - `/home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/`: local-only smoke scripts/screenshots/logs, never commit.

@@ -1,0 +1,48 @@
+user:
+  text: start
+assistant:
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: |-
+      Executed 4 commits on `main`:
+
+      - `35e5202` docs(eurostat): add verified data-source dossier
+      - `d93cfdb` feat(eurostat): add Zetaris-backed CRUD example
+      - `68e7bf3` feat(eurostat): add Java JDBC CRUD example
+      - `0479ca0` docs(plans): add sanitized Zetaris planning records
+
+      AGENTS.md was split correctly: rewrap in Commit 1, examples hunk in Commit 2. Angular 27/27 tests, Java 20 tests, markdownlint clean; tree clean, safety stash dropped, `main` ahead 4, not pushed.

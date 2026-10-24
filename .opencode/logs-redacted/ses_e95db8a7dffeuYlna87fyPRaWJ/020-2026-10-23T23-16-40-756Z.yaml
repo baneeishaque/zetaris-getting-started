@@ -1,0 +1,1962 @@
+---
+user:
+  text: 'for commit 2: /home/ext_root/lab-data/zetaris-getting-started/AGENTS.md must be hunked. we can''t correctly the line. so, use backup-edit-commit-restore machanism.'
+  time: 10/23/2026, 11:06:58.292 PM UTC
+assistant:
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: 'We need understand request. User says for commit 2: AGENTS.md must be hunked. "we can''t correctly the line. so, use backup-edit-commit-restore machanism." They want only a specific hunk of AGENTS.md in commit 2, because AGENTS.md has other changes not ours? Need inspect AGENTS.md diff. We need follow git atomic commit rules, hunk staging. Need use backup-edit-commit-restore mechanism: backup current AGENTS.md, edit to only desired content, stage/commit, restore full file. Need clarify exact hunk? Let''s inspect diff. Also need not execute commits until `start`? User is instructing how to handle commit 2, not necessarily starting. We need update preview and perhaps prepare backup. Need inspect AGENTS.md. Use git diff.'
+    thinking_duration: 764ms
+    thinking_duration_ms: 764
+    tool_calls:
+      - tool: bash
+        args:
+          command: git -C /home/ext_root/lab-data/zetaris-getting-started diff -- AGENTS.md
+        result: |
+          diff --git a/AGENTS.md b/AGENTS.md
+          index 0009ba4..6904714 100644
+          --- a/AGENTS.md
+          +++ b/AGENTS.md
+          @@ -1,6 +1,10 @@
+           # Agent instructions
+           
+          -This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`. You are acting as a data engineer against a Zetaris instance.
+          +This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages
+          +(`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, SQL references in `docs/guides/`, and
+          +runnable examples in `examples/` (`examples/eurostat-crud-java/` is a Spring Boot JDBC demo;
+          +`examples/eurostat-crud/` is an Angular browser CRUD example). You are acting as a data engineer against a
+          +Zetaris instance.
+           
+           ## Connect first
+           
+      - tool: bash
+        args:
+          command: git -C /home/ext_root/lab-data/zetaris-getting-started status --short AGENTS.md; git -C /home/ext_root/lab-data/zetaris-getting-started log -1 --oneline -- AGENTS.md
+        result: |2
+           M AGENTS.md
+          6a2fbaa Add a permissions guide and publish it on the site (#35)
+    time: 10/23/2026, 11:06:58.380 PM UTC
+    response: "\n\n"
+    duration: 2.652s
+    duration_ms: 2652
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Diff only one hunk. User says "must be hunked. we can't correctly the line." Maybe they mean the hunk contains line wrapping changes that aren't ours? Let's inspect full AGENTS.md current vs HEAD. The diff shows entire first paragraph reformatted and examples added. Maybe the first part "and SQL references in docs/guides/." plus examples is our change; but the line wrapping of the original sentence is also changed. They want only the examples addition, not the rewrap? "we can't correctly the line" maybe means cannot correctly isolate the line because the hunk includes both rewrap and addition. Use backup-edit-commit-restore: backup full AGENTS.md, edit to stage only the intended change (probably minimal insertion preserving original first paragraph), commit, restore full file. Need determine intended hunk. Could be they want AGENTS.md hunked separately because commit 2 should only include the examples paragraph, and the full file has other modifications? But diff only one hunk. Maybe "hunked" means stage only part of the hunk? The entire hunk is the change. The issue is line wrapping: they want to preserve original line and add examples sentence without reflowing? Let's parse.
+
+      Original:
+      "This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`. You are acting as a data engineer against a Zetaris instance."
+
+      Current:
+      "This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages
+      (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, SQL references in `docs/guides/`, and
+      runnable examples in `examples/` (`examples/eurostat-crud-java/` is a Spring Boot JDBC demo;
+      `examples/eurostat-crud/` is an Angular browser CRUD example). You are acting as a data engineer against a
+      Zetaris instance."
+
+      The only semantic change: "and SQL references in docs/guides/." -> "SQL references in docs/guides/, and runnable examples..." plus line wraps. The user says "AGENTS.md must be hunked. we can't correctly the line." Maybe they want to stage only the addition of examples, preserving original sentence structure and not rewrapping the original line. The backup-edit-commit-restore mechanism: backup current AGENTS.md (with our full change), edit AGENTS.md to minimal change (maybe insert examples phrase into original line), `git add AGENTS.md` and commit (Commit 2), then restore backup (full current file) to working tree. That means Commit 2 contains minimal line change; the full current file remains uncommitted/untracked modification after. But then the final tree would have a modification not committed, which is odd. The mechanism usually is: backup working file, replace with HEAD version, apply only desired hunk, commit, restore backup. The restored full file would differ from committed version, leaving a dirty file. Maybe they want the full AGENTS.md change in a later commit? Or they want to preserve their line wrapping in working tree but commit only the hunk? Wait, if we commit minimal change, then restore full file, the full file includes the same semantic addition plus different wrapping. The working tree would be dirty with only wrapping differences. That's undesirable unless the full file is meant to be committed later or kept local. Maybe the user means the opposite: AGENTS.md has a line that can't be correctly staged via `git add -p` due to wrapping, so use backup-edit-commit-restore to stage the whole hunk exactly, not a subset. They might want to commit the full hunk (all of AGENTS.md changes) as part of commit 2, but ensure it's staged correctly. "must be hunked. we can't correctly the line." Hmm.
+
+      Let's parse exact wording: "for commit 2: /home/.../AGENTS.md must be hunked. we can't correctly the line. so, use backup-edit-commit-restore machanism."
+
+      "must be hunked" likely means it must be staged as a hunk, not whole file. "we can't correctly the line" maybe "we can't correct the line" or "we can't correctly [stage] the line." They want to use backup-edit-commit-restore to stage only the intended hunk. The backup-edit-commit-restore mechanism: copy file to backup, edit file to desired commit content, `git add`, commit, then restore backup. This is used when interactive hunk staging is hard. It allows committing a specific version of the file while preserving the working-tree version. The restored working tree then has changes not committed. But maybe that's intended because AGENTS.md's full current version includes unrelated changes that should not be committed. Let's inspect whether AGENTS.md has other changes beyond this hunk? `git diff` shows only one hunk. So "unrelated changes" are just line wrapping. They may want commit 2 to contain only the examples addition with original line wrapping, and keep the rewrap local (uncommitted). That seems plausible: the user doesn't want the rewrap in the commit, but wants to keep it in the working file. Then after commit, AGENTS.md remains modified (just wrapping), which is okay if they later decide. But our post-commit expected clean would be false. We need update preview accordingly: AGENTS.md committed version uses original line + examples; working tree retains rewrap; post-commit status will show AGENTS.md modified. But that leaves a dirty file and could confuse. Maybe the rewrap is actually desired in the final file, but they don't want to commit it now? Hmm.
+
+      Alternatively "we can't correctly the line" means they cannot make the line correct in the diff because the original line is long, so they want to commit the whole hunk via backup mechanism. The mechanism would commit the current full file, then restore the same full file (no dirty). That doesn't achieve "hunked" though; it commits whole file. But since only one hunk, whole file = hunk. Maybe they mean "AGENTS.md must be hunked" as in "the change must be included as a hunk in commit 2" and they can't correctly [stage] the line due to line wrapping, so use backup-edit-commit-restore. Hmm.
+
+      We need clarify? The user gave a specific instruction; we should implement. But we need know desired committed content. We can infer: commit 2 should include only the examples-related change, not the rewrap of the original sentence. The "line" likely refers to the long first line; they can't correctly isolate the line because the hunk rewraps it. The backup mechanism lets us commit a minimal version. We should ask which version? The user said "we can't correctly the line" maybe they are telling us they can't correct it, so use mechanism. We can choose the minimal semantic change.
+
+      Need inspect the AGENTS.md from HEAD to see original line length and maybe markdownlint. The current file was reformatted to 120 chars. Original line is 355 chars, likely markdownlint MD013. The repo's `.markdownlint-cli2.jsonc` may enforce 120. If we commit minimal change preserving original long line, markdownlint would fail. That's likely why it was rewrapped. The user says "we can't correctly the line" — maybe they mean we can't correctly [format] the line because of the hunk? Hmm.
+
+      Let's check `.markdownlint-cli2.jsonc`.
+    thinking_duration: 7.727s
+    thinking_duration_ms: 7727
+    tool_calls:
+      - tool: bash
+        args:
+          command: cat /home/ext_root/lab-data/zetaris-getting-started/.markdownlint-cli2.jsonc
+        result: |
+          {
+              // 120-character limit; code blocks and tables are exempt.
+              "config": {
+                  "MD013": {
+                      "line_length": 120,
+                      "code_blocks": false,
+                      "tables": false,
+                  },
+                  "MD007": {
+                      "indent": 2,
+                  },
+                  "MD029": {
+                      "style": "ordered",
+                  },
+                  "MD046": {
+                      "style": "fenced",
+                  },
+                  "MD033": {
+                      "allowed_elements": ["br"],
+                  },
+              },
+          }
+      - tool: bash
+        args:
+          command: git -C /home/ext_root/lab-data/zetaris-getting-started show HEAD:AGENTS.md | sed -n '1,10p'
+        result: |
+          # Agent instructions
+
+          This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`. You are acting as a data engineer against a Zetaris instance.
+
+          ## Connect first
+
+          The user's first prompt names a protocol (JDBC or REST) and a goal. Which instance you talk to is set in `.env.local` (`ZETARIS_REST_URL`, `ZETARIS_JDBC_URL` and the rest; local is the default), not in the prompt. Before running anything else, read the connection guide for your harness in `docs/connections/` (`claude-code-connection.md`, `codex-connection.md`, `cursor-connection.md`) for the settings table and troubleshooting, run the preflight below, and confirm the connection with `SELECT 1` and `SHOW LIGHTNING DATABASES`. Over REST, also call `GET /datasource/datasources`. Then work on the user's goal.
+
+          - **JDBC:** use `ZETARIS_JDBC_JAR` if set; otherwise ask the user for the full path to the driver JAR. Do not assume or search for it.
+          - **REST:** the key is `ZETARIS_API_KEY` in `.env.local`, created by the user in the Zetaris GUI. Never create, request, print, log or put it in a URL.
+    time: 10/23/2026, 11:07:01.097 PM UTC
+    response: "\n\n"
+    duration: 9.043s
+    duration_ms: 9043
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Original line is 355 chars; new config enforces 120. The rewrap is necessary to pass lint. So the commit must include rewrap. Then what's the issue? "we can't correctly the line" maybe means they can't correctly stage only the AGENTS.md hunk because the hunk is intertwined with line wrapping. The backup-edit-commit-restore mechanism would commit the full file as-is, then restore backup (same). That doesn't change anything. Maybe they want to commit only the examples hunk and leave the line wrap change out, but then lint fails. Unless they don't care about lint for AGENTS.md? The preview Commit 2 doesn't run markdownlint on AGENTS.md; only tests/build. But repo config would fail if linting all. Hmm.
+
+      Let's think of "backup-edit-commit-restore mechanism" definition. It likely is a known pattern in their skills: when a file has multiple changes and you need to commit only one hunk, back up the working file, edit it to remove the unwanted hunks, stage/commit, then restore the backup. This is exactly for hunk selection without interactive staging. They say "AGENTS.md must be hunked. we can't correctly the line." So they want only a hunk of AGENTS.md committed. Which hunk? The semantic examples addition. The line rewrap might be considered part of the hunk or unwanted. They might want to commit the examples addition but not the rewrap. But the rewrap is required by lint. Maybe they want the rewrap committed too, but they can't stage the hunk correctly because `git add -p` sees the whole paragraph as one hunk; the backup mechanism commits the whole file, which includes the rewrap. That is effectively whole-file commit, not hunking. Yet since there is only one hunk, it's the same. Maybe they mean "AGENTS.md must be hunked" because commit 2 should include only the AGENTS.md hunk, not the whole file? But the file only has one hunk. Hmm.
+
+      Maybe there are other AGENTS.md changes not shown because they are in the index? `git diff` only unstaged. `git diff --cached` empty. So only one hunk. Could be they refer to a different line in AGENTS.md that was changed by another session, and they want to hunk it out. But diff shows only the examples paragraph. Maybe the user knows the file has a line that is hard to stage correctly (the long line), and wants us to use the backup mechanism to commit the entire file version. We can do that.
+
+      We need not execute commit yet; we can prepare the mechanism and update preview. The user's instruction is specific: "for commit 2: ... must be hunked. we can't correctly the line. so, use backup-edit-commit-restore machanism." We should acknowledge and adjust commit 2 execution plan to use backup-edit-commit-restore for AGENTS.md. We need define exact steps:
+      1. Back up `AGENTS.md` to scratch, e.g. `AGENTS.md.commit2-working.bak` (or `AGENTS.md.pre-commit2.bak`).
+      2. Create the intended commit version. If we want to commit the full current file, copy backup to `AGENTS.md` (same). If we want only a hunk, edit out unwanted changes. We need decide.
+      3. `git add AGENTS.md` (or stage only it), commit with commit-2 message.
+      4. Restore backup to `AGENTS.md` (so working tree returns to full version).
+      5. Verify `git diff -- AGENTS.md` shows only the changes not committed (if any).
+
+      If we commit full current file, restore yields no diff. If we commit minimal, restore yields rewrap diff. Which is desired? The phrase "must be hunked" suggests the committed version should be a hunk, not the full current file. The current file's only hunk is the entire paragraph. If we commit the full file, it's not "hunked" in the sense of partial. But maybe they mean "the AGENTS.md change must be staged as a hunk, not the whole file" because the file has other changes. There are no other changes. So maybe they mean "the AGENTS.md change is a hunk that must be handled separately from the rest of commit 2" (i.e., commit 2 has app files + AGENTS.md; hunk AGENTS.md separately). The backup mechanism lets us stage AGENTS.md alone without `git add -A`. But that's just `git add AGENTS.md`. Hmm.
+
+      Maybe "we can't correctly the line" refers to a typo: "we can't correct the line" — they want to change the line but can't due to the hunk? Or "we can't correctly [stage] the line" due to line wrapping. They want backup mechanism to commit a version where the line is correct. We need inspect the current line for correctness. It says:
+      "runnable examples in `examples/` (`examples/eurostat-crud-java/` is a Spring Boot JDBC demo;
+      `examples/eurostat-crud/` is an Angular browser CRUD example). You are acting as a data engineer against a
+      Zetaris instance."
+
+      This is grammatically okay. Maybe they want "examples" to be "runnable examples" but the line break after `demo;` is awkward? "we can't correctly the line" could mean we can't get the line wrapping right. The backup mechanism could let us set the exact line content. Hmm.
+
+      Could be a known issue: `git add -p` hunk splitting on a long line that was rewrapped; the hunk includes both the addition and the rewrap, and you can't stage only the addition because the line is one long line. The backup-edit-commit-restore mechanism solves it by writing the exact desired file. They want to commit only the examples addition, preserving original line? But then lint. Unless the desired file keeps the original long line and the examples addition appended, and they accept MD013 for AGENTS.md because the original already violated it (before config existed). The new config in Commit 1 enforces 120, but maybe AGENTS.md is exempt? No. The repo's CI may not lint AGENTS.md. The original AGENTS.md already had a 355-char line, and the repo had no config; adding config now would make existing file fail. The rewrap is needed to make the repo lint clean. So committing minimal without rewrap would introduce a lint failure under the new config. The user probably knows this and wants the rewrap committed. So why hunk?
+
+      Maybe they want to split the AGENTS.md change into a separate commit? "for commit 2: AGENTS.md must be hunked" could mean commit 2 should include only the hunk that adds examples, and the rewrap should be in a different commit (e.g., Commit 1 with markdownlint config). But commit 2 is the app commit; AGENTS.md examples paragraph is logically part of commit 2. The rewrap is formatting; could be part of commit 1 (lint config) or a separate style commit. The user says "we can't correctly the line" — maybe they want to avoid mixing formatting with content, per `separate-content-from-formatting-commits` skill. They want to hunk AGENTS.md so commit 2 only gets the content change (examples), while the rewrap goes with formatting? Hmm.
+
+      Let's consider the repo's commit history / conventions. AGENTS.md original line is long; the new `.markdownlint-cli2.jsonc` in Commit 1 enforces 120. If Commit 1 adds the config, then at Commit 1 the repo is lint-broken because AGENTS.md and many other files have long lines. The preview only lints dossier in Commit 1, not whole repo. So the config is not globally enforced yet. The rewrap of AGENTS.md is a formatting change to comply. It could be included in Commit 2 with the examples content. That's acceptable.
+
+      The user specifically says "must be hunked" — maybe they want to stage only the AGENTS.md hunk, not the entire file, because the file has a line that "we can't correctly" (maybe an accidental change). The backup mechanism is a way to stage a precise version. We need ask for clarification? The instruction is somewhat ambiguous, but we can implement a robust interpretation: commit 2 will include the full intended AGENTS.md change (rewrapped paragraph + examples), using backup-edit-commit-restore to avoid interactive hunk staging. But that's not "hunked" in a meaningful way. Alternatively, commit only the semantic addition while preserving the original line, then restore the rewrapped file. That leaves a dirty file. Not good.
+
+      Maybe the "line" is a specific line in AGENTS.md that has an unrelated change from another agent, and they want to exclude it. Let's compare current AGENTS.md to HEAD fully. `git diff` only one hunk. So no other changes. Unless there are changes in the index? Empty. So no.
+
+      Could the user be referring to a different `AGENTS.md`? They gave exact path. Only one hunk. Maybe "we can't correctly the line" means they cannot correctly *commit* the line because of line endings? Check CRLF? File may have CRLF? `file` says? Let's check.
+    thinking_duration: 10.443s
+    thinking_duration_ms: 10443
+    tool_calls:
+      - tool: bash
+        args:
+          command: file /home/ext_root/lab-data/zetaris-getting-started/AGENTS.md; git -C /home/ext_root/lab-data/zetaris-getting-started show HEAD:AGENTS.md | file -; git -C /home/ext_root/lab-data/zetaris-getting-started diff --numstat -- AGENTS.md
+        result: "/home/ext_root/lab-data/zetaris-getting-started/AGENTS.md: ASCII text, with very long lines (814)\n/dev/stdin: ASCII text, with very long lines (814)\n5\t1\tAGENTS.md\n"
+      - tool: bash
+        args:
+          command: git -C /home/ext_root/lab-data/zetaris-getting-started diff --word-diff=porcelain -- AGENTS.md | head -40
+        result: |
+          diff --git a/AGENTS.md b/AGENTS.md
+          index 0009ba4..6904714 100644
+          --- a/AGENTS.md
+          +++ b/AGENTS.md
+          @@ -1,6 +1,10 @@
+           # Agent instructions
+          ~
+           
+          ~
+           This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages
+          ~
+           (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`,
+          -and
+            SQL references in 
+          -`docs/guides/`.
+          +`docs/guides/`, and
+          ~
+          +runnable examples in `examples/` (`examples/eurostat-crud-java/` is a Spring Boot JDBC demo;
+          ~
+          +`examples/eurostat-crud/` is an Angular browser CRUD example).
+            You are acting as a data engineer against a
+          ~
+           Zetaris instance.
+          ~
+           
+          ~
+           ## Connect first
+          ~
+           
+          ~
+    time: 10/23/2026, 11:07:10.214 PM UTC
+    response: "\n\n"
+    duration: 12.167s
+    duration_ms: 12167
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      The semantic diff is clear: removed "and" before SQL references, added ", and runnable examples...". The line wrap changes are formatting. The user might want only the semantic change, not the rewrap. "we can't correctly the line" maybe means they can't correctly stage the line because of the wrap. Use backup-edit-commit-restore to commit the semantic change with the original long line? But then lint. Hmm.
+
+      Let's look at the skill `separate-content-from-formatting-commits` maybe relevant. But user explicitly says backup-edit-commit-restore. Is there a skill for that? Search.
+    thinking_duration: 581ms
+    thinking_duration_ms: 581
+    tool_calls:
+      - tool: bash
+        args:
+          command: grep -RIl 'backup-edit-commit-restore\|backup.*edit.*commit.*restore' /home/ext_root/lab-data/ai-suite/.agents/skills /home/ext_root/lab-data/ai-suite/ai-agent-rules 2>/dev/null | head -20
+        result: (no output)
+    time: 10/23/2026, 11:07:22.453 PM UTC
+    response: "\n\n"
+    duration: 2.399s
+    duration_ms: 2399
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      No skill. Maybe they mean a manual mechanism. We can implement.
+
+      Need maybe ask user which exact hunk. But the instruction is "AGENTS.md must be hunked. we can't correctly the line." They might be responding to our preview saying `AGENTS.md` included in Commit 2. They want us to hunk it rather than whole-file. Since there's only one hunk, maybe they want only the examples sentence, not the line wrap. But "we can't correctly the line" suggests they tried to hunk and couldn't because the line is long/wrapped. The backup mechanism can create a version with only the examples sentence appended to the original line, commit it, then restore the full rewrapped file. This would leave the rewrap as an uncommitted change. Is that acceptable? The post-commit status would show AGENTS.md modified, contradicting "clean". But we can update the preview to expect that. The user might want to keep the rewrap local because they don't want formatting noise in the commit. But then the committed AGENTS.md violates the new 120-char lint config. The user may not care, or may want the rewrap in a separate formatting commit later. The phrase "we can't correctly the line" could mean they don't want to deal with the line wrap at all, so they want the hunk committed as-is? Hmm.
+
+      Let's examine the exact commit 2 message: "feat(eurostat): add Zetaris-backed CRUD example" and body includes "Update AGENTS.md to describe both examples." If the AGENTS.md change is only the examples sentence, that matches. The rewrap is incidental. A clean atomic commit should include only the semantic change; formatting changes should be separate. The repo has a new markdownlint config, but AGENTS.md already had long lines; the rewrap is a formatting fix. Could be a separate commit, but the user only asked for commit 2 hunking. Maybe they want commit 2 to include the semantic hunk only, and the rewrap remains local for now. Then after all commits, AGENTS.md is dirty, which violates "final tree clean". But maybe they will handle it later. Or maybe they want the rewrap committed in Commit 1 (docs/lint) or a separate formatting commit. The user didn't ask to add a commit. We should not invent.
+
+      Could the "backup-edit-commit-restore" mechanism be used to commit the *full* current file while restoring a *different* working version? For example, back up the current full file, edit it to remove the rewrap (keeping semantic addition), commit that, then restore the full rewrapped file. That's exactly the mechanism. It allows committing a hunk that `git add -p` can't isolate due to line wrapping. The resulting dirty file is the rewrap, which the user may want to keep local. This is the most literal interpretation of "AGENTS.md must be hunked" — commit only the semantic hunk, not the formatting.
+
+      But "we can't correctly the line" might mean "we can't correctly [format] the line" so they want to commit the line as-is (rewrapped). In that case, backup mechanism would commit the full file, restore same, no dirty. Not a hunk.
+
+      We need resolve ambiguity. We can ask a clarifying question with options. The system allows `question` tool. But the user said "Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed." We are unsure about exact hunk content. We should ask. But maybe we can infer and proceed with a safe plan, presenting it for confirmation before execution. Since no `start` yet, we can update preview with the mechanism and a precise committed content, then ask. But the user asked us to do it; we should not stall unnecessarily.
+
+      Let's think about what "hunked" means in their workflow. In Git, to "hunk" a file means to stage only selected hunks. The backup-edit-commit-restore mechanism is a workaround when a hunk cannot be staged correctly (e.g., due to line wrapping). The user says "AGENTS.md must be hunked. we can't correctly the line." This strongly implies: AGENTS.md has a change that must be staged as a hunk, but the line wrapping makes it impossible to stage correctly with `git add -p`; therefore use backup-edit-commit-restore to create the exact staged content. The exact staged content is likely the *semantic* change, not the rewrap. Because if you wanted the whole file, you wouldn't need hunking. So commit only the semantic addition.
+
+      But what does "we can't correctly the line" mean? Maybe the line to commit is the examples line; due to wrapping, the hunk includes multiple lines. They can't correctly select just that line. The backup mechanism lets them commit a file where the examples line is added but the original line is not rewrapped. That is the semantic hunk. Yes.
+
+      So plan:
+      - Back up current `AGENTS.md` (rewrapped + examples) to scratch.
+      - Create a temporary version that is HEAD's AGENTS.md plus only the examples addition, preserving original long line. How exactly? Original sentence: "... helper scripts in `scripts/`, and SQL references in `docs/guides/`. You are acting..." We want to add examples without removing "and" maybe: "... helper scripts in `scripts/`, SQL references in `docs/guides/`, and runnable examples in `examples/` (`examples/eurostat-crud-java/` is a Spring Boot JDBC demo; `examples/eurostat-crud/` is an Angular browser CRUD example). You are acting..." But that removes "and" before SQL references. The semantic change in current file removes "and" before SQL references and adds ", and runnable examples..." That's correct grammar. If we preserve original line, we need to change "and SQL references" to "SQL references" and add ", and runnable examples..." on the same long line. The line becomes even longer (~500 chars), failing lint. But the commit is semantic; formatting can be fixed later. Alternatively, we can insert a new sentence after the original paragraph: "Runnable examples live in `examples/`: ...". That preserves original line exactly and adds a new paragraph, but then the examples are a separate paragraph, not part of the same sentence. The current content integrates them into the sentence. The user likely wants the semantic integration, not a separate paragraph.
+
+      Maybe the intended hunk is exactly the current rewrapped paragraph, because that's the only hunk. Then "hunked" just means commit it as a hunk, and backup mechanism commits the full file (which is the hunk). But that doesn't need hunking. Hmm.
+
+      Let's inspect the commit preview's Commit 2 message: "Update AGENTS.md to describe both examples." If we commit only the examples sentence but preserve original line, the diff will be one line changed (long line), not a hunk of multiple lines. That's actually a clean semantic hunk. The rewrap remains local. This seems plausible and matches "we can't correctly the line" — the line is long, so they can't correctly format/stage it; use backup mechanism to commit the semantic line, keep the formatted version local.
+
+      But then after commit, `git diff -- AGENTS.md` will show the rewrap. The user might want that rewrap to be part of a later commit or discard it. We can note it. The final tree is not clean. The commit preview says post-commit expected clean except scratch/.env.local. We must update to expect AGENTS.md formatting-only diff. Is that acceptable? The user asked for it. We can flag it.
+
+      Alternatively, maybe they want the rewrap committed in Commit 2 but not the rest of the file? There is no rest.
+
+      Could the file have another change in the working tree that's not in `git diff` because it's in a submodule? No.
+
+      I think we should ask a concise clarifying question: "Which AGENTS.md content should Commit 2 contain: (A) only the examples sentence, preserving the original long line (rewrap stays uncommitted), or (B) the current rewrapped paragraph including the examples sentence?" This is a legitimate ambiguity and prevents a wrong commit. The user said "we can't correctly the line" — maybe they expect us to know. But asking is safer. However, the instruction "use backup-edit-commit-restore mechanism" is clear enough; we can present the exact plan and ask for confirmation as part of preview. Since no `start` yet, we can update the preview with a proposed mechanism and ask. But the user might be annoyed by another question.
+
+      Let's read the user's wording again: "for commit 2: /home/.../AGENTS.md must be hunked. we can't correctly the line. so, use backup-edit-commit-restore machanism."
+
+      "we can't correctly the line" — maybe they mean "we can't correctly [stage] the line." They are telling us the problem and the solution. They likely expect us to implement the backup mechanism to commit the desired hunk. The desired hunk is probably the semantic examples addition, because that's the only content change. The rewrap is formatting. So implement A.
+
+      But wait: The commit 2 includes `AGENTS.md`; the user says it "must be hunked." If we commit only the semantic sentence, the committed file will have a 500-char line, violating `.markdownlint-cli2.jsonc` added in Commit 1. But the repo's existing AGENTS.md already had a 355-char line; the config is new. Maybe the config only applies to docs? It's root config, applies to all. The user may not care about linting AGENTS.md. The commit preview Commit 2 verification doesn't lint AGENTS.md. So okay.
+
+      But if the final tree has the rewrapped version uncommitted, the committed version is lint-broken. That's worse. Maybe the user wants the rewrap committed too, so the committed version is lint-clean. Then the "hunk" is the whole paragraph, and the backup mechanism is just a way to stage it. But why "we can't correctly the line"? Maybe because `git add -p` shows the hunk with the long line and they can't edit it correctly; backup mechanism commits the full file, which is the hunk. That makes sense: they can't correctly edit the hunk line in interactive mode, so use backup to commit the whole file version. But then it's not partial hunking; it's whole-file. Yet since there's only one hunk, it's equivalent.
+
+      Maybe the user's concern is that `git add AGENTS.md` would stage the whole file, but they want only the hunk. Since there's only one hunk, staging the whole file is fine. But they may not know that. They specifically ask for backup mechanism, so we should use it to stage a precise version. We can choose the current full file (the only hunk) and restore the same; no dirty. That satisfies "hunked" trivially and keeps lint clean. But it doesn't demonstrate hunking.
+
+      Let's look at the commit preview: Commit 2 currently stages `AGENTS.md` whole. The user says "must be hunked." They likely reviewed the preview and want us to change the execution plan from `git add AGENTS.md` to a hunk-staging mechanism. The reason: "we can't correctly the line" — perhaps they tried to use `git add -p` and the line wrapping makes it impossible to select only the intended change. They want the backup mechanism to stage the intended hunk. The intended hunk is the examples addition. So A.
+
+      I lean A: commit only the examples sentence, preserving the original line; keep the rewrap local. But this leaves a dirty file and lint issue. We should explicitly flag that and ask if they want the rewrap committed separately. Maybe the user wants exactly that: the rewrap is a separate formatting change that shouldn't be in Commit 2. They may later ask to commit it. The mechanism restores it to working tree. This is consistent with `separate-content-from-formatting-commits` principles. The commit 2 is a feature commit; formatting should be separate. The new `.markdownlint-cli2.jsonc` in Commit 1 is a docs commit; the AGENTS.md rewrap could be a formatting commit later. But the user didn't ask for a fifth commit. Maybe they will handle it.
+
+      Could we add a fifth commit for the rewrap? The user only said "for commit 2: AGENTS.md must be hunked." They didn't ask to add a commit. Don't invent.
+
+      Let's prepare the backup mechanism and update preview with a clear note: Commit 2 will contain only the semantic examples change; the 120-column rewrap will be restored to the working tree and remain uncommitted (formatting-only). Post-commit status will show `M AGENTS.md` with only rewrap. If the user wants the rewrap committed, they can say so. But is that what they want? Hmm.
+
+      Wait, maybe "we can't correctly the line" means they *cannot* keep the original long line because it's incorrect under the new lint config. They want the rewrap. So A would be wrong. The phrase "we can't correctly the line" could mean "we can't [make] the line correct" — i.e., the line is too long and needs rewrap, but hunking can't capture it. Then they want the full rewrapped line committed. The backup mechanism would commit the full current file. Hmm.
+
+      Let's parse grammar: "AGENTS.md must be hunked. we can't correctly the line." If they meant "we can't correctly stage the line," they'd say "we can't correctly hunk the line." "we can't correctly the line" is missing a verb; likely "we can't correctly [format] the line" or "we can't [get] the line correct." Maybe they mean the line wrapping is not correct and they can't fix it. They want to commit a hunk that has the correct line? The current line is wrapped at 120, which is correct. So maybe they mean they can't correctly isolate the line in the hunk. Argh.
+
+      Maybe there's a known issue with `git add -p` and long lines: when a line is too long, the hunk editor displays it wrapped, and editing the hunk is error-prone. The backup-edit-commit-restore mechanism avoids that. The user says "we can't correctly the line" = "we can't correctly [edit] the line [in the hunk]." So they want to commit the whole hunk (current rewrapped paragraph) via backup mechanism. That is B.
+
+      If B, the mechanism is:
+      1. `cp AGENTS.md scratch/AGENTS.md.commit2.bak`
+      2. Ensure AGENTS.md is the desired commit version (current).
+      3. `git add AGENTS.md` (or use `git update-index`?).
+      4. Commit.
+      5. `cp scratch/AGENTS.md.commit2.bak AGENTS.md` (restore; identical, no diff).
+      This is trivial. But it satisfies "use backup-edit-commit-restore." The "edit" step is no-op because current is desired. Could still do it.
+
+      Maybe the user expects us to "edit" the file to the desired commit content, which is the current content. No-op. That seems pointless, so likely A.
+
+      Let's look at the current AGENTS.md line 3-6. The rewrap is exactly 120 chars. The examples addition is integrated. If the user wanted only the semantic change, they'd have to accept a 500-char line, which is ugly. The whole point of the new lint config is to enforce 120. So committing a 500-char line is counterproductive. The user likely wants the rewrap committed. Then why hunk? Maybe because commit 2 should include only the AGENTS.md hunk, not the entire file? But the entire file only has that hunk. Maybe there are other modifications in the file that are not in the diff because they were already committed? No.
+
+      Wait, maybe the user is looking at a different working tree state than us? Could be another agent/session modified AGENTS.md further after our diff? We just ran diff; only one hunk. The user may have local changes not visible? No, same workspace.
+
+      Could "AGENTS.md must be hunked" mean it must be split into a separate hunk from the rest of commit 2, i.e., staged separately so that if commit 2 fails, AGENTS.md isn't mixed? The backup mechanism ensures only AGENTS.md is staged, then app files. But `git add AGENTS.md` already does that. Hmm.
+
+      Maybe the user wants to commit AGENTS.md in a *separate commit* from commit 2? "for commit 2: AGENTS.md must be hunked" could mean "for commit 2, the AGENTS.md change must be hunked [out into its own commit]"? But they say "use backup-edit-commit-restore mechanism," which is for hunking within a commit, not splitting commits.
+
+      I think the safest is to ask a short clarifying question with two options, showing the exact diff each would produce. Since no `start`, this is a good time. But the user may expect action. We can phrase: "I can do that. To confirm, should Commit 2 include the full rewrapped paragraph (lint-clean), or only the examples sentence with the original long line (rewrap left uncommitted)?" This is concise and prevents a wrong commit. Use the question tool? The system says use `question` for clarification. We can use it. But the user might prefer a direct answer. We can also just state our plan: commit the full rewrapped hunk via backup mechanism, restore identical file, no dirty. That seems most sensible for lint. But it doesn't "hunk" anything. Hmm.
+
+      Let's see if there's a way to hunk only the semantic change while keeping the rewrap in the same commit: no, a hunk is a contiguous diff. The rewrap and semantic change are intertwined in one hunk. You can split the hunk into smaller hunks only if there are context lines between changes. Here, the changes are on adjacent lines; `git add -p` may allow splitting by line? It can split a hunk into smaller hunks if there are unchanged lines between changes. The rewrap changed lines 3-6 entirely; the semantic change is on line 4-5. There are no unchanged lines between. So you can't split. The backup mechanism can create any intermediate file. If you want only the semantic change, you create a version with original line + semantic edit. If you want the rewrap, you create the current version. There's no middle ground that includes rewrap but not semantic (that would be original content rewrapped, no examples). Maybe the user wants to commit the rewrap *without* the examples in a formatting commit, and the examples in commit 2? But commit 2 is the examples commit. No.
+
+      Maybe the desired hunk is: original line rewrapped to 120 but *without* the examples addition, then commit 2 adds examples separately? That would be two hunks/commits. Not asked.
+
+      Let's consider the commit 1/2 split. Commit 1 adds `.markdownlint-cli2.jsonc` and dossier. Commit 2 adds Angular app, root `.env.example`, and `AGENTS.md`. The AGENTS.md change describes both examples. It logically belongs in Commit 2. The rewrap is needed because of the new lint config. If we commit only the semantic change with original long line, the repo at Commit 2 fails the new lint config for AGENTS.md. That is bad. So we should commit the rewrapped version. The backup mechanism can be used to ensure the exact rewrapped version is committed, then restore it. Since it's the same, no dirty. This is the most defensible.
+
+      But then what does "hunked" mean? We can say: "Commit 2 will stage AGENTS.md via the backup-edit-commit-restore path: back up the current rewrapped file, write the exact commit version, stage only AGENTS.md, commit, then restore the backup. Since the commit version is the current rewrapped paragraph, the restore is byte-identical and the tree stays clean." That addresses the instruction and keeps lint. If the user wanted only the semantic hunk, they can correct us before `start`. We can present this plan. But they explicitly said "we can't correctly the line" — if we commit the current line, we're not correcting anything. Hmm.
+
+      Maybe we can make the line "correct" in a different way: the current line has a grammatical issue? Let's read:
+      "This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages
+      (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, SQL references in `docs/guides/`, and
+      runnable examples in `examples/` (`examples/eurostat-crud-java/` is a Spring Boot JDBC demo;
+      `examples/eurostat-crud/` is an Angular browser CRUD example). You are acting as a data engineer against a
+      Zetaris instance."
+
+      The list: "install guide, source packages, helper scripts, SQL references, and runnable examples." That's correct. The line breaks are a bit awkward but fine. Maybe "we can't correctly the line" means the line is not correctly wrapped because "Zetaris instance." is on its own line; they want it on the previous line? It fits? Let's count. "Zetaris instance." could be on line 5 after "against a " maybe 120? Current line 5: "`examples/eurostat-crud/` is an Angular browser CRUD example). You are acting as a data engineer against a" = maybe 118. Adding "Zetaris instance." would exceed. So wrap is correct. Maybe they want "Zetaris instance." on line 5 and "against a" moved? No.
+
+      Maybe the issue is the line "runnable examples in `examples/` (`examples/eurostat-crud-java/` is a Spring Boot JDBC demo;" — the semicolon at end of line is odd. Could be "we can't correctly the line" = the line is grammatically awkward. They want to fix it but can't due to hunk. Hmm.
+
+      Given ambiguity, asking is best. But the user might be frustrated by a question. The instruction "Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed" explicitly permits asking. We are unsure. Let's ask a focused question with options. Use the `question` tool. But we need maybe update preview first? We can ask before editing. The question should include the exact two versions. Let's craft:
+
+      "Which AGENTS.md content should Commit 2 contain?"
+      Options:
+      1. "Full rewrapped paragraph (Recommended)" — commit the current 120-column version with examples; lint-clean; restore identical backup; no dirty file.
+      2. "Examples sentence only" — commit only the semantic examples addition on the original long line; restore the 120-column rewrap as an uncommitted formatting change; committed AGENTS.md will violate MD013.
+
+      Maybe a third: "Rewrap only, examples later" — commit the 120-column rewrap without examples; then examples in a later commit. But not needed.
+
+      The recommended should be full rewrapped because lint-clean and no dirty. But the user said "must be hunked" — option 1 isn't hunked. Hmm. Maybe recommend option 2 because it's the only true hunk. But then lint. The user's instruction "AGENTS.md must be hunked" suggests option 2. We can recommend 2 but note lint. Or recommend 1 and explain.
+
+      Wait, maybe the user wants to hunk the AGENTS.md change into commit 2 but *not* include the rewrap because the rewrap belongs to a different commit (maybe commit 1). We could add the rewrap to Commit 1? Commit 1 is docs; AGENTS.md rewrap is formatting. But Commit 1 already adds `.markdownlint-cli2.jsonc`; rewrapping AGENTS.md to comply with it is logically part of Commit 1. Then Commit 2's AGENTS.md hunk would be only the examples sentence on the already-rewrapped line? But if Commit 1 rewraps the original line, Commit 2 adds examples. That would be two hunks across two commits, and no dirty file. This is elegant:
+      - Commit 1: add `.markdownlint-cli2.jsonc` + rewrap AGENTS.md original paragraph to 120 (no examples).
+      - Commit 2: add examples sentence to the rewrapped line (one-line change maybe).
+      But the user said "for commit 2: AGENTS.md must be hunked" — maybe they want exactly this: Commit 2 should contain only the examples hunk, while the rewrap goes to Commit 1. But they didn't say to modify Commit 1. And the backup mechanism would be used for Commit 2 to stage only the examples hunk. The rewrap would need to be committed in Commit 1. That would require changing Commit 1's file list and message. Is that what they mean? "AGENTS.md must be hunked" = the AGENTS.md change must be split into hunks across commits. "we can't correctly the line" = we can't correctly separate the line. "use backup-edit-commit-restore mechanism" = to create the intermediate state for Commit 1/2. This is plausible and follows `separate-content-from-formatting-commits`: formatting (rewrap) with Commit 1's lint config, content (examples) with Commit 2. But the user specifically says "for commit 2", not "for commit 1". Maybe they want the rewrap not committed at all, just the examples hunk.
+
+      Hmm.
+
+      Let's look at the commit preview's Commit 1: it adds `.markdownlint-cli2.jsonc`. It does not include AGENTS.md. If the new config is added, the repo's existing AGENTS.md is non-compliant. A clean Commit 1 should perhaps rewrap AGENTS.md to comply. But then Commit 2 adds examples. That would make each commit lint-clean. The user may be pointing this out: AGENTS.md must be hunked because the rewrap belongs to Commit 1 and the examples to Commit 2. "we can't correctly the line" because the hunk mixes them. This is a strong interpretation! It aligns with atomic commits: Commit 1 introduces lint config and formatting compliance; Commit 2 adds feature docs. The backup-edit-commit-restore mechanism can create the intermediate AGENTS.md for Commit 1 (rewrapped original, no examples), commit it, then restore the full version for Commit 2. But the user said "for commit 2: AGENTS.md must be hunked" — maybe they mean when executing Commit 2, use the mechanism to stage only the examples hunk. The intermediate state for Commit 1 would also need to be created. Hmm.
+
+      Wait, the current Commit 1 includes `.markdownlint-cli2.jsonc`, which enforces 120. If Commit 1 is committed without rewrapping AGENTS.md, the repo at Commit 1 has a lint violation. But the preview only lints `docs/data-sources/eurostat/*.md`, not AGENTS.md. So it's not caught. A careful user might notice and ask to hunk AGENTS.md so the rewrap goes with Commit 1. The phrase "AGENTS.md must be hunked" could mean "the AGENTS.md change must be split: rewrap in Commit 1, examples in Commit 2." "we can't correctly the line" = we can't correctly isolate the line for Commit 2 because the rewrap is mixed. "use backup-edit-commit-restore mechanism" = create the two versions. This is very plausible.
+
+      But the user said "for commit 2", not "for commits 1 and 2". Maybe they only care about commit 2 containing the examples hunk, and they don't want the rewrap in commit 2. Where does the rewrap go? It could remain in the working tree (uncommitted) or go to Commit 1. The backup mechanism restores the full file after Commit 2, leaving the rewrap uncommitted. If they wanted it in Commit 1, they'd need to commit it before Commit 2, which requires editing Commit 1's plan. They didn't mention that.
+
+      Maybe the simplest: The user wants Commit 2 to include the *entire* AGENTS.md change as a hunk (not split), but because the line is long and `git add -p` can't handle it, use backup mechanism. They may not care about the distinction. We can implement B (full current file) and be done. But if they wanted A, we'd commit too much.
+
+      We need more information. Ask. But maybe we can avoid a question by choosing a plan that satisfies all interpretations: Commit 1 includes the rewrap (formatting), Commit 2 includes the examples hunk. This is the most atomic and lint-clean. It uses backup mechanism for both. It results in no dirty file. It changes Commit 1's scope to include AGENTS.md formatting, which the user didn't explicitly ask but is logically necessary. Would the user object? Possibly, because they said "for commit 2" not "for commit 1". But it's a sensible resolution. We can present it as the plan and ask for confirmation before `start`. Since no `start`, no harm. The user can correct.
+
+      Let's design the exact two versions:
+      - Base HEAD AGENTS.md: original long paragraph.
+      - Version A (Commit 1 formatting): rewrap the original paragraph to 120 columns, no examples. Need create exact text. The current rewrapped paragraph includes examples. We need remove examples and rewrap. Original paragraph:
+      "This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`. You are acting as a data engineer against a Zetaris instance."
+      Rewrap to 120:
+      "This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages
+      (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`.
+      You are acting as a data engineer against a Zetaris instance."
+      This is 3 lines. Check line lengths. Good.
+      - Version B (Commit 2 content): current rewrapped paragraph with examples. This is 5 lines. The diff from Version A to B is:
+        - line 2: "..., and SQL references in `docs/guides/`." -> "..., SQL references in `docs/guides/`, and"
+        - line 3: "You are acting as a data engineer against a Zetaris instance." -> "runnable examples in ... demo;"
+        - line 4: new "`examples/eurostat-crud/` is an Angular browser CRUD example). You are acting as a data engineer against a"
+        - line 5: new "Zetaris instance."
+      This is a hunk. Could stage only that. The backup mechanism:
+        - Back up current full AGENTS.md (Version B).
+        - Write Version A to AGENTS.md.
+        - Stage/commit as part of Commit 1 (with `.markdownlint-cli2.jsonc`, dossier).
+        - Restore Version B from backup.
+        - Later, Commit 2 stages AGENTS.md (the diff from A to B) and app files. Since Version B is in working tree and index has A, `git add AGENTS.md` stages B. No hunking needed. But the user asked for backup mechanism for Commit 2; we can use it to ensure only the AGENTS.md hunk is staged: back up B, ensure file is B, `git add AGENTS.md`, commit, restore B (identical). Or just `git add AGENTS.md`. Hmm.
+
+      If we want Commit 2 to contain only the examples hunk, and Commit 1 to contain the rewrap, this is clean. But it changes Commit 1 message/body to mention AGENTS.md formatting. The Commit 1 message currently:
+      "docs(eurostat): add verified data-source dossier
+      - Add an eight-document Eurostat dossier covering ...
+      - ...
+      - Add a repository markdownlint config with a 120-character limit."
+      We can add a bullet: "Rewrap the AGENTS.md intro to the new 120-character limit." That is a docs/formatting change. Fine.
+
+      But is this over-engineering? The user asked specifically for commit 2. Maybe they don't want commit 1 changed. Hmm.
+
+      Alternatively, keep Commit 1 as is, and for Commit 2 use backup mechanism to commit only the examples hunk (Version B with original line? No, Version B is current rewrapped). If Commit 2 commits Version B, it includes both rewrap and examples. That's B. If Commit 2 commits only examples (Version C: original long line + examples), the rewrap remains dirty. Not ideal.
+
+      What if the backup mechanism is used to stage a hunk from Version B while the index has HEAD (original)? You can't stage a hunk that depends on Version A (rewrapped original) because the index doesn't have A. The hunk would include the rewrap. So to stage only the examples hunk, the index must first have the rewrap (Commit 1). Thus, the two-commit split is the only way to truly hunk AGENTS.md into "rewrap" and "examples" without leaving dirty state. This is likely what the user wants! "AGENTS.md must be hunked" = split into two hunks across Commit 1 and Commit 2. "we can't correctly the line" = can't stage the examples line because the rewrap is mixed. "use backup-edit-commit-restore" = create the intermediate rewrap-only version for Commit 1, then restore full for Commit 2. This is a coherent, high-quality plan.
+
+      But the user said "for commit 2" — maybe they mean "for commit 2, AGENTS.md must be hunked [i.e., only the examples part], so use the mechanism." The rewrap would be committed in Commit 1 as a prerequisite. They may expect us to realize that. We can propose this plan in the preview and ask for `start`. It changes Commit 1 scope; we should highlight it. If they wanted something else, they can correct.
+
+      However, the user might not want AGENTS.md rewrap in Commit 1 because Commit 1 is "docs(eurostat): add verified data-source dossier" and AGENTS.md formatting is unrelated to Eurostat. A separate formatting commit would be more atomic. But adding a fifth commit for "style: wrap AGENTS.md" is also possible. The user didn't ask for it. The commit 1 already adds the lint config, so formatting compliance is related. It's acceptable.
+
+      Let's consider the repo's commit message rules: Commit 1 is `docs(eurostat)`. Adding AGENTS.md rewrap under that scope is a bit off. Could use `docs: add Eurostat dossier and markdownlint config` with AGENTS.md. Still okay. Or add a separate Commit 1b `style: wrap AGENTS.md to 120 columns` before Commit 2. That would be a 5-commit plan. The user asked for "commit 2" hunking; adding a formatting commit might be overkill. But atomic commits rule says separate content from formatting. The `separate-content-from-formatting-commits` skill exists. The user may appreciate it. Yet they didn't ask.
+
+      Maybe the rewrap isn't a separate concern; it's part of the examples paragraph rewrite. The content change necessitated rewrapping the paragraph. In that case, committing both together is fine. Then B is correct. The user's "must be hunked" might just mean "stage the AGENTS.md change as its own hunk in commit 2, not the whole file" — but the whole file only has that hunk. B.
+
+      We are going in circles. Need decide whether to ask. The safest is to ask a concise clarification with the two main interpretations, because committing the wrong content is costly. The user said "stop and ask for clarification if you are unsure." We are unsure. Let's ask.
+
+      But maybe we can make the question more specific and include the proposed backup mechanism. Use `question` tool:
+      Question: "Commit 2's AGENTS.md hunk: which content should be committed?"
+      Options:
+      1. "Full rewrapped paragraph (Recommended)" — commit current 120-col paragraph with examples; backup/restore identical; tree stays clean; lint-clean.
+      2. "Examples hunk only" — commit only the examples sentence; rewrap stays uncommitted; committed file violates MD013.
+      3. "Split rewrap into Commit 1" — Commit 1 gets the 120-col rewrap without examples; Commit 2 gets only the examples hunk; tree stays clean and lint-clean.
+
+      This gives the user control. The recommended should maybe be option 3? It is the most atomic and satisfies "hunked." But it changes Commit 1. Option 1 is simplest. The user's instruction "must be hunked" suggests not option 1. Option 3 is the best interpretation of hunking. Option 2 is literal but leaves lint issue. I'd recommend option 3.
+
+      But the question tool's options need concise labels. We can ask. However, the system says "If you recommend a specific option, make that the first option in the list and add '(Recommended)'". We can put option 3 first. But the user may not want to change Commit 1. Hmm.
+
+      Maybe instead of a question, we can state: "I'll implement this as: Commit 1 gets the 120-column rewrap (no examples), Commit 2 gets only the examples hunk, via backup-edit-commit-restore; this keeps each commit lint-clean and the tree clean. Confirm or correct." Then wait. That's a proposal, not a question. The user can respond. But the user asked us to do it; we should perhaps proceed to update preview with this plan, then ask `start`. That is progress. If they disagree, they'll say.
+
+      Given the ambiguity, I'll use the question tool. It's designed for this. Let's ask.
+    thinking_duration: 43.428s
+    thinking_duration_ms: 43428
+    tool_calls:
+      - tool: question
+        args:
+          questions:
+            - question: Which AGENTS.md content should Commit 2 contain?
+              header: AGENTS.md hunk
+              options:
+                - label: Split rewrap into Commit 1 (Recommended)
+                  description: Commit 1 gets the 120-column rewrap without the examples; Commit 2 gets only the examples hunk. Uses backup-edit-commit-restore; each commit is lint-clean and the tree ends clean.
+                - label: Full rewrapped paragraph
+                  description: Commit 2 gets the current 120-column paragraph including the examples. Backup/restore is byte-identical; tree stays clean and lint-clean, but the rewrap is not separated.
+                - label: Examples hunk only
+                  description: Commit 2 gets only the examples sentence on the original long line; the 120-column rewrap stays uncommitted. Committed AGENTS.md would violate MD013.
+        result: 'User has answered your questions: "Which AGENTS.md content should Commit 2 contain?"="Split rewrap into Commit 1 (Recommended)". You can now continue with the user''s answers in mind.'
+    time: 10/23/2026, 11:07:24.937 PM UTC
+    response: "\n\n"
+    duration: 425.247s
+    duration_ms: 425247
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Now implement plan. Need update Commit 1 to include AGENTS.md rewrap, Commit 2 only examples hunk, execution steps with backup-edit-commit-restore. Need create backup and intermediate version? We can prepare files now. But no commits until start. We can create backup in scratch and the rewrap-only version. We need ensure working tree remains full current version. We can create backup `AGENTS.md.commit2-full.bak` and `AGENTS.md.commit1-rewrap-only.md` in scratch. Then preview describes:
+      - Before Commit 1: back up full AGENTS.md; write rewrap-only version; stage AGENTS.md with Commit 1; commit; restore full version from backup.
+      - Commit 2: stage AGENTS.md (now full version) with app files; this stages only the examples hunk because index has rewrap-only. To use backup-edit-commit-restore for Commit 2 as requested: back up full version again (or use existing), ensure full version in working tree, stage AGENTS.md, commit, restore full version (identical). But the "hunk" is already isolated by Commit 1. We can still use the mechanism for Commit 2 to stage only AGENTS.md and restore. The user asked "for commit 2 ... use backup-edit-commit-restore mechanism." We'll explicitly do:
+        - Backup full `AGENTS.md` to `AGENTS.md.commit2-full.bak`.
+        - Commit 2 staging: write full version (already), `git add AGENTS.md` (this stages only examples hunk relative to index), commit, then restore backup. Since backup is full, identical.
+      But the real hunk isolation happened in Commit 1. Maybe the user expects Commit 2 to do the hunking. We can explain: Commit 1 commits the rewrap-only version; Commit 2's `git add AGENTS.md` stages only the examples hunk. The backup mechanism preserves the full file across both. That's correct.
+
+      Need create intermediate rewrap-only AGENTS.md. We need exact content. Let's construct by taking current AGENTS.md and replacing the first paragraph with rewrap-only version. We must be careful not to alter rest of file. Use Python script or edit. We can create backup first, then use `git show HEAD:AGENTS.md` and apply rewrap. But easiest: copy current full file to scratch, then use Python to replace lines 3-6 (current paragraph) with 3-line rewrap-only. Need know exact current lines 1-8. We saw. Let's read first 10 lines with line numbers.
+    thinking_duration: 2.317s
+    thinking_duration_ms: 2317
+    tool_calls:
+      - tool: read
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/AGENTS.md
+          limit: 10
+        result: |-
+          <path>/home/ext_root/lab-data/zetaris-getting-started/AGENTS.md</path>
+          <type>file</type>
+          <content>
+          1: # Agent instructions
+          2: 
+          3: This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages
+          4: (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, SQL references in `docs/guides/`, and
+          5: runnable examples in `examples/` (`examples/eurostat-crud-java/` is a Spring Boot JDBC demo;
+          6: `examples/eurostat-crud/` is an Angular browser CRUD example). You are acting as a data engineer against a
+          7: Zetaris instance.
+          8: 
+          9: ## Connect first
+          10: 
+
+          (Showing lines 1-10 of 69. Use offset=11 to continue.)
+          </content>
+    time: 10/23/2026, 11:14:30.251 PM UTC
+    response: "\n\n"
+    duration: 4.981s
+    duration_ms: 4981
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Need create rewrap-only lines 3-5:
+      "This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages
+      (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`.
+      You are acting as a data engineer against a Zetaris instance."
+
+      Check line lengths <=120. Let's calculate. Use Python. Also create backup. We need ensure backup is exact. Use `cp`. Then create `AGENTS.md.commit1-rewrap-only.md` by taking current and replacing lines 3-7 with new 3 lines. Use Python script with exact strings. Could use `git show HEAD:AGENTS.md` and apply a patch? The original paragraph is one line; rewrapping it is easy. But the rest of the file may have changed? Current full file vs HEAD only first paragraph. So `git show HEAD:AGENTS.md` plus replace first paragraph is equivalent. But use current to preserve any other changes? Diff says only first paragraph, so same. Use current and replace lines 3-7.
+
+      Need not modify working tree yet. Create scratch files. Use Python via bash heredoc? Rules warn about nested heredocs. We can use `python3 - <<'PY'` with no triple quotes? We can use single-quoted strings. Fine. But avoid complex. Use `python3 -c` with a small script? Better write a script file via `write` tool. Since scratch path. Or use `sed`? Not. Use Python with a here-doc; no nested heredoc. The body has no `PY`. Fine.
+
+      Let's create backup and intermediate. Then verify:
+      - `cmp` backup and working file (should be identical).
+      - Diff between intermediate and backup: only examples removed.
+      - Diff between HEAD and intermediate: rewrap only.
+      - Diff between intermediate and backup: examples hunk.
+      - markdownlint intermediate: 0 issues.
+      - markdownlint full: 0 issues.
+
+      Let's do.
+    thinking_duration: 1.890s
+    thinking_duration_ms: 1890
+    tool_calls:
+      - tool: bash
+        args:
+          command: |-
+            cp /home/ext_root/lab-data/zetaris-getting-started/AGENTS.md /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/AGENTS.md.commit2-full.bak && python3 - <<'PY'
+            from pathlib import Path
+            src = Path('/home/ext_root/lab-data/zetaris-getting-started/AGENTS.md')
+            out = Path('/home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/AGENTS.md.commit1-rewrap-only.md')
+            lines = src.read_text().splitlines(keepends=True)
+            new_para = (
+                "This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages\n"
+                "(`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`.\n"
+                "You are acting as a data engineer against a Zetaris instance.\n"
+            )
+            out.write_text(''.join(lines[:2]) + new_para + ''.join(lines[7:]))
+            PY
+            cmp /home/ext_root/lab-data/zetaris-getting-started/AGENTS.md /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/AGENTS.md.commit2-full.bak && echo 'backup matches working file'
+        result: |
+          backup matches working file
+    time: 10/23/2026, 11:14:35.292 PM UTC
+    response: "\n\n"
+    duration: 4.312s
+    duration_ms: 4312
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Now verify diffs and lint. Need temporarily use intermediate as working? For lint, markdownlint can lint the scratch file; it's untracked in scratch (ignored) but may skip. Could copy to root temp, lint, remove. Or use `markdownlint-cli2` on scratch? It might skip ignored. Use `git add -N`? Simpler copy to `/home/ext_root/lab-data/zetaris-getting-started/AGENTS.commit1-rewrap-only.md` (untracked root, not ignored), lint, remove. But root markdownlint config applies. Let's do. Also diff HEAD vs intermediate and intermediate vs full. Use `git diff --no-index` with exit 1; handle. Use `diff -u`. Output small.
+    thinking_duration: 623ms
+    thinking_duration_ms: 623
+    tool_calls:
+      - tool: bash
+        args:
+          command: diff -u <(git -C /home/ext_root/lab-data/zetaris-getting-started show HEAD:AGENTS.md) /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/AGENTS.md.commit1-rewrap-only.md | sed -n '1,40p'
+        result: "--- /dev/fd/63\t2026-10-23 23:14:44.669359218 +0000\n+++ /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/AGENTS.md.commit1-rewrap-only.md\t2026-10-23 23:14:39.552560665 +0000\n@@ -1,6 +1,8 @@\n # Agent instructions\n \n-This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`. You are acting as a data engineer against a Zetaris instance.\n+This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages\n+(`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`.\n+You are acting as a data engineer against a Zetaris instance.\n \n ## Connect first\n \n"
+      - tool: bash
+        args:
+          command: diff -u /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/AGENTS.md.commit1-rewrap-only.md /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/AGENTS.md.commit2-full.bak | sed -n '1,40p'
+        result: "--- /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/AGENTS.md.commit1-rewrap-only.md\t2026-10-23 23:14:39.552560665 +0000\n+++ /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/AGENTS.md.commit2-full.bak\t2026-10-23 23:14:39.510562319 +0000\n@@ -1,8 +1,10 @@\n # Agent instructions\n \n This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages\n-(`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`.\n-You are acting as a data engineer against a Zetaris instance.\n+(`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, SQL references in `docs/guides/`, and\n+runnable examples in `examples/` (`examples/eurostat-crud-java/` is a Spring Boot JDBC demo;\n+`examples/eurostat-crud/` is an Angular browser CRUD example). You are acting as a data engineer against a\n+Zetaris instance.\n \n ## Connect first\n \n"
+      - tool: bash
+        args:
+          command: cp /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/AGENTS.md.commit1-rewrap-only.md /home/ext_root/lab-data/zetaris-getting-started/AGENTS.commit1-check.md && markdownlint-cli2 AGENTS.commit1-check.md; status=$?; rm /home/ext_root/lab-data/zetaris-getting-started/AGENTS.commit1-check.md; exit $status
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+        result: |
+          markdownlint-cli2 v0.23.3 (markdownlint v0.41.1)
+          Finding: AGENTS.commit1-check.md
+          Linting: 1 file
+          Summary: 27 issues in 1 file
+          AGENTS.commit1-check.md:9:121 error MD013/line-length Line length [Expected: 120; Actual: 612]
+          AGENTS.commit1-check.md:11:121 error MD013/line-length Line length [Expected: 120; Actual: 134]
+          AGENTS.commit1-check.md:12:121 error MD013/line-length Line length [Expected: 120; Actual: 151]
+          AGENTS.commit1-check.md:13:121 error MD013/line-length Line length [Expected: 120; Actual: 199]
+          AGENTS.commit1-check.md:14:121 error MD013/line-length Line length [Expected: 120; Actual: 297]
+          AGENTS.commit1-check.md:18:121 error MD013/line-length Line length [Expected: 120; Actual: 196]
+          AGENTS.commit1-check.md:20:121 error MD013/line-length Line length [Expected: 120; Actual: 308]
+          AGENTS.commit1-check.md:22:121 error MD013/line-length Line length [Expected: 120; Actual: 396]
+          AGENTS.commit1-check.md:23 error MD031/blanks-around-fences Fenced code blocks should be surrounded by blank lines [Context: "```bash"]
+          AGENTS.commit1-check.md:27 error MD031/blanks-around-fences Fenced code blocks should be surrounded by blank lines [Context: "```"]
+          AGENTS.commit1-check.md:28:121 error MD013/line-length Line length [Expected: 120; Actual: 590]
+          AGENTS.commit1-check.md:31:121 error MD013/line-length Line length [Expected: 120; Actual: 380]
+          AGENTS.commit1-check.md:34:121 error MD013/line-length Line length [Expected: 120; Actual: 146]
+          AGENTS.commit1-check.md:35:121 error MD013/line-length Line length [Expected: 120; Actual: 387]
+          AGENTS.commit1-check.md:41:121 error MD013/line-length Line length [Expected: 120; Actual: 184]
+          AGENTS.commit1-check.md:42:121 error MD013/line-length Line length [Expected: 120; Actual: 501]
+          AGENTS.commit1-check.md:43:121 error MD013/line-length Line length [Expected: 120; Actual: 189]
+          AGENTS.commit1-check.md:47:121 error MD013/line-length Line length [Expected: 120; Actual: 241]
+          AGENTS.commit1-check.md:49:121 error MD013/line-length Line length [Expected: 120; Actual: 160]
+          AGENTS.commit1-check.md:50:121 error MD013/line-length Line length [Expected: 120; Actual: 586]
+          AGENTS.commit1-check.md:51:121 error MD013/line-length Line length [Expected: 120; Actual: 192]
+          AGENTS.commit1-check.md:52:121 error MD013/line-length Line length [Expected: 120; Actual: 192]
+          AGENTS.commit1-check.md:53:121 error MD013/line-length Line length [Expected: 120; Actual: 616]
+          AGENTS.commit1-check.md:54:121 error MD013/line-length Line length [Expected: 120; Actual: 814]
+          AGENTS.commit1-check.md:55:121 error MD013/line-length Line length [Expected: 120; Actual: 153]
+          AGENTS.commit1-check.md:62:121 error MD013/line-length Line length [Expected: 120; Actual: 337]
+          AGENTS.commit1-check.md:67:121 error MD013/line-length Line length [Expected: 120; Actual: 178]
+    time: 10/23/2026, 11:14:39.668 PM UTC
+    response: "\n\n"
+    duration: 8.137s
+    duration_ms: 8137
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      AGENTS.md has many pre-existing lint issues. The rewrap of first paragraph doesn't make it lint-clean overall. So the "lint-clean each commit" rationale is false. The repo config is new, but AGENTS.md is full of violations. We only care about the first paragraph? Hmm. The rewrap of first paragraph is still a formatting change, but not enough to make file lint-clean. So the split into Commit 1 is just separating formatting of the touched paragraph. That's still valid.
+
+      But the user chose split rewrap into Commit 1. We should follow. The commit 1 message can mention "Rewrap the AGENTS.md intro to the new 120-character limit." It won't claim full lint. Good.
+
+      Need update preview:
+      - Commit 1 files add `AGENTS.md` (modified, intro rewrap only).
+      - Commit 1 message add bullet.
+      - Commit 1 execution steps include backup mechanism before staging: back up full AGENTS.md, write rewrap-only version, stage, commit, restore full.
+      - Commit 2 files: AGENTS.md now only examples hunk (diff vs Commit 1).
+      - Commit 2 message: update bullet "Update AGENTS.md to describe both examples." Maybe mention examples hunk only.
+      - Commit 2 execution: backup full AGENTS.md (already), stage AGENTS.md + app files; commit; restore full (identical). But since Commit 1 restored full, Commit 2 stages examples hunk. We should explain.
+      - Gate 1 item 5: AGENTS.md expected in Commit 1 (rewrap) and Commit 2 (examples). Update.
+      - Post-commit expected clean.
+      - Add explicit backup file paths.
+
+      Need maybe update Commit 1 file count/description. Let's view Commit 1 section.
+    thinking_duration: 3.270s
+    thinking_duration_ms: 3270
+    tool_calls:
+      - tool: read
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          offset: 55
+          limit: 100
+        result: |-
+          <path>/home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md</path>
+          <type>file</type>
+          <content>
+          55: ## Commit 1: docs(eurostat): add verified data-source dossier
+          56: 
+          57: - **Files**:
+          58:   - `.markdownlint-cli2.jsonc` (new, 22 lines)
+          59:   - `README.md` (modified)
+          60:   - `open_data/rest_apis/rest-api-sources.md` (modified)
+          61:   - `docs/data-sources/eurostat/README.md` (new, 148 lines)
+          62:   - `docs/data-sources/eurostat/api-reference.md` (new, 347 lines)
+          63:   - `docs/data-sources/eurostat/data-dictionary.md` (new, 353 lines)
+          64:   - `docs/data-sources/eurostat/data-quality.md` (new, 268 lines)
+          65:   - `docs/data-sources/eurostat/dataset-profile.md` (new, 246 lines)
+          66:   - `docs/data-sources/eurostat/license-and-attribution.md` (new, 151 lines)
+          67:   - `docs/data-sources/eurostat/operations-runbook.md` (new, 284 lines)
+          68:   - `docs/data-sources/eurostat/zetaris-integration.md` (new, 258 lines)
+          69: 
+          70: - **Message**:
+          71: 
+          72:   ```text
+          73:   docs(eurostat): add verified data-source dossier
+          74: 
+          75:   - Add the une_rt_m dossier covering the dataset profile, API
+          76:     contract, data dictionary, quality checks, Zetaris views,
+          77:     operations, and licensing.
+          78:   - Record the verified PL/T slice: 356 rows from 1997-01 to
+          79:     2026-08, with 2026-09 present but empty.
+          80:   - Link the dossier from the root README and REST source catalog.
+          81:   - Add the repository markdownlint config used by the dossier.
+          82:   - Keep the 2026-09-19 onboarding SQL comments as a historical
+          83:     baseline; the license correction is documentation-only.
+          84:   - Replace local absolute paths in runbook commands with
+          85:     /path/to/zetaris-getting-started so the docs are portable.
+          86:   ```
+          87: 
+          88: - **Hunks/Preview**:
+          89: 
+          90:   `~~~diff
+          91:   diff --git a/README.md b/README.md
+          92:   index 9ecc71c..7038c4d 100644
+          93:   --- a/README.md
+          94:   +++ b/README.md
+          95:   @@ -31,6 +31,7 @@ The [GitHub Pages guide](website/README.md) describes how to preview and publish
+          96:    | [`open_data/manifest.json`](open_data/manifest.json) | Source/model IDs, status, and dependencies for `onboard.py` |
+          97:    | [`docs/guides/project-paths.md`](docs/guides/project-paths.md) | Optional project directions, including the [PUDL chart](examples/pudl-chart/README.md) and [EDGAR/PUDL/NOAA guide](docs/guides/create-edgar-pudl-noaa-usl.md) |
+          98:    | [`docs/guides/zetaris-lightning-sql-companion.md`](docs/guides/zetaris-lightning-sql-companion.md) | SQL reference: shapes, quoting, gotchas, and confirmed platform limitations — read alongside the Zetaris Kbase while writing your own SQL |
+          99:   +| [`docs/data-sources/`](docs/data-sources/) | Verified data-source dossiers, starting with the Eurostat unemployment-rate dataset |
+          100:    | [`docs/plans/FUTURES.md`](docs/plans/FUTURES.md) | The full data-source roadmap, priority order, and status per category |
+          101:    | [`docs/plans/`](docs/plans/) | Active plans for in-progress or upcoming work; [`docs/plans/archive/`](docs/plans/archive/) holds completed or superseded plans and the original source-research manifest, kept as historical record |
+          102:   
+          103:   @@ -49,6 +50,7 @@ docs/
+          104:      connections/     Route choices, Cursor/Codex/Claude Code prompts, and recipe command reference
+          105:      install/         Installation & configuration guide, plus its test record
+          106:      guides/          First dataset, project paths, readiness, recovery, and demo guidance
+          107:   +  data-sources/    Verified data-source dossiers (Eurostat unemployment rate)
+          108:      plans/           Active roadmap and category plans (FUTURES.md, recipes/); archive/ for completed plans
+          109:    ```
+          110:   
+          111:   diff --git a/open_data/rest_apis/rest-api-sources.md b/open_data/rest_apis/rest-api-sources.md
+          112:   index 86c9a7f..6cb2c29 100644
+          113:   --- a/open_data/rest_apis/rest-api-sources.md
+          114:   +++ b/open_data/rest_apis/rest-api-sources.md
+          115:   @@ -78,9 +78,14 @@ A catalog of REST sources registered with `CREATE LIGHTNING REST TABLE`. Each en
+          116:    ## 7. Eurostat REST API — license: open, with a condition
+          117:   
+          118:    - **What it is:** EU statistics, including unemployment and HICP inflation, through a public SDMX/REST API.
+          119:   -- **Licence:** commonly understood to align with CC-BY 4.0, but this has not been independently confirmed. Read Eurostat's policy before reuse.
+          120:   +- **Licence:** Reuse of statistical data, metadata, publications, and other dissemination tools is authorised
+          121:   +  for commercial and non-commercial purposes provided the source is acknowledged, under the European
+          122:   +  Commission reuse policy (Decision 2011/833/EU). Editorial content is CC BY 4.0. Commercial reuse of data for
+          123:   +  countries outside the EU, EFTA, and official EU acceding and candidate countries is not allowed. See the
+          124:   +  [Eurostat license and attribution dossier](../../docs/data-sources/eurostat/license-and-attribution.md).
+          125:    - **Access:** no key, no registration, CORS-enabled.
+          126:    - **Docs:** [Eurostat API Statistics guide](https://wikis.ec.europa.eu/display/EUROSTATHELP/API+Statistics+-+data+query)
+          127:   +- **Full dossier:** [`docs/data-sources/eurostat/README.md`](../../docs/data-sources/eurostat/README.md)
+          128:   
+          129:    ## 8. Statistics Canada Web Data Service (WDS) — license: open (StatCan Open Licence)
+          130:   ~~~
+          131: 
+          132: - **New file content summary**:
+          133:   - Dossier covers `une_rt_m`: profile, dimensions, full code inventory, JSON-stat API, Zetaris REST table and three views, data quality, operations, and licensing.
+          134:   - Verified facts: PL/T slice is 356 rows, `1997-01` to `2026-08`; `2026-09` is present but empty; Zetaris metadata `last_updated` is `2026-10-21T11:00:00+0200`.
+          135:   - `.markdownlint-cli2.jsonc` sets the repo's 120-character limit and table/list/code-block conventions.
+          136: 
+          137: - **Verification**:
+          138:   - `markdownlint-cli2` on the eight dossier files: 0 issues.
+          139:   - Root `README.md` and `rest-api-sources.md`: 56 pre-existing issues (baseline 57); no new issue from our lines.
+          140:   - Dangling-link audit: 36 dossier links checked, all `EXISTS`.
+          141:   - `git diff --check`: clean for tracked files.
+          142: 
+          143: ---
+          144: 
+          145: ## Commit 2: feat(eurostat): add Zetaris-backed CRUD example
+          146: 
+          147: - **Files**: all 53 untracked files under `examples/eurostat-crud/`, plus the
+          148:   root `.env.example` and `AGENTS.md`:
+          149:   - `.editorconfig`
+          150:   - `.env.example` (app-local)
+          151:   - `.gitignore`
+          152:   - `.prettierrc`
+          153:   - `.vscode/extensions.json`
+          154:   - `.vscode/launch.json`
+
+          (Showing lines 55-154 of 498. Use offset=155 to continue.)
+          </content>
+    time: 10/23/2026, 11:14:47.901 PM UTC
+    response: "\n\n"
+    duration: 4.848s
+    duration_ms: 4848
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Need modify Commit 1 file list add AGENTS.md, message bullet, verification maybe diff check. Commit 2 file list change "plus root .env.example and AGENTS.md" -> "plus root .env.example and the examples hunk in AGENTS.md". Message body update. Execution plan.
+
+      Let's edit Commit 1.
+    thinking_duration: 435ms
+    thinking_duration_ms: 435
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          oldString: |2-
+              - `README.md` (modified)
+              - `open_data/rest_apis/rest-api-sources.md` (modified)
+              - `docs/data-sources/eurostat/README.md` (new, 148 lines)
+          newString: |2-
+              - `README.md` (modified)
+              - `open_data/rest_apis/rest-api-sources.md` (modified)
+              - `AGENTS.md` (modified: 120-column rewrap of the intro only; no examples text)
+              - `docs/data-sources/eurostat/README.md` (new, 148 lines)
+        result: Edit applied successfully.
+    time: 10/23/2026, 11:14:52.821 PM UTC
+    response: "\n\n\n\n"
+    duration: 3.957s
+    duration_ms: 3957
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          oldString: |2-
+              - Add the repository markdownlint config used by the dossier.
+              - Keep the 2026-09-19 onboarding SQL comments as a historical
+          newString: |2-
+              - Add the repository markdownlint config used by the dossier.
+              - Rewrap the AGENTS.md intro to the new 120-character limit.
+              - Keep the 2026-09-19 onboarding SQL comments as a historical
+        result: Edit applied successfully.
+    time: 10/23/2026, 11:14:56.872 PM UTC
+    response: "\n\n"
+    duration: 2.250s
+    duration_ms: 2250
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Add verification for AGENTS rewrap? Maybe:
+      - `AGENTS.md` Commit 1 version is generated by backup-edit-commit-restore; diff from HEAD is rewrap-only.
+      Need add to Commit 1 Verification.
+    thinking_duration: 293ms
+    thinking_duration_ms: 293
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          oldString: |2-
+              - Dangling-link audit: 36 dossier links checked, all `EXISTS`.
+              - `git diff --check`: clean for tracked files.
+          newString: |2-
+              - Dangling-link audit: 36 dossier links checked, all `EXISTS`.
+              - `AGENTS.md` Commit 1 version diff: intro rewrap only; the examples
+                text is absent and the rest of the file is byte-identical.
+              - `git diff --check`: clean for tracked files.
+        result: Edit applied successfully.
+    time: 10/23/2026, 11:14:59.217 PM UTC
+    response: "\n\n"
+    duration: 2.245s
+    duration_ms: 2245
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Now Commit 2 file list.
+    thinking_duration: 87ms
+    thinking_duration_ms: 87
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          oldString: |-
+            - **Files**: all 53 untracked files under `examples/eurostat-crud/`, plus the
+              root `.env.example` and `AGENTS.md`:
+          newString: |-
+            - **Files**: all 53 untracked files under `examples/eurostat-crud/`, plus the
+              root `.env.example` and only the examples hunk in `AGENTS.md`:
+        result: Edit applied successfully.
+    time: 10/23/2026, 11:15:01.545 PM UTC
+    response: "\n\n"
+    duration: 1.850s
+    duration_ms: 1850
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Find Commit 2 message bullet.
+    thinking_duration: 101ms
+    thinking_duration_ms: 101
+    tool_calls:
+      - tool: bash
+        args:
+          command: sed -n '145,220p' /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+        result: |2
+            - `git diff --check`: clean for tracked files.
+
+          ---
+
+          ## Commit 2: feat(eurostat): add Zetaris-backed CRUD example
+
+          - **Files**: all 53 untracked files under `examples/eurostat-crud/`, plus the
+            root `.env.example` and only the examples hunk in `AGENTS.md`:
+            - `.editorconfig`
+            - `.env.example` (app-local)
+            - `.gitignore`
+            - `.prettierrc`
+            - `.vscode/extensions.json`
+            - `.vscode/launch.json`
+            - `.vscode/tasks.json`
+            - `README.md`
+            - `angular.json`
+            - `mise.toml`
+            - `package-lock.json`
+            - `package.json`
+            - `proxy.conf.cjs`
+            - `public/favicon.ico`
+            - `src/app/app.config.ts`
+            - `src/app/app.css`
+            - `src/app/app.html`
+            - `src/app/app.routes.ts`
+            - `src/app/app.spec.ts`
+            - `src/app/app.ts`
+            - `src/app/core/series/saved-series.model.ts`
+            - `src/app/core/series/series-labels.ts`
+            - `src/app/core/series/series-store.service.spec.ts`
+            - `src/app/core/series/series-store.service.ts`
+            - `src/app/core/zetaris/zetaris-connection.service.spec.ts`
+            - `src/app/core/zetaris/zetaris-connection.service.ts`
+            - `src/app/core/zetaris/zetaris.models.ts`
+            - `src/app/core/zetaris/zetaris.service.spec.ts`
+            - `src/app/core/zetaris/zetaris.service.ts`
+            - `src/app/features/series-detail/series-detail.css`
+            - `src/app/features/series-detail/series-detail.html`
+            - `src/app/features/series-detail/series-detail.spec.ts`
+            - `src/app/features/series-detail/series-detail.ts`
+            - `src/app/features/series-form/series-form.css`
+            - `src/app/features/series-form/series-form.html`
+            - `src/app/features/series-form/series-form.spec.ts`
+            - `src/app/features/series-form/series-form.ts`
+            - `src/app/features/series-list/series-list.css`
+            - `src/app/features/series-list/series-list.html`
+            - `src/app/features/series-list/series-list.spec.ts`
+            - `src/app/features/series-list/series-list.ts`
+            - `src/app/features/zetaris-settings/zetaris-settings.css`
+            - `src/app/features/zetaris-settings/zetaris-settings.html`
+            - `src/app/features/zetaris-settings/zetaris-settings.ts`
+            - `src/app/shared/rate-chart/rate-chart.css`
+            - `src/app/shared/rate-chart/rate-chart.html`
+            - `src/app/shared/rate-chart/rate-chart.ts`
+            - `src/index.html`
+            - `src/main.ts`
+            - `src/styles.css`
+            - `tsconfig.app.json`
+            - `tsconfig.json`
+            - `tsconfig.spec.json`
+            - root `.env.example` (modified)
+            - `AGENTS.md` (modified)
+
+          - **Message**:
+
+            ```text
+            feat(eurostat): add Zetaris-backed CRUD example
+
+            - Add an Angular 22 example under examples/eurostat-crud that
+              stores saved-series metadata in the browser and reads the PL/T
+              observations from the registered Zetaris views.
+            - Keep the example Zetaris-only; it does not call the public
+              Eurostat API.
+            - Add a connection page that keeps the API key in sessionStorage
+              and a dev proxy that keeps browser requests same-origin.
+    time: 10/23/2026, 11:15:03.484 PM UTC
+    response: "\n\n\n\n"
+    duration: 1.451s
+    duration_ms: 1451
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    tool_calls:
+      - tool: bash
+        args:
+          command: sed -n '220,275p' /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+        result: |2+
+              and a dev proxy that keeps browser requests same-origin.
+            - Add list, form, detail, and settings routes, an SVG trend
+              chart, unit tests, build configuration, and usage notes.
+            - Document the Zetaris CORS limitation and the production
+              reverse-proxy and credential-boundary requirements.
+            - Add the Angular example to AGENTS.md, default ZETARIS_ORG_ID
+              to 1 in the root .env.example, and add an app-local
+              .env.example for the dev proxy. Document copying that local
+              template to the gitignored .env.local.
+            - Verify 27 unit tests and the production build before commit.
+            ```
+
+          - **Hunks/Preview**:
+
+            `~~~diff
+            diff --git a/examples/eurostat-crud/.env.example b/examples/eurostat-crud/.env.example
+            new file mode 100644
+            --- /dev/null
+            +++ b/examples/eurostat-crud/.env.example
+            @@ -0,0 +1,4 @@
+            +# Copy this file to .env.local and set the Zetaris REST endpoint.
+            +# .env.local is gitignored. Do not put credentials in this file; the app
+            +# asks for the API key at runtime and keeps it in sessionStorage.
+            +ZETARIS_REST_URL=http://localhost:8888/api/v1.0
+            
+            diff --git a/.env.example b/.env.example
+            index 853dd37..39bcd3f 100644
+            --- a/.env.example
+            +++ b/.env.example
+            @@ -14,7 +14,7 @@ PGSSLMODE=disable
+            
+             # Zetaris HTTP API scripts (TypeScript and Python versions in scripts/).
+             ZETARIS_BASE_URL=http://localhost:3000
+            -ZETARIS_ORG_ID=
+            +ZETARIS_ORG_ID=1
+             # Set either an API key or a username and password for POST /api/auth/login.
+             # Create the key in the Zetaris GUI (never ask an agent to create it). Coding
+             # harness sessions (docs/connections/) read ZETARIS_API_KEY from .env.local.
+            
+            diff --git a/AGENTS.md b/AGENTS.md
+            index 0009ba4..6904714 100644
+            --- a/AGENTS.md
+            +++ b/AGENTS.md
+            @@ -1,6 +1,10 @@
+             # Agent instructions
+            
+            -This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`. You are acting as a data engineer against a Zetaris instance.
+            +This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages
+            +(`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, SQL references in `docs/guides/`, and
+            +runnable examples in `examples/` (`examples/eurostat-crud-java/` is a Spring Boot JDBC demo;
+            +`examples/eurostat-crud/` is an Angular browser CRUD example). You are acting as a data engineer against a
+            +Zetaris instance.
+            
+             ## Connect first
+            ~~~
+
+    time: 10/23/2026, 11:15:05.081 PM UTC
+    response: "\n\n"
+    duration: 1.783s
+    duration_ms: 1783
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Need update AGENTS.md preview in Commit 2 to show diff from Commit 1 version, not HEAD. The current hunk preview is from HEAD (includes rewrap). We need replace with examples-only diff. This is important. Commit 2's `AGENTS.md` diff should be:
+      ```
+      diff --git a/AGENTS.md b/AGENTS.md
+      index ... (Commit 1 blob)..(full blob)
+      --- a/AGENTS.md
+      +++ b/AGENTS.md
+      @@ -2,9 +2,11 @@
+       
+       This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages
+      -(`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`.
+      -You are acting as a data engineer against a Zetaris instance.
+      +(`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, SQL references in `docs/guides/`, and
+      +runnable examples in `examples/` (`examples/eurostat-crud-java/` is a Spring Boot JDBC demo;
+      +`examples/eurostat-crud/` is an Angular browser CRUD example). You are acting as a data engineer against a
+      +Zetaris instance.
+      ```
+      Need exact index hashes maybe not necessary; preview can omit. Use diff with no index or use `diff --git`. The current hunk preview includes index. We can replace with a simple diff without index. Need ensure it's clear. Let's compute exact diff between intermediate and full. We have it from `diff -u`; can convert to git diff style. We'll replace the AGENTS.md hunk in preview.
+
+      Also Commit 2 message bullet "Add the Angular example to AGENTS.md" should say "Add the examples hunk to AGENTS.md" or "Add both examples to AGENTS.md." It currently says "Add the Angular example to AGENTS.md" but the text describes both examples (Java and Angular). Maybe update to "Add both examples to AGENTS.md." Good.
+
+      Also Commit 2 file list last `AGENTS.md` (modified) -> `AGENTS.md` (modified: examples hunk only). Let's edit.
+    thinking_duration: 5.995s
+    thinking_duration_ms: 5995
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          oldString: |2-
+              - root `.env.example` (modified)
+              - `AGENTS.md` (modified)
+          newString: |2-
+              - root `.env.example` (modified)
+              - `AGENTS.md` (modified: examples hunk only, relative to Commit 1)
+        result: Edit applied successfully.
+    time: 10/23/2026, 11:15:06.982 PM UTC
+    response: "\n\n"
+    duration: 7.555s
+    duration_ms: 7555
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          oldString: |2-
+              - Add the Angular example to AGENTS.md, default ZETARIS_ORG_ID
+                to 1 in the root .env.example, and add an app-local
+          newString: |2-
+              - Add both examples to AGENTS.md, default ZETARIS_ORG_ID
+                to 1 in the root .env.example, and add an app-local
+        result: Edit applied successfully.
+    time: 10/23/2026, 11:15:14.746 PM UTC
+    response: "\n\n"
+    duration: 2.217s
+    duration_ms: 2217
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Replace AGENTS diff block. Need exact old string from `diff --git a/AGENTS.md` to before `~~~`. Use edit.
+    thinking_duration: 478ms
+    thinking_duration_ms: 478
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          oldString: |2-
+              diff --git a/AGENTS.md b/AGENTS.md
+              index 0009ba4..6904714 100644
+              --- a/AGENTS.md
+              +++ b/AGENTS.md
+              @@ -1,6 +1,10 @@
+               # Agent instructions
+              
+              -This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`. You are acting as a data engineer against a Zetaris instance.
+              +This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages
+              +(`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, SQL references in `docs/guides/`, and
+              +runnable examples in `examples/` (`examples/eurostat-crud-java/` is a Spring Boot JDBC demo;
+              +`examples/eurostat-crud/` is an Angular browser CRUD example). You are acting as a data engineer against a
+              +Zetaris instance.
+              
+               ## Connect first
+              ~~~
+          newString: |2-
+              diff --git a/AGENTS.md b/AGENTS.md
+              --- a/AGENTS.md
+              +++ b/AGENTS.md
+              @@ -2,9 +2,11 @@
+              
+               This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages
+              -(`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`.
+              -You are acting as a data engineer against a Zetaris instance.
+              +(`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, SQL references in `docs/guides/`, and
+              +runnable examples in `examples/` (`examples/eurostat-crud-java/` is a Spring Boot JDBC demo;
+              +`examples/eurostat-crud/` is an Angular browser CRUD example). You are acting as a data engineer against a
+              +Zetaris instance.
+              
+               ## Connect first
+              ~~~
+        result: Edit applied successfully.
+    time: 10/23/2026, 11:15:17.130 PM UTC
+    response: "\n\n"
+    duration: 6.046s
+    duration_ms: 6046
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Need add note about backup mechanism in Commit 2. Could add after file list or before Message:
+      "**AGENTS.md staging**: use backup-edit-commit-restore. Commit 1 already committed the rewrap-only version; this commit's `git add AGENTS.md` stages only the examples hunk. Backup full file, stage, commit, restore full file."
+      Maybe add a dedicated bullet. Also in Commit 1 execution plan, add backup steps. Let's view Execution Plan now.
+    thinking_duration: 472ms
+    thinking_duration_ms: 472
+    tool_calls:
+      - tool: bash
+        args:
+          command: sed -n '430,520p' /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+        result: |
+          4. Confirm the index is empty.
+          5. Confirm no `.env.local`, `target/`, `node_modules/`, or `scratch/` is staged. `.env.example` and `AGENTS.md` are expected in Commit 2; the Java example is expected in Commit 3; the sanitized plans are expected in Commit 4.
+          6. Confirm no pre-existing stashes; capture the safety stash.
+
+          ### Gate 2 — Safety stash
+
+          1. `git -C /home/ext_root/lab-data/zetaris-getting-started stash push -u -m "pre-commit safety: Eurostat dossier, Angular example, and Java example"`
+          2. `git -C /home/ext_root/lab-data/zetaris-getting-started stash apply`
+          3. Do not `pop`; retain until final verification.
+
+          ### Commit 1
+
+          1. `git -C /home/ext_root/lab-data/zetaris-getting-started add .markdownlint-cli2.jsonc README.md open_data/rest_apis/rest-api-sources.md docs/data-sources/eurostat`
+          2. `git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached --name-only`
+          3. `git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached --check`
+          4. `markdownlint-cli2 docs/data-sources/eurostat/*.md` from the repo root
+          5. Commit with the prepared message file:
+             `git -C /home/ext_root/lab-data/zetaris-getting-started commit -F <scratch>/commit-1-message.txt`
+          6. Verify: `git -C /home/ext_root/lab-data/zetaris-getting-started show --stat --oneline HEAD`
+
+          ### Commit 2
+
+          1. `git -C /home/ext_root/lab-data/zetaris-getting-started add examples/eurostat-crud AGENTS.md .env.example`
+          2. `git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached --name-only`
+          3. `git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached --check`
+          4. Run `npm test -- --watch=false` and `npm run build` in `examples/eurostat-crud`
+          5. Commit with the prepared message file:
+             `git -C /home/ext_root/lab-data/zetaris-getting-started commit -F <scratch>/commit-2-message.txt`
+          6. Verify: `git -C /home/ext_root/lab-data/zetaris-getting-started show --stat --oneline HEAD`
+
+          ### Commit 3
+
+          1. `git -C /home/ext_root/lab-data/zetaris-getting-started add examples/eurostat-crud-java`
+          2. `git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached --name-only`
+          3. `git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached --check`
+          4. Run `mvn -q test` in `examples/eurostat-crud-java`
+          5. Commit with the prepared message file:
+             `git -C /home/ext_root/lab-data/zetaris-getting-started commit -F <scratch>/commit-3-message.txt`
+          6. Verify: `git -C /home/ext_root/lab-data/zetaris-getting-started show --stat --oneline HEAD`
+
+          ### Commit 4
+
+          1. `git -C /home/ext_root/lab-data/zetaris-getting-started add docs/plans`
+          2. `git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached --name-only`
+          3. `git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached --check`
+          4. `markdownlint-cli2 docs/plans/*.md docs/plans/archive/2026-10-20_zetaris-local-setup_*.md docs/plans/archive/2026-10-23_eurostat-crud-java_*.md`
+          5. Commit with the prepared message file:
+             `git -C /home/ext_root/lab-data/zetaris-getting-started commit -F <scratch>/commit-4-message.txt`
+          6. Verify: `git -C /home/ext_root/lab-data/zetaris-getting-started show --stat --oneline HEAD`
+
+          ### Post-Commit Verification
+
+          1. `git -C /home/ext_root/lab-data/zetaris-getting-started status --short`
+             - Expected: clean except ignored `scratch/` and local `.env.local` files.
+          2. `git -C /home/ext_root/lab-data/zetaris-getting-started log -4 --oneline`
+          3. `git -C /home/ext_root/lab-data/zetaris-getting-started show --stat HEAD~3..HEAD`
+          4. Run the commit-preview verifier against this file.
+          5. Confirm the safety stash is a no-op, then drop it only after verification.
+          6. Do not push unless separately requested.
+
+          ### Abort Rules
+
+          - Stop on any staged path outside the planned lists.
+          - Stop on any secret, `.env.local`, `target/`, `node_modules/`, or `scratch/` path.
+          - Stop on a pre-commit fetch that shows the branch is behind.
+          - Stop on a failing test, build, lint, or link check.
+          - Stop on an author-identity mismatch.
+
+          ---
+
+          Please say `start` to begin the sequential execution of the four atomic
+          commits above.
+    time: 10/23/2026, 11:15:23.264 PM UTC
+    response: "\n\n"
+    duration: 2.223s
+    duration_ms: 2223
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Need update Gate 1 item 5: AGENTS.md expected in Commit 1 (rewrap) and Commit 2 (examples). Also safety stash message maybe mention plans. Not essential but update.
+
+      Commit 1 steps:
+      1. Backup full AGENTS.md to scratch (already done, but execution should re-verify).
+      2. Install rewrap-only version: `cp <scratch>/AGENTS.md.commit1-rewrap-only.md AGENTS.md`.
+      3. Stage files including AGENTS.md.
+      4. diff cached name/check.
+      5. Verify cached AGENTS diff is rewrap-only: `git diff --cached -- AGENTS.md`.
+      6. lint dossier.
+      7. commit.
+      8. Restore full: `cp <scratch>/AGENTS.md.commit2-full.bak AGENTS.md`.
+      9. Verify working tree AGENTS diff vs HEAD is examples hunk? Actually after Commit 1, HEAD has rewrap-only; working tree full has examples. `git diff -- AGENTS.md` should show examples hunk. Good.
+
+      Commit 2 steps:
+      1. Backup full AGENTS.md to `AGENTS.md.commit2-full.bak` (already; re-verify). Maybe create a new backup `AGENTS.md.commit2-precommit.bak`.
+      2. Stage examples/eurostat-crud, `.env.example`, and `AGENTS.md` (stages examples hunk only).
+      3. `git diff --cached -- AGENTS.md` verify only examples hunk.
+      4. diff cached name/check.
+      5. tests/build.
+      6. commit.
+      7. Restore full backup (identical).
+      8. Verify `git status --short AGENTS.md` clean.
+
+      But the user specifically asked "for commit 2 ... use backup-edit-commit-restore mechanism." We should put the backup/restore explicitly in Commit 2, even if Commit 1 also uses it. In Commit 2:
+      - Back up full `AGENTS.md` to `AGENTS.md.commit2-full.bak` (already exists).
+      - Ensure working tree is full version (restored after Commit 1).
+      - Stage AGENTS.md and app files.
+      - Commit.
+      - Restore backup.
+      This is the mechanism. The "edit" step is no-op because the full version is already the desired commit-2 content. But we can say "the edit step is already materialized by the restored full file." Hmm.
+
+      Maybe better: Commit 2's desired content is the full version; we back it up, then `git add` it, commit, restore. That's exactly backup-edit-commit-restore. The hunk isolation comes from Commit 1's index. Good.
+
+      Need ensure commit 1 message file includes AGENTS.md rewrap bullet. We must update `commit-1-message.txt` too, not just preview. Let's inspect.
+    thinking_duration: 4.824s
+    thinking_duration_ms: 4824
+    tool_calls:
+      - tool: bash
+        args:
+          command: cat /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-1-message.txt
+        result: |
+          docs(eurostat): add verified data-source dossier
+
+          - Add the une_rt_m dossier covering the dataset profile, API
+            contract, data dictionary, quality checks, Zetaris views,
+            operations, and licensing.
+          - Record the verified PL/T slice: 356 rows from 1997-01 to
+            2026-08, with 2026-09 present but empty.
+          - Link the dossier from the root README and REST source catalog.
+          - Add the repository markdownlint config used by the dossier.
+          - Keep the 2026-09-19 onboarding SQL comments as a historical
+            baseline; the license correction is documentation-only.
+          - Replace local absolute paths in runbook commands with
+            /path/to/zetaris-getting-started so the docs are portable.
+      - tool: bash
+        args:
+          command: cat /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-2-message.txt
+        result: |
+          feat(eurostat): add Zetaris-backed CRUD example
+
+          - Add an Angular 22 example under examples/eurostat-crud that
+            stores saved-series metadata in the browser and reads the PL/T
+            observations from the registered Zetaris views.
+          - Keep the example Zetaris-only; it does not call the public
+            Eurostat API.
+          - Add a connection page that keeps the API key in sessionStorage
+            and a dev proxy that keeps browser requests same-origin.
+          - Add list, form, detail, and settings routes, an SVG trend
+            chart, unit tests, build configuration, and usage notes.
+          - Document the Zetaris CORS limitation and the production
+            reverse-proxy and credential-boundary requirements.
+          - Add the Angular example to AGENTS.md, default ZETARIS_ORG_ID
+            to 1 in the root .env.example, and add an app-local
+            .env.example for the dev proxy. Document copying that local
+            template to the gitignored .env.local.
+          - Verify 27 unit tests and the production build before commit.
+    time: 10/23/2026, 11:15:25.760 PM UTC
+    response: "\n\n\n\n"
+    duration: 6.630s
+    duration_ms: 6630
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Update both messages. Commit 1 add bullet after markdownlint config. Commit 2 change "Add the Angular example" -> "Add both examples". Also maybe mention AGENTS.md examples hunk only? The message can say "Add both examples to AGENTS.md." Good.
+    thinking_duration: 1.681s
+    thinking_duration_ms: 1681
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-1-message.txt
+          oldString: |-
+            - Add the repository markdownlint config used by the dossier.
+            - Keep the 2026-09-19 onboarding SQL comments as a historical
+          newString: |-
+            - Add the repository markdownlint config used by the dossier.
+            - Rewrap the AGENTS.md intro to the new 120-character limit.
+            - Keep the 2026-09-19 onboarding SQL comments as a historical
+        result: Edit applied successfully.
+    time: 10/23/2026, 11:15:32.588 PM UTC
+    response: "\n\n"
+    duration: 3.702s
+    duration_ms: 3702
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-2-message.txt
+          oldString: '- Add the Angular example to AGENTS.md, default ZETARIS_ORG_ID'
+          newString: '- Add both examples to AGENTS.md, default ZETARIS_ORG_ID'
+        result: Edit applied successfully.
+    time: 10/23/2026, 11:15:36.366 PM UTC
+    response: "\n\n"
+    duration: 1.705s
+    duration_ms: 1705
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Now update Execution Plan. Use edit for Gate 1 item 5.
+    thinking_duration: 150ms
+    thinking_duration_ms: 150
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          oldString: 5. Confirm no `.env.local`, `target/`, `node_modules/`, or `scratch/` is staged. `.env.example` and `AGENTS.md` are expected in Commit 2; the Java example is expected in Commit 3; the sanitized plans are expected in Commit 4.
+          newString: 5. Confirm no `.env.local`, `target/`, `node_modules/`, or `scratch/` is staged. `AGENTS.md` is expected in Commit 1 (rewrap) and Commit 2 (examples hunk); `.env.example` is expected in Commit 2; the Java example is expected in Commit 3; the sanitized plans are expected in Commit 4.
+        result: Edit applied successfully.
+    time: 10/23/2026, 11:15:38.162 PM UTC
+    response: "\n\n\n\n"
+    duration: 1.874s
+    duration_ms: 1874
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Update safety stash message to mention plans maybe.
+    thinking_duration: 50ms
+    thinking_duration_ms: 50
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          oldString: '1. `git -C /home/ext_root/lab-data/zetaris-getting-started stash push -u -m "pre-commit safety: Eurostat dossier, Angular example, and Java example"`'
+          newString: '1. `git -C /home/ext_root/lab-data/zetaris-getting-started stash push -u -m "pre-commit safety: Eurostat dossier, Angular example, Java example, and sanitized plans"`'
+        result: Edit applied successfully.
+    time: 10/23/2026, 11:15:40.145 PM UTC
+    response: "\n\n"
+    duration: 1.714s
+    duration_ms: 1714
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Now replace Commit 1 and Commit 2 execution sections. Need exact.
+    thinking_duration: 88ms
+    thinking_duration_ms: 88
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          oldString: |-
+            ### Commit 1
+
+            1. `git -C /home/ext_root/lab-data/zetaris-getting-started add .markdownlint-cli2.jsonc README.md open_data/rest_apis/rest-api-sources.md docs/data-sources/eurostat`
+            2. `git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached --name-only`
+            3. `git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached --check`
+            4. `markdownlint-cli2 docs/data-sources/eurostat/*.md` from the repo root
+            5. Commit with the prepared message file:
+               `git -C /home/ext_root/lab-data/zetaris-getting-started commit -F <scratch>/commit-1-message.txt`
+            6. Verify: `git -C /home/ext_root/lab-data/zetaris-getting-started show --stat --oneline HEAD`
+
+            ### Commit 2
+
+            1. `git -C /home/ext_root/lab-data/zetaris-getting-started add examples/eurostat-crud AGENTS.md .env.example`
+            2. `git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached --name-only`
+            3. `git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached --check`
+            4. Run `npm test -- --watch=false` and `npm run build` in `examples/eurostat-crud`
+            5. Commit with the prepared message file:
+               `git -C /home/ext_root/lab-data/zetaris-getting-started commit -F <scratch>/commit-2-message.txt`
+            6. Verify: `git -C /home/ext_root/lab-data/zetaris-getting-started show --stat --oneline HEAD`
+          newString: |-
+            ### Commit 1 — backup-edit-commit-restore for AGENTS.md
+
+            1. Back up the full AGENTS.md:
+               `cp AGENTS.md <scratch>/AGENTS.md.commit2-full.bak`
+            2. Install the rewrap-only version:
+               `cp <scratch>/AGENTS.md.commit1-rewrap-only.md AGENTS.md`
+            3. `git -C /home/ext_root/lab-data/zetaris-getting-started add .markdownlint-cli2.jsonc README.md open_data/rest_apis/rest-api-sources.md AGENTS.md docs/data-sources/eurostat`
+            4. `git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached --name-only`
+            5. `git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached --check`
+            6. Confirm the staged AGENTS.md hunk is rewrap-only:
+               `git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached -- AGENTS.md`
+            7. `markdownlint-cli2 docs/data-sources/eurostat/*.md` from the repo root
+            8. Commit with the prepared message file:
+               `git -C /home/ext_root/lab-data/zetaris-getting-started commit -F <scratch>/commit-1-message.txt`
+            9. Restore the full AGENTS.md:
+               `cp <scratch>/AGENTS.md.commit2-full.bak AGENTS.md`
+            10. Verify the restored diff is the examples hunk only:
+                `git -C /home/ext_root/lab-data/zetaris-getting-started diff -- AGENTS.md`
+            11. Verify: `git -C /home/ext_root/lab-data/zetaris-getting-started show --stat --oneline HEAD`
+
+            ### Commit 2 — backup-edit-commit-restore for AGENTS.md
+
+            1. Reconfirm the full AGENTS.md backup exists and matches the working file:
+               `cmp AGENTS.md <scratch>/AGENTS.md.commit2-full.bak`
+            2. Stage the Angular example, root `.env.example`, and AGENTS.md:
+               `git -C /home/ext_root/lab-data/zetaris-getting-started add examples/eurostat-crud AGENTS.md .env.example`
+            3. Confirm the staged AGENTS.md hunk is examples-only relative to Commit 1:
+               `git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached -- AGENTS.md`
+            4. `git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached --name-only`
+            5. `git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached --check`
+            6. Run `npm test -- --watch=false` and `npm run build` in `examples/eurostat-crud`
+            7. Commit with the prepared message file:
+               `git -C /home/ext_root/lab-data/zetaris-getting-started commit -F <scratch>/commit-2-message.txt`
+            8. Restore the full AGENTS.md backup:
+               `cp <scratch>/AGENTS.md.commit2-full.bak AGENTS.md`
+            9. Verify `git status --short AGENTS.md` is clean.
+            10. Verify: `git -C /home/ext_root/lab-data/zetaris-getting-started show --stat --oneline HEAD`
+        result: Edit applied successfully.
+    time: 10/23/2026, 11:15:42.061 PM UTC
+    response: "\n\n"
+    duration: 4.948s
+    duration_ms: 4948
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Need maybe add a note near Commit 2 files explaining backup mechanism. Add after file list before Message. Let's insert.
+    thinking_duration: 185ms
+    thinking_duration_ms: 185
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          oldString: |2-
+              - root `.env.example` (modified)
+              - `AGENTS.md` (modified: examples hunk only, relative to Commit 1)
+
+            - **Message**:
+          newString: |2-
+              - root `.env.example` (modified)
+              - `AGENTS.md` (modified: examples hunk only, relative to Commit 1)
+
+            - **AGENTS.md staging**: backup-edit-commit-restore. Commit 1 commits the
+              rewrap-only version; this commit stages only the examples hunk. The full
+              file is backed up, staged, committed, and restored byte-for-byte.
+
+            - **Message**:
+        result: Edit applied successfully.
+    time: 10/23/2026, 11:15:47.133 PM UTC
+    response: "\n\n"
+    duration: 4.242s
+    duration_ms: 4242
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Need add similar note in Commit 1? The section title already says. Good.
+
+      Need update Commit 1 "New file content summary" or verification to mention AGENTS. Fine.
+
+      Need update preview top "Included" says `AGENTS.md` (examples paragraph, extended to name both examples). Now AGENTS.md spans two commits. Update:
+      - `AGENTS.md` (intro rewrap in Commit 1; examples hunk in Commit 2)
+      Let's edit.
+    thinking_duration: 557ms
+    thinking_duration_ms: 557
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          oldString: '- `AGENTS.md` (examples paragraph, extended to name both examples)'
+          newString: '- `AGENTS.md` (intro rewrap in Commit 1; examples hunk in Commit 2)'
+        result: Edit applied successfully.
+    time: 10/23/2026, 11:15:51.524 PM UTC
+    response: "\n\n\n\n"
+    duration: 2.573s
+    duration_ms: 2573
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Need ensure commit 1 message file and preview message match. Preview has bullet "Rewrap..." yes. Message file yes. Commit 2 message preview and file match "Add both examples" yes. Good.
+
+      Need verify intermediate file diff and backup. Also ensure working tree AGENTS.md still full. We copied backup but didn't modify working. Good.
+
+      Need maybe simulate Commit 1 staging to verify the staged diff is rewrap-only, without committing. We can use a temporary index file (`GIT_INDEX_FILE`) to avoid touching real index. Great idea. Use `GIT_INDEX_FILE=/tmp/...`? But no scratch? We can use scratch. We can create a temporary index from HEAD, then `git add` with that index, and inspect `git diff --cached`. This simulates Commit 1. Then simulate Commit 2 by committing to a temporary branch? That would create commits, not allowed before start. We can use `git write-tree` / `git commit-tree`? Too much. We can at least verify diffs.
+
+      Use temporary index:
+      ```
+      tmpidx=scratch/tmp-index
+      GIT_INDEX_FILE=$tmpidx git read-tree HEAD
+      GIT_INDEX_FILE=$tmpidx git add ... (with working tree rewrap-only? Need temporarily replace AGENTS.md, but we don't want to modify working file; we can use `git update-index --cacheinfo` with blob of rewrap-only file, or use `git hash-object -w` and `git update-index --add --cacheinfo 100644,<blob>,AGENTS.md`).
+      ```
+      We can compute blob for intermediate and add. But simpler: just use `git diff --no-index` as we did. The staged diff from HEAD to intermediate is exactly rewrap-only. For Commit 2, diff intermediate to full is examples-only. Good enough.
+
+      Need verify file line lengths and no unintended changes. `diff` showed exactly. Good.
+
+      Need maybe run markdownlint on intermediate? It reports 27 issues because rest of file pre-existing. We don't need. But the rewrap-only intro lines are <=120. Verify with awk.
+    thinking_duration: 3.385s
+    thinking_duration_ms: 3385
+    tool_calls:
+      - tool: bash
+        args:
+          command: awk 'NR>=3 && NR<=5 {printf "%d %d %s\n", NR, length($0), $0}' /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/AGENTS.md.commit1-rewrap-only.md
+        result: |
+          3 105 This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages
+          4 108 (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`.
+          5 61 You are acting as a data engineer against a Zetaris instance.
+      - tool: bash
+        args:
+          command: cmp /home/ext_root/lab-data/zetaris-getting-started/AGENTS.md /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/AGENTS.md.commit2-full.bak && echo 'working AGENTS.md unchanged and backed up'
+        result: |
+          working AGENTS.md unchanged and backed up
+      - tool: bash
+        args:
+          command: git -C /home/ext_root/lab-data/zetaris-getting-started status --short AGENTS.md; git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached --name-only
+        result: |2
+           M AGENTS.md
+    time: 10/23/2026, 11:15:54.232 PM UTC
+    response: "\n\n"
+    duration: 5.696s
+    duration_ms: 5696
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Index empty. Good.
+
+      Need maybe update commit preview's Commit 2 hunk preview index lines? We removed index. Fine.
+
+      Need maybe update `commit-1-message.txt` to mention AGENTS rewrap and preview. Done.
+
+      Need maybe add backup files to Relevant Files? The summary final will mention. Not necessary now.
+
+      Need now respond to user: we've updated plan, prepared backup/intermediate, no commit yet, ask `start`. But before, maybe show exact plan? Concise. The user asked "use mechanism" — we should say done. Maybe mention Commit 1 now includes rewrap, Commit 2 only examples hunk. The final response should be short.
+
+      But wait: The user's original request might imply they wanted Commit 2 to use backup mechanism, not Commit 1. We did both. Good.
+
+      Need ensure no issue with Commit 1 message title "docs(eurostat)" including AGENTS.md rewrap. Acceptable.
+
+      Need perhaps update Commit 1 verification: "AGENTS.md Commit 1 version diff: intro rewrap only; examples text absent and rest byte-identical." We verified. Good.
+
+      Need maybe update Commit 2 verification to include "staged AGENTS.md hunk examples-only." Add bullet. Let's add to Commit 2 Verification. Find Commit 2 verification.
+    thinking_duration: 1.559s
+    thinking_duration_ms: 1559
+    tool_calls:
+      - tool: bash
+        args:
+          command: grep -n '^## Commit 2\|^- \*\*Verification' /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+        result: |
+          139:- **Verification**:
+          149:## Commit 2: feat(eurostat): add Zetaris-backed CRUD example
+          288:- **Verification**:
+          371:- **Verification**:
+          409:- **Verification**:
+    time: 10/23/2026, 11:16:00.088 PM UTC
+    response: "\n\n\n\n"
+    duration: 3.243s
+    duration_ms: 3243
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    tool_calls:
+      - tool: read
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          offset: 286
+          limit: 20
+        result: |-
+          <path>/home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md</path>
+          <type>file</type>
+          <content>
+          286:     - `/settings` saves, tests, and clears the Zetaris connection.
+          287: 
+          288: - **Verification**:
+          289:   - `npm test -- --watch=false`: 27/27 tests pass.
+          290:   - `npm run build`: success; `main 341.47 kB`, `styles 6.81 kB`.
+          291:   - Browser smoke: connection test/save, 356-row read, reload persistence, update, delete, and no API key in `localStorage`.
+          292:   - Dangling-link audit: 2 app README links checked, all `EXISTS`.
+          293:   - Secret scan: only test fixture `test-key`; no real key or `.env.local` content.
+          294:   - `git diff --check`: clean for tracked files.
+          295: 
+          296: ---
+          297: 
+          298: ## Commit 3: feat(eurostat): add Java JDBC CRUD example
+          299: 
+          300: - **Files**: all 49 untracked files under `examples/eurostat-crud-java/`:
+          301:   - `.env.example`
+          302:   - `.gitignore`
+          303:   - `README.md`
+          304:   - `pom.xml`
+          305:   - `run.sh`
+
+          (Showing lines 286-305 of 523. Use offset=306 to continue.)
+          </content>
+    time: 10/23/2026, 11:16:03.427 PM UTC
+    response: "\n\n"
+    duration: 1.685s
+    duration_ms: 1685
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Add bullet:
+      - Staged AGENTS.md diff is examples-only relative to Commit 1; full file restored byte-for-byte after commit.
+      Let's edit.
+    thinking_duration: 599ms
+    thinking_duration_ms: 599
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          oldString: |2-
+              - Secret scan: only test fixture `test-key`; no real key or `.env.local` content.
+              - `git diff --check`: clean for tracked files.
+
+            ---
+
+            ## Commit 3: feat(eurostat): add Java JDBC CRUD example
+          newString: |2-
+              - Secret scan: only test fixture `test-key`; no real key or `.env.local` content.
+              - Staged `AGENTS.md` diff is examples-only relative to Commit 1; the full
+                file is restored byte-for-byte after the commit.
+              - `git diff --check`: clean for tracked files.
+
+            ---
+
+            ## Commit 3: feat(eurostat): add Java JDBC CRUD example
+        result: Edit applied successfully.
+    time: 10/23/2026, 11:16:05.313 PM UTC
+    response: "\n\n"
+    duration: 2.965s
+    duration_ms: 2965
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Need maybe update final "four atomic commits" still. Good.
+
+      Need maybe update the commit preview's "Hunks/Preview" for Commit 2 to use a diff header that indicates relative to Commit 1. Add a note before diff: "AGENTS.md hunk is relative to Commit 1's rewrap-only version." Let's add.
+    thinking_duration: 486ms
+    thinking_duration_ms: 486
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          oldString: |-
+            - **Hunks/Preview**:
+
+              `~~~diff
+              diff --git a/examples/eurostat-crud/.env.example b/examples/eurostat-crud/.env.example
+          newString: |-
+            - **Hunks/Preview**:
+
+              The `AGENTS.md` hunk below is relative to Commit 1's rewrap-only version.
+
+              `~~~diff
+              diff --git a/examples/eurostat-crud/.env.example b/examples/eurostat-crud/.env.example
+        result: Edit applied successfully.
+    time: 10/23/2026, 11:16:08.404 PM UTC
+    response: "\n\n\n\n"
+    duration: 6.026s
+    duration_ms: 6026
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Need maybe update Commit 1 "Hunks/Preview" to include AGENTS.md rewrap diff? Currently only README and catalog. The user asked AGENTS.md hunk; preview should show it. Add a diff for AGENTS.md rewrap-only in Commit 1. The preview currently has diff blocks for README and catalog. We can add after catalog diff before `~~~`. Let's inspect around 100-135.
+    thinking_duration: 1.047s
+    thinking_duration_ms: 1047
+    tool_calls:
+      - tool: bash
+        args:
+          command: sed -n '88,145p' /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+        result: |2
+            ```
+
+          - **Hunks/Preview**:
+
+            `~~~diff
+            diff --git a/README.md b/README.md
+            index 9ecc71c..7038c4d 100644
+            --- a/README.md
+            +++ b/README.md
+            @@ -31,6 +31,7 @@ The [GitHub Pages guide](website/README.md) describes how to preview and publish
+             | [`open_data/manifest.json`](open_data/manifest.json) | Source/model IDs, status, and dependencies for `onboard.py` |
+             | [`docs/guides/project-paths.md`](docs/guides/project-paths.md) | Optional project directions, including the [PUDL chart](examples/pudl-chart/README.md) and [EDGAR/PUDL/NOAA guide](docs/guides/create-edgar-pudl-noaa-usl.md) |
+             | [`docs/guides/zetaris-lightning-sql-companion.md`](docs/guides/zetaris-lightning-sql-companion.md) | SQL reference: shapes, quoting, gotchas, and confirmed platform limitations — read alongside the Zetaris Kbase while writing your own SQL |
+            +| [`docs/data-sources/`](docs/data-sources/) | Verified data-source dossiers, starting with the Eurostat unemployment-rate dataset |
+             | [`docs/plans/FUTURES.md`](docs/plans/FUTURES.md) | The full data-source roadmap, priority order, and status per category |
+             | [`docs/plans/`](docs/plans/) | Active plans for in-progress or upcoming work; [`docs/plans/archive/`](docs/plans/archive/) holds completed or superseded plans and the original source-research manifest, kept as historical record |
+            
+            @@ -49,6 +50,7 @@ docs/
+               connections/     Route choices, Cursor/Codex/Claude Code prompts, and recipe command reference
+               install/         Installation & configuration guide, plus its test record
+               guides/          First dataset, project paths, readiness, recovery, and demo guidance
+            +  data-sources/    Verified data-source dossiers (Eurostat unemployment rate)
+               plans/           Active roadmap and category plans (FUTURES.md, recipes/); archive/ for completed plans
+             ```
+            
+            diff --git a/open_data/rest_apis/rest-api-sources.md b/open_data/rest_apis/rest-api-sources.md
+            index 86c9a7f..6cb2c29 100644
+            --- a/open_data/rest_apis/rest-api-sources.md
+            +++ b/open_data/rest_apis/rest-api-sources.md
+            @@ -78,9 +78,14 @@ A catalog of REST sources registered with `CREATE LIGHTNING REST TABLE`. Each en
+             ## 7. Eurostat REST API — license: open, with a condition
+            
+             - **What it is:** EU statistics, including unemployment and HICP inflation, through a public SDMX/REST API.
+            -- **Licence:** commonly understood to align with CC-BY 4.0, but this has not been independently confirmed. Read Eurostat's policy before reuse.
+            +- **Licence:** Reuse of statistical data, metadata, publications, and other dissemination tools is authorised
+            +  for commercial and non-commercial purposes provided the source is acknowledged, under the European
+            +  Commission reuse policy (Decision 2011/833/EU). Editorial content is CC BY 4.0. Commercial reuse of data for
+            +  countries outside the EU, EFTA, and official EU acceding and candidate countries is not allowed. See the
+            +  [Eurostat license and attribution dossier](../../docs/data-sources/eurostat/license-and-attribution.md).
+             - **Access:** no key, no registration, CORS-enabled.
+             - **Docs:** [Eurostat API Statistics guide](https://wikis.ec.europa.eu/display/EUROSTATHELP/API+Statistics+-+data+query)
+            +- **Full dossier:** [`docs/data-sources/eurostat/README.md`](../../docs/data-sources/eurostat/README.md)
+            
+             ## 8. Statistics Canada Web Data Service (WDS) — license: open (StatCan Open Licence)
+            ~~~
+
+          - **New file content summary**:
+            - Dossier covers `une_rt_m`: profile, dimensions, full code inventory, JSON-stat API, Zetaris REST table and three views, data quality, operations, and licensing.
+            - Verified facts: PL/T slice is 356 rows, `1997-01` to `2026-08`; `2026-09` is present but empty; Zetaris metadata `last_updated` is `2026-10-21T11:00:00+0200`.
+            - `.markdownlint-cli2.jsonc` sets the repo's 120-character limit and table/list/code-block conventions.
+
+          - **Verification**:
+            - `markdownlint-cli2` on the eight dossier files: 0 issues.
+            - Root `README.md` and `rest-api-sources.md`: 56 pre-existing issues (baseline 57); no new issue from our lines.
+            - Dangling-link audit: 36 dossier links checked, all `EXISTS`.
+            - `AGENTS.md` Commit 1 version diff: intro rewrap only; the examples
+              text is absent and the rest of the file is byte-identical.
+            - `git diff --check`: clean for tracked files.
+    time: 10/23/2026, 11:16:14.684 PM UTC
+    response: "\n\n"
+    duration: 3.150s
+    duration_ms: 3150
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Add AGENTS diff before closing `~~~`. Use edit.
+    thinking_duration: 542ms
+    thinking_duration_ms: 542
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          oldString: |2-
+              ## 8. Statistics Canada Web Data Service (WDS) — license: open (StatCan Open Licence)
+              ~~~
+          newString: |2-
+              ## 8. Statistics Canada Web Data Service (WDS) — license: open (StatCan Open Licence)
+              
+              diff --git a/AGENTS.md b/AGENTS.md
+              --- a/AGENTS.md
+              +++ b/AGENTS.md
+              @@ -1,6 +1,8 @@
+               # Agent instructions
+              
+              -This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`. You are acting as a data engineer against a Zetaris instance.
+              +This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages
+              +(`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`.
+              +You are acting as a data engineer against a Zetaris instance.
+              
+               ## Connect first
+              ~~~
+        result: Edit applied successfully.
+    time: 10/23/2026, 11:16:18.216 PM UTC
+    response: "\n\n"
+    duration: 3.779s
+    duration_ms: 3779
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Need verify preview still coherent and no old "pending". Also check that Commit 1 file list includes AGENTS and message. Good.
+
+      Need maybe update Commit 1 `New file content summary` bullet? It says `.markdownlint-cli2.jsonc` sets config. Fine.
+
+      Need perhaps update top "Preview scope" and "Included" done.
+
+      Need perhaps update commit 1 message file to match preview exactly. Check.
+    thinking_duration: 542ms
+    thinking_duration_ms: 542
+    tool_calls:
+      - tool: bash
+        args:
+          command: cat /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-1-message.txt; echo '---'; cat /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-2-message.txt
+        result: |
+          docs(eurostat): add verified data-source dossier
+
+          - Add the une_rt_m dossier covering the dataset profile, API
+            contract, data dictionary, quality checks, Zetaris views,
+            operations, and licensing.
+          - Record the verified PL/T slice: 356 rows from 1997-01 to
+            2026-08, with 2026-09 present but empty.
+          - Link the dossier from the root README and REST source catalog.
+          - Add the repository markdownlint config used by the dossier.
+          - Rewrap the AGENTS.md intro to the new 120-character limit.
+          - Keep the 2026-09-19 onboarding SQL comments as a historical
+            baseline; the license correction is documentation-only.
+          - Replace local absolute paths in runbook commands with
+            /path/to/zetaris-getting-started so the docs are portable.
+          ---
+          feat(eurostat): add Zetaris-backed CRUD example
+
+          - Add an Angular 22 example under examples/eurostat-crud that
+            stores saved-series metadata in the browser and reads the PL/T
+            observations from the registered Zetaris views.
+          - Keep the example Zetaris-only; it does not call the public
+            Eurostat API.
+          - Add a connection page that keeps the API key in sessionStorage
+            and a dev proxy that keeps browser requests same-origin.
+          - Add list, form, detail, and settings routes, an SVG trend
+            chart, unit tests, build configuration, and usage notes.
+          - Document the Zetaris CORS limitation and the production
+            reverse-proxy and credential-boundary requirements.
+          - Add both examples to AGENTS.md, default ZETARIS_ORG_ID
+            to 1 in the root .env.example, and add an app-local
+            .env.example for the dev proxy. Document copying that local
+            template to the gitignored .env.local.
+          - Verify 27 unit tests and the production build before commit.
+      - tool: bash
+        args:
+          command: grep -n 'AGENTS.md\|backup-edit-commit-restore\|four atomic\|pending' /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md | head -40
+        result: |
+          21:- `AGENTS.md` (intro rewrap in Commit 1; examples hunk in Commit 2)
+          61:  - `AGENTS.md` (modified: 120-column rewrap of the intro only; no examples text)
+          83:  - Rewrap the AGENTS.md intro to the new 120-character limit.
+          133:  diff --git a/AGENTS.md b/AGENTS.md
+          134:  --- a/AGENTS.md
+          135:  +++ b/AGENTS.md
+          156:  - `AGENTS.md` Commit 1 version diff: intro rewrap only; the examples
+          165:  root `.env.example` and only the examples hunk in `AGENTS.md`:
+          220:  - `AGENTS.md` (modified: examples hunk only, relative to Commit 1)
+          222:- **AGENTS.md staging**: backup-edit-commit-restore. Commit 1 commits the
+          242:  - Add both examples to AGENTS.md, default ZETARIS_ORG_ID
+          251:  The `AGENTS.md` hunk below is relative to Commit 1's rewrap-only version.
+          278:  diff --git a/AGENTS.md b/AGENTS.md
+          279:  --- a/AGENTS.md
+          280:  +++ b/AGENTS.md
+          309:  - Staged `AGENTS.md` diff is examples-only relative to Commit 1; the full
+          452:5. Confirm no `.env.local`, `target/`, `node_modules/`, or `scratch/` is staged. `AGENTS.md` is expected in Commit 1 (rewrap) and Commit 2 (examples hunk); `.env.example` is expected in Commit 2; the Java example is expected in Commit 3; the sanitized plans are expected in Commit 4.
+          461:### Commit 1 — backup-edit-commit-restore for AGENTS.md
+          463:1. Back up the full AGENTS.md:
+          464:   `cp AGENTS.md <scratch>/AGENTS.md.commit2-full.bak`
+          466:   `cp <scratch>/AGENTS.md.commit1-rewrap-only.md AGENTS.md`
+          467:3. `git -C /home/ext_root/lab-data/zetaris-getting-started add .markdownlint-cli2.jsonc README.md open_data/rest_apis/rest-api-sources.md AGENTS.md docs/data-sources/eurostat`
+          470:6. Confirm the staged AGENTS.md hunk is rewrap-only:
+          471:   `git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached -- AGENTS.md`
+          475:9. Restore the full AGENTS.md:
+          476:   `cp <scratch>/AGENTS.md.commit2-full.bak AGENTS.md`
+          478:    `git -C /home/ext_root/lab-data/zetaris-getting-started diff -- AGENTS.md`
+          481:### Commit 2 — backup-edit-commit-restore for AGENTS.md
+          483:1. Reconfirm the full AGENTS.md backup exists and matches the working file:
+          484:   `cmp AGENTS.md <scratch>/AGENTS.md.commit2-full.bak`
+          485:2. Stage the Angular example, root `.env.example`, and AGENTS.md:
+          486:   `git -C /home/ext_root/lab-data/zetaris-getting-started add examples/eurostat-crud AGENTS.md .env.example`
+          487:3. Confirm the staged AGENTS.md hunk is examples-only relative to Commit 1:
+          488:   `git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached -- AGENTS.md`
+          494:8. Restore the full AGENTS.md backup:
+          495:   `cp <scratch>/AGENTS.md.commit2-full.bak AGENTS.md`
+          496:9. Verify `git status --short AGENTS.md` is clean.
+          539:Please say `start` to begin the sequential execution of the four atomic
+    time: 10/23/2026, 11:16:22.180 PM UTC
+    response: "\n\n\n\n"
+    duration: 2.754s
+    duration_ms: 2754
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: 'Need maybe check preview line 133 diff for Commit 1: it shows `@@ -1,6 +1,8 @@` and removes long line, adds 3 lines. Good. Commit 2 diff line 278. Let''s view to ensure correct.'
+    thinking_duration: 326ms
+    thinking_duration_ms: 326
+    tool_calls:
+      - tool: bash
+        args:
+          command: sed -n '270,295p' /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+        result: |2
+             # Zetaris HTTP API scripts (TypeScript and Python versions in scripts/).
+             ZETARIS_BASE_URL=http://localhost:3000
+            -ZETARIS_ORG_ID=
+            +ZETARIS_ORG_ID=1
+             # Set either an API key or a username and password for POST /api/auth/login.
+             # Create the key in the Zetaris GUI (never ask an agent to create it). Coding
+             # harness sessions (docs/connections/) read ZETARIS_API_KEY from .env.local.
+            
+            diff --git a/AGENTS.md b/AGENTS.md
+            --- a/AGENTS.md
+            +++ b/AGENTS.md
+            @@ -2,9 +2,11 @@
+            
+             This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages
+            -(`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`.
+            -You are acting as a data engineer against a Zetaris instance.
+            +(`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, SQL references in `docs/guides/`, and
+            +runnable examples in `examples/` (`examples/eurostat-crud-java/` is a Spring Boot JDBC demo;
+            +`examples/eurostat-crud/` is an Angular browser CRUD example). You are acting as a data engineer against a
+            +Zetaris instance.
+            
+             ## Connect first
+            ~~~
+
+            - Entire app directory is new; no mixed-concern hunks.
+            - Key behavior:
+    time: 10/23/2026, 11:16:25.076 PM UTC
+    response: "\n\n"
+    duration: 2.845s
+    duration_ms: 2845
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Good. The hunk header `@@ -2,9 +2,11 @@` is correct? The diff from intermediate to full shows lines 1-8 with context. We used `@@ -2,9 +2,11 @@`, okay.
+
+      Need maybe verify actual staged simulation to be sure Commit 2 hunk is examples-only. We can create a temporary index and use `git apply --cached`? Let's simulate without commit:
+      1. `GIT_INDEX_FILE=scratch/tmp-index git read-tree HEAD`
+      2. Add Commit 1 content: we need index entries for all Commit 1 files with working tree versions. But AGENTS.md working is full; we need intermediate blob. We can use `git hash-object -w` intermediate and `git update-index --cacheinfo`. For other files, `git add` with temp index will read working tree. Then `git diff --cached` shows Commit 1 staged diff. Then for Commit 2, update AGENTS.md index to full blob, add app files, diff cached. This is possible but a bit heavy. We already have direct diffs. Not necessary.
+
+      Need maybe check that the rewrap-only intermediate file's rest is byte-identical to full. `diff` showed only first paragraph. Good.
+
+      Need maybe update Commit 1 file count / "New file content summary" no. Fine.
+
+      Need maybe update `commit-preview.md` "Baseline" unchanged.
+
+      Need now respond to user. They asked for mechanism. We should say plan updated and prepared, no commit yet. But maybe they expect us to actually execute? They didn't say `start`. The original protocol requires explicit `start`. They haven't said start. So we wait. We can say: "Prepared. Commit 1 now gets the rewrap-only AGENTS.md; Commit 2 stages only the examples hunk via backup-edit-commit-restore. Backup and intermediate files are in scratch; index remains empty. Say `start`."
+
+      Need mention exact backup paths. Keep concise. Maybe 3 bullets.
+
+      But before final, check index empty and working AGENTS unchanged. Done. Maybe check no temp `AGENTS.commit1-check.md` left. We removed. Check.
+    thinking_duration: 3.682s
+    thinking_duration_ms: 3682
+    tool_calls:
+      - tool: bash
+        args:
+          command: test ! -e /home/ext_root/lab-data/zetaris-getting-started/AGENTS.commit1-check.md && echo 'no temp check file'; git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached --name-only; git -C /home/ext_root/lab-data/zetaris-getting-started status --short AGENTS.md
+        result: |
+          no temp check file
+           M AGENTS.md
+    time: 10/23/2026, 11:16:28.051 PM UTC
+    response: "\n\n"
+    duration: 6.440s
+    duration_ms: 6440
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Need final concise. Mention:
+      - Commit 1: AGENTS.md rewrap-only.
+      - Commit 2: AGENTS.md examples-only hunk, backup-edit-commit-restore.
+      - Backup: `scratch/.../AGENTS.md.commit2-full.bak`; intermediate: `AGENTS.md.commit1-rewrap-only.md`.
+      - Preview/messages updated; index empty; await `start`.
+
+      No need to mention question. Let's answer.
+    thinking_duration: 529ms
+    thinking_duration_ms: 529
+    time: 10/23/2026, 11:16:34.676 PM UTC
+    response: |-
+      Prepared for the backup-edit-commit-restore flow:
+
+      - Commit 1 gets the 120-column AGENTS.md rewrap only.
+      - Commit 2 gets only the examples hunk, then restores the full file.
+      - Backup and intermediate files are in `scratch/e95db8a7dffeuYlna87fyPRaWJ/`: `AGENTS.md.commit2-full.bak` and `AGENTS.md.commit1-rewrap-only.md`.
+
+      Preview and both commit messages are updated; index remains empty. Say `start` to execute.
+    duration: 5.975s
+    duration_ms: 5975
+

@@ -1,0 +1,1532 @@
+---
+user:
+  text: i want to use zetaris euro stat database rest interface
+  time: 10/23/2026, 8:24:17.585 PM UTC
+assistant:
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      We need respond to new request. User wants to use Zetaris Eurostat database REST interface. We have context: docs dossier, Zetaris object `EUROSTAT_REST`, table/views. Need understand what exactly they want. They may want the Angular app to use Zetaris REST interface instead of public Eurostat API. Need clarify or implement? "i want to use zetaris euro stat database rest interface" likely wants app to use Zetaris REST interface. We should inspect repo docs and app, maybe plan. Need determine current Zetaris REST interface details, auth, endpoints. We have prior dossier `zetaris-integration.md`, `api-reference.md`, runbook. Need read relevant docs and code. Also AGENTS rules: connect first, preflight, never expose API key, use `.env.local`; likely Zetaris REST endpoint and key. Need inspect. This is a new task. We should ask clarifying? They said "i want to use zetaris euro stat database rest interface" — could mean they want to query Zetaris, not public API. We need likely modify app to use Zetaris REST API. But browser app cannot hold Zetaris API key; prior decision was no Zetaris key in app. Need flag security/architecture. Could use a local proxy/BFF. Need inspect docs for Zetaris REST interface and existing scripts. Maybe there is a "REST interface" endpoint like `https://<host>/api/rest/...` requiring token. We need know. Let's read dossier `zetaris-integration.md`, `api-reference.md`, `operations-runbook.md`, maybe connection docs. Also root AGENTS. Use read/grep. Since user asks high-level, maybe first explain options and ask. But likely they expect implementation. Need gather facts.
+
+      Need check current app service uses public API. We can adapt to Zetaris. But security: Zetaris key in browser is bad. Could implement a BFF/proxy using existing Python scripts? The app is static Angular, no backend. Could add a minimal local proxy in Node/Express? But plan says no BFF. User now overrides. Need ask whether they want:
+      1. Replace public Eurostat API calls with Zetaris REST interface directly (requires exposing token in browser; not recommended).
+      2. Add a local backend proxy/BFF that holds `ZETARIS_API_KEY` and app calls it (recommended).
+      3. Just query Zetaris manually via SQL/curl, not change app.
+      Need understand "zetaris euro stat database rest interface" maybe they want to use Zetaris's REST table (already onboarded) as data source. Could implement via Zetaris REST endpoint with an API key from env. We need see if Zetaris REST API supports SQL query endpoint or REST table endpoint. The dossier likely documents. Let's read.
+    thinking_duration: 2.862s
+    thinking_duration_ms: 2862
+    tool_calls:
+      - tool: read
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/docs/data-sources/eurostat/operations-runbook.md
+        result: |-
+          <path>/home/ext_root/lab-data/zetaris-getting-started/docs/data-sources/eurostat/zetaris-integration.md</path>
+          <type>file</type>
+          <content>
+          1: # Zetaris integration
+          2: 
+          3: This document describes the Eurostat registration that already exists in the Zetaris instance. It is a
+          4: single-country slice of `une_rt_m`, not a general Eurostat connector. The raw REST table is backed by the
+          5: public endpoint; the three views decode or expose parts of the JSON-stat response.
+          6: 
+          7: ## Object inventory
+          8: 
+          9: | Object | Type | Identifier | Purpose |
+          10: | :--- | :--- | :--- | :--- |
+          11: | Eurostat database | Lightning database | `EUROSTAT_REST` (id 917) | Registration container. |
+          12: | Eurostat container | Schemastore container | `eurostat` | Holds the decoded views. |
+          13: | Raw slice | REST table | `EUROSTAT_REST.une_rt_m_pl` | JSON-stat response for Poland, total sex, total age, `PC_ACT`, `SA`. |
+          14: | Metadata view | Schemastore view | `eurostat.une_rt_m_pl_metadata_table` | Dataset label, source, update timestamp, geo labels, time index map. |
+          15: | Snapshot view | Schemastore view | `eurostat.une_rt_m_pl_snapshot_table` | Three fixed rate columns. |
+          16: | Series view | Schemastore view | `eurostat.une_rt_m_pl_series_table` | One `(period, rate)` row per populated month. |
+          17: 
+          18: The raw table name is written as `EUROSTAT_REST.une_rt_m_pl` in the registration and referenced as
+          19: `eurostat_rest.une_rt_m_pl` in the view definitions. Zetaris identifiers are case-insensitive in these
+          20: examples; use the casing shown in the object inventory when writing new SQL.
+          21: 
+          22: ## Registration request
+          23: 
+          24: The source is registered with `CREATE LIGHTNING REST TABLE`. The exact request block from
+          25: [`07_eurostat_create.sql`](../../../open_data/rest_apis/sql/non_rate_limited/07_eurostat_create.sql) is:
+          26: 
+          27: ```sql
+          28: CREATE LIGHTNING REST TABLE une_rt_m_pl FROM EUROSTAT_REST REQUEST(
+          29:     endpoint "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_m?format=JSON&geo=PL&sex=T&age=TOTAL&unit=PC_ACT&s_adj=SA&lang=EN",
+          30:     method "get",
+          31:     response_type "json",
+          32:     http_encoding "URLENCODED"
+          33: ) HEADER (
+          34: ) BODY ();
+          35: ```
+          36: 
+          37: The request has no headers and no body. The endpoint fixes the slice; there are no runtime parameters. To
+          38: register a different country or sex, create a separate REST table with a different URL and table name.
+          39: 
+          40: The database and container are created first:
+          41: 
+          42: ```sql
+          43: CREATE LIGHTNING DATABASE EUROSTAT_REST DESCRIBE BY "Eurostat REST API JSON-stat source";
+          44: CREATE SCHEMASTORE CONTAINER eurostat;
+          45: ```
+          46: 
+          47: ## View definitions
+          48: 
+          49: ### Metadata view
+          50: 
+          51: ```sql
+          52: CREATE SCHEMASTORE VIEW une_rt_m_pl_metadata_table WITH CONTAINER eurostat AS
+          53: SELECT
+          54:     label AS dataset_label,
+          55:     source AS dataset_source,
+          56:     updated AS last_updated,
+          57:     dimension.geo.category.label AS geo_labels,
+          58:     dimension.time.category.index AS time_index_map
+          59: FROM eurostat_rest.une_rt_m_pl;
+          60: ```
+          61: 
+          62: This view is safe to query without `explode()`. It returns one row with:
+          63: 
+          64: | Column | Type | Observed value |
+          65: | :--- | :--- | :--- |
+          66: | `dataset_label` | string | `Unemployment by sex and age - monthly data` |
+          67: | `dataset_source` | string | `ESTAT` |
+          68: | `last_updated` | string | `2026-10-21T11:00:00+0200` |
+          69: | `geo_labels` | `struct<PL:string>` | `{"PL":"Poland"}` |
+          70: | `time_index_map` | struct with 525 `bigint` fields | Period-to-index map, including `2026-09` |
+          71: 
+          72: `time_index_map` is a struct, not a map. It is convenient for direct backtick access, but it is not directly
+          73: `explode()`-able without JSON coercion.
+          74: 
+          75: ### Snapshot view
+          76: 
+          77: ```sql
+          78: CREATE SCHEMASTORE VIEW une_rt_m_pl_snapshot_table WITH CONTAINER eurostat AS
+          79: SELECT
+          80:     value.`168` AS rate_1997_01,
+          81:     value.`510` AS rate_2025_07,
+          82:     value.`522` AS rate_2026_07
+          83: FROM eurostat_rest.une_rt_m_pl;
+          84: ```
+          85: 
+          86: The view has exactly three columns. It is a spot check, not a wide-format snapshot. The indices are:
+          87: 
+          88: | Column | Flat index | Period | Observed value |
+          89: | :--- | ---: | :--- | ---: |
+          90: | `rate_1997_01` | 168 | 1997-01 | 11.8 |
+          91: | `rate_2025_07` | 510 | 2025-07 | 3.1 |
+          92: | `rate_2026_07` | 522 | 2026-07 | 3.4 |
+          93: 
+          94: The series view includes `2026-08`, but the snapshot view does not. Do not use the snapshot view as the
+          95: latest-value source.
+          96: 
+          97: ### Series view
+          98: 
+          99: ```sql
+          100: CREATE SCHEMASTORE VIEW une_rt_m_pl_series_table WITH CONTAINER eurostat AS
+          101: SELECT
+          102:     time_label AS period,
+          103:     CAST(rate_value AS DOUBLE) AS unemployment_rate_pct
+          104: FROM eurostat_rest.une_rt_m_pl
+          105: LATERAL VIEW explode(from_json(to_json(value), 'map<string,double>')) AS time_key, rate_value
+          106: LATERAL VIEW explode(from_json(to_json(dimension.time.category.index), 'map<string,bigint>')) AS time_label, time_index_value
+          107: WHERE CAST(time_key AS INT) = time_index_value;
+          108: ```
+          109: 
+          110: Both dynamic-key objects are coerced with `from_json(to_json(...))`. A plain `explode()` fails because
+          111: Zetaris infers both objects as structs, not maps. The join compares the stringified flat index in `value`
+          112: with the integer time index.
+          113: 
+          114: The view has two columns:
+          115: 
+          116: | Column | Type | Meaning |
+          117: | :--- | :--- | :--- |
+          118: | `period` | string | Calendar month in `YYYY-MM` form. |
+          119: | `unemployment_rate_pct` | double | Unemployment rate as a percentage of the labour force. |
+          120: 
+          121: It has 356 rows, one per populated month. It does not carry the source status flags.
+          122: 
+          123: ## Verified state
+          124: 
+          125: Observed on 2026-10-23 against the live Zetaris instance:
+          126: 
+          127: | Check | Result |
+          128: | :--- | :--- |
+          129: | `EUROSTAT_REST.une_rt_m_pl` selected fields | `class=dataset`, `source=ESTAT`, `updated=2026-10-21T11:00:00+0200`, `version=2.0` |
+          130: | Metadata row | Label, source, timestamp, and `geo_labels` as expected |
+          131: | Series row count | 356 |
+          132: | Series distinct periods | 356 |
+          133: | Series first period | `1997-01` |
+          134: | Series last period | `2026-08` |
+          135: | Snapshot values | `11.8`, `3.1`, `3.4` |
+          136: | Series view types | `period string`, `unemployment_rate_pct double` |
+          137: | Snapshot view types | `rate_1997_01 double`, `rate_2025_07 double`, `rate_2026_07 double` |
+          138: | Metadata view types | `dataset_label string`, `dataset_source string`, `last_updated string`, `geo_labels struct<PL:string>`, `time_index_map struct<...525 fields>` |
+          139: 
+          140: ## Verification queries
+          141: 
+          142: Run the preflight first:
+          143: 
+          144: ```bash
+          145: cd /home/ext_root/lab-data/zetaris-getting-started
+          146: python3 scripts/preflight.py
+          147: ```
+          148: 
+          149: Then run the checks one at a time:
+          150: 
+          151: ```bash
+          152: python3 scripts/run_sql.py -e "SELECT COUNT(*) AS n, MIN(period) AS first_period, MAX(period) AS last_period, COUNT(DISTINCT period) AS distinct_periods FROM eurostat.une_rt_m_pl_series_table"
+          153: python3 scripts/run_sql.py -e "SELECT period, unemployment_rate_pct FROM eurostat.une_rt_m_pl_series_table ORDER BY period DESC LIMIT 5"
+          154: python3 scripts/run_sql.py -e "SELECT dataset_label, dataset_source, last_updated, geo_labels FROM eurostat.une_rt_m_pl_metadata_table"
+          155: python3 scripts/run_sql.py -e "SELECT rate_1997_01, rate_2025_07, rate_2026_07 FROM eurostat.une_rt_m_pl_snapshot_table"
+          156: python3 scripts/run_sql.py -e "DESCRIBE eurostat.une_rt_m_pl_series_table"
+          157: python3 scripts/run_sql.py -e "DESCRIBE eurostat.une_rt_m_pl_snapshot_table"
+          158: ```
+          159: 
+          160: Expected outputs:
+          161: 
+          162: | Query | Expected |
+          163: | :--- | :--- |
+          164: | Count/range | `n=356`, `first_period=1997-01`, `last_period=2026-08`, `distinct_periods=356` |
+          165: | Latest rows | `2026-08` = 3.4, `2026-07` = 3.4, `2026-06` = 3.4, `2026-05` = 3.4, `2026-04` = 3.3 |
+          166: | Metadata | Label, `ESTAT`, `2026-10-21T11:00:00+0200`, `{"PL":"Poland"}` |
+          167: | Snapshot | `11.8`, `3.1`, `3.4` |
+          168: | Series describe | `period string`, `unemployment_rate_pct double` |
+          169: | Snapshot describe | Three `double` columns |
+          170: 
+          171: ## Known drift from the 2026-09-19 scripts
+          172: 
+          173: The onboarding scripts are historical records. They were correct on 2026-09-19 and are not edited by this
+          174: dossier.
+          175: 
+          176: 1. **Value count.** `07_eurostat_create.sql` says 355 values through `2026-07`. The live source now has 356
+          177:    values through `2026-08`.
+          178: 2. **Latest month.** Caveat 2 says `2026-08` was not published on 2026-09-19. It is published now. The new
+          179:    empty position is `2026-09`.
+          180: 3. **Snapshot examples.** `07_eurostat_select.sql` examples 2 and 3 use the three-column snapshot view and
+          181:    therefore end at `2026-07`. The full series view ends at `2026-08`.
+          182: 4. **Snapshot name.** `une_rt_m_pl_snapshot_table` can be misread as a full wide table. It is a three-column
+          183:    spot check.
+          184: 5. **Licence header.** The create script's header points to
+          185:    `https://ec.europa.eu/eurostat/about/policies/copyright`, which returns 404. The official page is
+          186:    `https://ec.europa.eu/eurostat/en/help/copyright-notice`.
+          187: 6. **Catalogue wording.** `open_data/rest_apis/rest-api-sources.md` says the licence is "commonly understood
+          188:    to align with CC-BY 4.0, but this has not been independently confirmed". The official notice distinguishes
+          189:    editorial content (CC BY 4.0) from statistical data reuse (authorised with attribution under Decision
+          190:    2011/833/EU). See [`license-and-attribution.md`](license-and-attribution.md).
+          191: 
+          192: ## Limits
+          193: 
+          194: - **Poland only.** The registration URL fixes `geo=PL`.
+          195: - **One sex.** The registration URL fixes `sex=T`.
+          196: - **One age class.** The registration URL fixes `age=TOTAL`.
+          197: - **One unit.** The registration URL fixes `unit=PC_ACT`.
+          198: - **One adjustment.** The registration URL fixes `s_adj=SA`.
+          199: - **No status flags in the series view.** The raw `status` struct has two entries for PL, but the decoded view
+          200:   does not expose them.
+          201: - **No history.** The registration returns the current vintage. Revisions overwrite prior values.
+          202: - **Dynamic structs.** `value`, `status`, and `dimension.time.category.index` are structs with one field per
+          203:   key. Do not treat them as maps without coercion.
+          204: - **Snapshot view is narrow.** It has three columns and ends at `2026-07`.
+          205: - **REST table is a registration, not a cache guarantee.** Treat queries as reads against the registered
+          206:   endpoint; do not assume a local copy or a vintage.
+          207: 
+          208: ## Adding another country
+          209: 
+          210: There is no runtime parameter on the registered REST table. To add Germany, for example, create a second
+          211: registration with `geo=DE` and a distinct table name:
+          212: 
+          213: ```sql
+          214: CREATE LIGHTNING REST TABLE une_rt_m_de FROM EUROSTAT_REST REQUEST(
+          215:     endpoint "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_m?format=JSON&geo=DE&sex=T&age=TOTAL&unit=PC_ACT&s_adj=SA&lang=EN",
+          216:     method "get",
+          217:     response_type "json",
+          218:     http_encoding "URLENCODED"
+          219: ) HEADER (
+          220: ) BODY ();
+          221: ```
+          222: 
+          223: Then create the same three views with `de` names. This is a live change and is not part of this dossier. For
+          224: ad-hoc analysis, the public API is simpler and avoids creating one table per country.
+          225: 
+          226: ## Security
+          227: 
+          228: - The Zetaris API key lives in `.env.local` and is used only by the repository's SQL helpers.
+          229: - Never put `ZETARIS_API_KEY` in a browser app, a notebook, a screenshot, or a document.
+          230: - The Eurostat endpoint itself needs no key.
+          231: - The REST table registration does not add authentication to Eurostat; it adds a Zetaris object that reads
+          232:   the public endpoint.
+          233: 
+          234: ## Teardown
+          235: 
+          236: The create script comments out the teardown. If removal is explicitly approved, the views can be dropped with
+          237: SQL:
+          238: 
+          239: ```sql
+          240: DROP VIEW eurostat.une_rt_m_pl_metadata_table;
+          241: DROP VIEW eurostat.une_rt_m_pl_snapshot_table;
+          242: DROP VIEW eurostat.une_rt_m_pl_series_table;
+          243: ```
+          244: 
+          245: The underlying REST table and Lightning database are removed through the Zetaris Data Explorer; the script
+          246: notes that there is no SQL path for those objects. Do not run teardown as part of routine verification.
+
+          (End of file - total 246 lines)
+          </content>
+      - tool: read
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/docs/data-sources/eurostat/operations-runbook.md
+        result: |-
+          <path>/home/ext_root/lab-data/zetaris-getting-started/docs/data-sources/eurostat/operations-runbook.md</path>
+          <type>file</type>
+          <content>
+          1: # Operations runbook
+          2: 
+          3: This runbook covers the Eurostat `une_rt_m` registration and the public API. It does not create, modify, or
+          4: delete anything unless a step explicitly says so. Run read-only checks first, and get approval before any
+          5: mutation.
+          6: 
+          7: ## Prerequisites
+          8: 
+          9: | Requirement | Why |
+          10: | :--- | :--- |
+          11: | Python 3.9 or later | Runs `scripts/preflight.py`, `scripts/run_sql.py`, and `scripts/onboard.py`. |
+          12: | `.env.local` | Holds `ZETARIS_REST_URL`, `ZETARIS_API_KEY`, `ZETARIS_USERNAME`, `ZETARIS_PASSWORD`, and `ZETARIS_USER_AGENT`. |
+          13: | Zetaris REST access | The registration and verification queries use the REST channel. |
+          14: | `curl` | Fetches the live JSON-stat response. |
+          15: | `python3` standard library | Parses JSON without extra packages. |
+          16: | Network access to `ec.europa.eu` | Required for live verification and refresh. |
+          17: 
+          18: No Node.js runtime is required for the data source or the Zetaris checks. A browser client only needs the
+          19: public API.
+          20: 
+          21: ## Preflight
+          22: 
+          23: Run this before any Zetaris work:
+          24: 
+          25: ```bash
+          26: cd /home/ext_root/lab-data/zetaris-getting-started
+          27: python3 scripts/preflight.py
+          28: ```
+          29: 
+          30: Expected result:
+          31: 
+          32: ```text
+          33: [PASS] env file: /home/ext_root/lab-data/zetaris-getting-started/.env.local
+          34: [PASS] ZETARIS_API_KEY: [REDACTED]
+          35: [PASS] ZETARIS_USERNAME: set
+          36: [PASS] ZETARIS_PASSWORD: [REDACTED]
+          37: [PASS] ZETARIS_USER_AGENT: set, in the form app_name user@domain.tld
+          38: [PASS] REST datasources: HTTP 200
+          39: [PASS] REST SELECT 1
+          40: [INFO] lightning databases: EUROSTAT_REST, ...
+          41: READY
+          42: ```
+          43: 
+          44: If preflight fails, stop and report the missing item. Do not create credentials or change the endpoint to work
+          45: around a failure.
+          46: 
+          47: ## Verify the live source
+          48: 
+          49: ### Fetch the registered slice
+          50: 
+          51: ```bash
+          52: cd /home/ext_root/lab-data/zetaris-getting-started
+          53: curl -sS --compressed \
+          54:   'https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_m?format=JSON&lang=EN&geo=PL&sex=T&age=TOTAL&unit=PC_ACT&s_adj=SA' \
+          55:   -o /tmp/eurostat_pl_t.json
+          56: ```
+          57: 
+          58: ### Check the count, range, missing positions, and status
+          59: 
+          60: ```bash
+          61: python3 - <<'PY'
+          62: import json
+          63: 
+          64: with open('/tmp/eurostat_pl_t.json', encoding='utf-8') as handle:
+          65:     data = json.load(handle)
+          66: 
+          67: time_index = data['dimension']['time']['category']['index']
+          68: index_to_period = {position: period for period, position in time_index.items()}
+          69: values = data['value']
+          70: keys = sorted(int(key) for key in values)
+          71: missing = data['extension']['positions-with-no-data']['time']
+          72: status = data['status']
+          73: 
+          74: print('updated', data['updated'])
+          75: print('values', len(values))
+          76: print('first', index_to_period[keys[0]])
+          77: print('last', index_to_period[keys[-1]])
+          78: print('missing', len(missing))
+          79: print('status', status)
+          80: PY
+          81: ```
+          82: 
+          83: Expected:
+          84: 
+          85: ```text
+          86: updated 2026-10-21T11:00:00+0200
+          87: values 356
+          88: first 1997-01
+          89: last 2026-08
+          90: missing 169
+          91: status {'312': 'b', '323': 'd'}
+          92: ```
+          93: 
+          94: If the values differ, record the new count, first/last period, missing count, and status. Update the
+          95: verification ledger in [`data-quality.md`](data-quality.md) before drawing conclusions.
+          96: 
+          97: ### Check the API contract
+          98: 
+          99: ```bash
+          100: curl -sSI \
+          101:   'https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_m?format=JSON&lang=EN&geo=PL&sex=T&age=TOTAL&unit=PC_ACT&s_adj=SA' \
+          102:   | sed -n '1,20p'
+          103: ```
+          104: 
+          105: Expected headers include:
+          106: 
+          107: ```text
+          108: HTTP/1.1 200 OK
+          109: Content-Type: application/json
+          110: Access-Control-Allow-Origin: *
+          111: Access-Control-Allow-Methods: GET
+          112: ```
+          113: 
+          114: ## Verify the Zetaris registration
+          115: 
+          116: ### Count and range
+          117: 
+          118: ```bash
+          119: python3 scripts/run_sql.py -e "SELECT COUNT(*) AS n, MIN(period) AS first_period, MAX(period) AS last_period, COUNT(DISTINCT period) AS distinct_periods FROM eurostat.une_rt_m_pl_series_table"
+          120: ```
+          121: 
+          122: Expected:
+          123: 
+          124: ```text
+          125: ['356', '1997-01', '2026-08', '356']
+          126: ```
+          127: 
+          128: ### Latest rows
+          129: 
+          130: ```bash
+          131: python3 scripts/run_sql.py -e "SELECT period, unemployment_rate_pct FROM eurostat.une_rt_m_pl_series_table ORDER BY period DESC LIMIT 5"
+          132: ```
+          133: 
+          134: Expected:
+          135: 
+          136: ```text
+          137: ['2026-08', '3.4']
+          138: ['2026-07', '3.4']
+          139: ['2026-06', '3.4']
+          140: ['2026-05', '3.4']
+          141: ['2026-04', '3.3']
+          142: ```
+          143: 
+          144: ### Metadata
+          145: 
+          146: ```bash
+          147: python3 scripts/run_sql.py -e "SELECT dataset_label, dataset_source, last_updated, geo_labels FROM eurostat.une_rt_m_pl_metadata_table"
+          148: ```
+          149: 
+          150: Expected:
+          151: 
+          152: ```text
+          153: ['Unemployment by sex and age - monthly data', 'ESTAT', '2026-10-21T11:00:00+0200', '{"PL":"Poland"}']
+          154: ```
+          155: 
+          156: ### Snapshot
+          157: 
+          158: ```bash
+          159: python3 scripts/run_sql.py -e "SELECT rate_1997_01, rate_2025_07, rate_2026_07 FROM eurostat.une_rt_m_pl_snapshot_table"
+          160: ```
+          161: 
+          162: Expected:
+          163: 
+          164: ```text
+          165: ['11.8', '3.1', '3.4']
+          166: ```
+          167: 
+          168: ### Types
+          169: 
+          170: ```bash
+          171: python3 scripts/run_sql.py -e "DESCRIBE eurostat.une_rt_m_pl_series_table"
+          172: python3 scripts/run_sql.py -e "DESCRIBE eurostat.une_rt_m_pl_snapshot_table"
+          173: python3 scripts/run_sql.py -e "DESCRIBE eurostat.une_rt_m_pl_metadata_table"
+          174: ```
+          175: 
+          176: Expected:
+          177: 
+          178: ```text
+          179: series:   period string, unemployment_rate_pct double
+          180: snapshot: rate_1997_01 double, rate_2025_07 double, rate_2026_07 double
+          181: metadata: dataset_label string, dataset_source string, last_updated string,
+          182:           geo_labels struct<PL:string>, time_index_map struct<...525 fields>
+          183: ```
+          184: 
+          185: ## Refresh the registration
+          186: 
+          187: The manifest id is `eurostat`. Use `onboard.py` so the dependency order and the create script are resolved from
+          188: the manifest rather than typed by hand.
+          189: 
+          190: ### Show the plan
+          191: 
+          192: ```bash
+          193: cd /home/ext_root/lab-data/zetaris-getting-started
+          194: python3 scripts/onboard.py plan eurostat
+          195: ```
+          196: 
+          197: ### Dry run
+          198: 
+          199: ```bash
+          200: python3 scripts/onboard.py run eurostat --dry-run
+          201: ```
+          202: 
+          203: Review the statement list. The create script includes:
+          204: 
+          205: - `CREATE LIGHTNING DATABASE EUROSTAT_REST`
+          206: - `CREATE SCHEMASTORE CONTAINER eurostat`
+          207: - `CREATE LIGHTNING REST TABLE une_rt_m_pl`
+          208: - Three `CREATE SCHEMASTORE VIEW` statements
+          209: 
+          210: ### Re-run with skip-exists
+          211: 
+          212: After approval, and only if the objects already exist or the intent is to refresh the registration:
+          213: 
+          214: ```bash
+          215: python3 scripts/onboard.py run eurostat --skip-exists
+          216: ```
+          217: 
+          218: `--skip-exists` skips duplicate-object errors. Without it, the run stops at the first object that already
+          219: exists. A refresh does not rewrite the view definitions if they already exist; to change a view, drop and
+          220: recreate it deliberately.
+          221: 
+          222: ### Verify after refresh
+          223: 
+          224: Re-run the count, range, metadata, snapshot, and type checks above. Compare the live source count with the
+          225: Zetaris count. They must match.
+          226: 
+          227: ## Teardown
+          228: 
+          229: Teardown is destructive. Get explicit approval before running it.
+          230: 
+          231: ### Show the teardown plan
+          232: 
+          233: ```bash
+          234: python3 scripts/onboard.py teardown eurostat
+          235: ```
+          236: 
+          237: ### Execute
+          238: 
+          239: ```bash
+          240: python3 scripts/onboard.py teardown eurostat --yes
+          241: ```
+          242: 
+          243: The runner drops the views it can derive from the create script. It leaves REST/file registrations, Lightning
+          244: databases, and SchemaStore containers for manual cleanup and lists them in its output. The create script's own
+          245: teardown section comments out only the three `DROP VIEW` statements. The REST table and `EUROSTAT_REST`
+          246: database are removed through the Zetaris Data Explorer.
+          247: 
+          248: Do not use `--drop-namespace` for this source; it is a USL option and there is no USL namespace here.
+          249: 
+          250: ## Troubleshooting
+          251: 
+          252: | Symptom | Likely cause | Action |
+          253: | :--- | :--- | :--- |
+          254: | Preflight 401 | Bad `ZETARIS_API_KEY` | Re-check `.env.local`; do not print the key. |
+          255: | Preflight 400 | Bad `X-Org-ID` or non-UUID `X-Request-ID` | Check the REST helper configuration. |
+          256: | `Operation not permitted` before HTTP | Local network restriction | Request elevated execution for the read-only preflight; do not change the endpoint. |
+          257: | Empty API result | Invalid dimension code | Check `age`, `sex`, `geo`, `unit`, and `s_adj` against the valid codes. |
+          258: | `dimension.age.category.index = {}` | Invalid age, such as `Y15-74` | Use `TOTAL`, `Y_LT25`, or `Y25-74`. |
+          259: | `value = {}` | Invalid code or no data for the slice | Re-check the URL; the API returns HTTP 200 even for empty results. |
+          260: | CORS error in a browser | Eurostat changed CORS or the request is malformed | Check the response headers; a proxy/BFF would be a separate approved change. |
+          261: | Series view empty | View creation failed or the raw table is empty | Check `DESCRIBE` and `SELECT * FROM eurostat_rest.une_rt_m_pl LIMIT 1`. |
+          262: | `DATATYPE_MISMATCH` on `explode()` | Dynamic-key object was not coerced | Apply `from_json(to_json(...), 'map<...>')` to both `value` and `dimension.time.category.index`. |
+          263: | Latest row is `2026-07` | Querying the snapshot view | Use `une_rt_m_pl_series_table`; the snapshot view ends at `2026-07`. |
+          264: | Latest row is `2026-08`, but `2026-09` is expected | Normal reporting lag | Check the source `updated` timestamp and the next release. |
+          265: | Count mismatch | Source revised or registration stale | Re-run the live count and the Zetaris count; refresh if needed. |
+          266: 
+          267: ## Security
+          268: 
+          269: - Keep `ZETARIS_API_KEY` in `.env.local`. Never print it, paste it into a document, or put it in a browser app.
+          270: - The Eurostat API needs no key. Do not add one.
+          271: - Do not commit `.env.local`, downloaded responses, or query outputs that contain credentials.
+          272: - Use the least-privileged Zetaris account that can read the objects. Creating, dropping, and granting are
+          273:   administrative actions.
+          274: - Do not run teardown or refresh commands without explicit approval.
+          275: 
+          276: ## Change log
+          277: 
+          278: | Date | Change | Evidence |
+          279: | :--- | :--- | :--- |
+          280: | 2026-10-23 | Initial verification of the live source, Zetaris series view, metadata view, and snapshot view. | 356 values, 356 rows, metadata timestamp, snapshot values. |
+          281: | 2026-10-23 | Documented the 2026-09-19 script drift. | Live source has 356 values through 2026-08; script says 355 through 2026-07. |
+          282: | 2026-10-23 | Corrected the licence reference to the official copyright notice. | Old `/about/policies/copyright` URL returns 404. |
+
+          (End of file - total 282 lines)
+          </content>
+      - tool: read
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/docs/data-sources/eurostat/api-reference.md
+        result: |-
+          <path>/home/ext_root/lab-data/zetaris-getting-started/docs/data-sources/eurostat/api-reference.md</path>
+          <type>file</type>
+          <content>
+          1: # Eurostat Statistics API reference
+          2: 
+          3: ## Endpoint
+          4: 
+          5: | Property | Value |
+          6: | :--- | :--- |
+          7: | Base URL | `https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/` |
+          8: | Dataset path | `une_rt_m` |
+          9: | Method | `GET` |
+          10: | Authentication | None |
+          11: | Registration | None |
+          12: | Response format | JSON-stat 2.0 when `format=JSON` |
+          13: | CORS | Enabled (`Access-Control-Allow-Origin: *`) |
+          14: | Typical content type | `application/json` |
+          15: 
+          16: The canonical request for the registered Zetaris slice is:
+          17: 
+          18: ```text
+          19: https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_m?format=JSON&lang=EN&geo=PL&sex=T&age=TOTAL&unit=PC_ACT&s_adj=SA
+          20: ```
+          21: 
+          22: ## Parameters
+          23: 
+          24: | Parameter | Required | Values used here | Meaning |
+          25: | :--- | :--- | :--- | :--- |
+          26: | `format` | Recommended | `JSON` | Return JSON-stat instead of SDMX or another format. |
+          27: | `lang` | Recommended | `EN` | Language for labels and metadata. |
+          28: | `freq` | Optional | `M` | Monthly frequency. The dataset contains only `M`. |
+          29: | `s_adj` | Optional | `SA` | Seasonal adjustment. Full codes: `NSA`, `SA`, `TC`. |
+          30: | `age` | Optional | `TOTAL` | Age class. Full codes: `TOTAL`, `Y_LT25`, `Y25-74`. |
+          31: | `unit` | Optional | `PC_ACT` | Unit. Full codes: `THS_PER`, `PC_ACT`. |
+          32: | `sex` | Optional | `T` | Sex. Full codes: `T`, `M`, `F`. |
+          33: | `geo` | Optional | `PL` | Geography. Full dataset has 38 categories. |
+          34: | `time` | Optional | Omitted | Time filter. The registration returns the full 525-month axis. |
+          35: 
+          36: Omitting a dimension returns all of its categories. The API does not require every dimension to be filtered.
+          37: The registered Zetaris slice fixes six dimensions and leaves `time` unfiltered.
+          38: 
+          39: ### Fixed dimensions in the registration
+          40: 
+          41: | Dimension | Value | Why |
+          42: | :--- | :--- | :--- |
+          43: | `freq` | `M` | The dataset is monthly. |
+          44: | `s_adj` | `SA` | The registration uses the headline seasonally adjusted series. |
+          45: | `age` | `TOTAL` | The registration uses the total age class. |
+          46: | `unit` | `PC_ACT` | The registration uses rates, not levels. |
+          47: | `sex` | `T` | The registration uses the total sex. |
+          48: | `geo` | `PL` | The registration is a Poland example. |
+          49: 
+          50: ## Exact request URLs
+          51: 
+          52: ### Registered slice
+          53: 
+          54: ```text
+          55: https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_m?format=JSON&lang=EN&geo=PL&sex=T&age=TOTAL&unit=PC_ACT&s_adj=SA
+          56: ```
+          57: 
+          58: ### Browser template
+          59: 
+          60: ```text
+          61: https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_m?format=JSON&lang=EN&freq=M&s_adj=SA&age=TOTAL&unit=PC_ACT&sex={sex}&geo={geo}
+          62: ```
+          63: 
+          64: Replace `{sex}` with `T`, `M`, or `F`, and `{geo}` with a supported country code such as `PL`, `DE`, `FR`,
+          65: `ES`, or `IT`.
+          66: 
+          67: ### Full dataset
+          68: 
+          69: ```text
+          70: https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_m?format=JSON&lang=EN
+          71: ```
+          72: 
+          73: The full response is about 10 MB uncompressed at the time of verification. It is useful for exploration but
+          74: too large for a browser page that only needs one series.
+          75: 
+          76: ## Response shape
+          77: 
+          78: A filtered response has 11 top-level fields:
+          79: 
+          80: ```text
+          81: version, class, label, source, updated, value, status, id, size, dimension, extension
+          82: ```
+          83: 
+          84: ### Top-level fields
+          85: 
+          86: | Field | Type | Notes |
+          87: | :--- | :--- | :--- |
+          88: | `version` | string | `2.0`. |
+          89: | `class` | string | `dataset`. |
+          90: | `label` | string | Dataset title. |
+          91: | `source` | string | `ESTAT`. |
+          92: | `updated` | string | Source timestamp. |
+          93: | `value` | object | Sparse observations keyed by stringified flat index. |
+          94: | `status` | object | Optional status flags keyed by the same flat index. |
+          95: | `id` | array | Dimension order. |
+          96: | `size` | array | Dimension cardinalities. |
+          97: | `dimension` | object | Category indexes and labels per dimension. |
+          98: | `extension` | object | Annotations, no-data positions, and status labels. |
+          99: 
+          100: ### Filtered slice dimensions
+          101: 
+          102: For the PL/T request, `id` and `size` are:
+          103: 
+          104: ```text
+          105: id:   ["freq", "s_adj", "age", "unit", "sex", "geo", "time"]
+          106: size: [1, 1, 1, 1, 1, 1, 525]
+          107: ```
+          108: 
+          109: The time axis has 525 categories, but only 356 have values. `value` is sparse; it does not contain keys for
+          110: the 169 empty positions.
+          111: 
+          112: ### Response excerpt
+          113: 
+          114: ```text
+          115: {
+          116:   "version": "2.0",
+          117:   "class": "dataset",
+          118:   "label": "Unemployment by sex and age - monthly data",
+          119:   "source": "ESTAT",
+          120:   "updated": "2026-10-21T11:00:00+0200",
+          121:   "value": {
+          122:     "168": 11.8,
+          123:     "169": 11.5,
+          124:     ...
+          125:     "523": 3.4
+          126:   },
+          127:   "status": {
+          128:     "312": "b",
+          129:     "323": "d"
+          130:   },
+          131:   "id": ["freq", "s_adj", "age", "unit", "sex", "geo", "time"],
+          132:   "size": [1, 1, 1, 1, 1, 1, 525],
+          133:   "dimension": {
+          134:     "time": {
+          135:       "label": "Time",
+          136:       "category": {
+          137:         "index": {
+          138:           "1983-01": 0,
+          139:           ...
+          140:           "1997-01": 168,
+          141:           ...
+          142:           "2026-08": 523,
+          143:           "2026-09": 524
+          144:         },
+          145:         "label": {
+          146:           "1983-01": "1983-01",
+          147:           ...
+          148:         }
+          149:       }
+          150:     },
+          151:     ...
+          152:   },
+          153:   "extension": {
+          154:     "datastructure": {
+          155:       "id": "UNE_RT_M",
+          156:       "agencyId": "ESTAT",
+          157:       "version": "156.0"
+          158:     },
+          159:     "positions-with-no-data": {
+          160:       "time": [0, 1, ..., 167, 524]
+          161:     },
+          162:     "status": {
+          163:       "label": {
+          164:         "b": "break in time series",
+          165:         "d": "definition differs (see metadata)"
+          166:       }
+          167:     }
+          168:   }
+          169: }
+          170: ```
+          171: 
+          172: The excerpt is illustrative; the real `value` object has 356 entries and the real `dimension.time.category.index`
+          173: has 525 entries.
+          174: 
+          175: ## JSON-stat decoding
+          176: 
+          177: ### Algorithm
+          178: 
+          179: 1. Read `id` and `size`.
+          180: 2. Build `stride[d] = product(size[d + 1:])`.
+          181: 3. Invert `dimension.time.category.index` so the integer position maps to a period label.
+          182: 4. For each time position, compute the flat index with the other dimensions fixed at index `0`:
+          183: 
+          184:    ```text
+          185:    flat = time_position * stride[time_dimension]
+          186:    ```
+          187: 
+          188:    This is valid for a request that filters every non-time dimension to one category. The registered slice
+          189:    does exactly that.
+          190: 5. Read `value[String(flat)]`.
+          191: 6. Keep only finite numeric values.
+          192: 7. Sort ascending by period label.
+          193: 
+          194: For the registered slice, every non-time dimension has size 1, so the flat index equals the time position.
+          195: `2026-08` has position `523`, so its value is `value["523"]`.
+          196: 
+          197: ### TypeScript decoder for a filtered request
+          198: 
+          199: ```ts
+          200: export interface JsonStatDataset {
+          201:   version: string;
+          202:   class: "dataset";
+          203:   label: string;
+          204:   source: string;
+          205:   updated: string;
+          206:   value: Record<string, number>;
+          207:   status?: Record<string, string>;
+          208:   id: string[];
+          209:   size: number[];
+          210:   dimension: Record<string, {
+          211:     label: string;
+          212:     category: {
+          213:       index: Record<string, number>;
+          214:       label: Record<string, string>;
+          215:     };
+          216:   }>;
+          217:   extension?: {
+          218:     status?: { label?: Record<string, string> };
+          219:     "positions-with-no-data"?: { time?: number[] };
+          220:   };
+          221: }
+          222: 
+          223: export interface Observation {
+          224:   period: string;
+          225:   rate: number;
+          226: }
+          227: 
+          228: export function decodeSeries(dataset: JsonStatDataset): Observation[] {
+          229:   const timeDimension = dataset.id.indexOf("time");
+          230:   if (timeDimension === -1) {
+          231:     throw new Error("JSON-stat response has no time dimension");
+          232:   }
+          233: 
+          234:   const strides = dataset.size.map((_, index) =>
+          235:     dataset.size.slice(index + 1).reduce((product, size) => product * size, 1),
+          236:   );
+          237:   const timeIndex = dataset.dimension.time.category.index;
+          238:   const observations: Observation[] = [];
+          239: 
+          240:   for (const [period, position] of Object.entries(timeIndex)) {
+          241:     const flat = position * strides[timeDimension];
+          242:     const value = dataset.value[String(flat)];
+          243:     if (typeof value === "number" && Number.isFinite(value)) {
+          244:       observations.push({ period, rate: value });
+          245:     }
+          246:   }
+          247: 
+          248:   return observations.sort((left, right) => left.period.localeCompare(right.period));
+          249: }
+          250: ```
+          251: 
+          252: ### Python decoder for a filtered request
+          253: 
+          254: ```python
+          255: import json
+          256: from urllib.request import urlopen
+          257: 
+          258: URL = (
+          259:     "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_m"
+          260:     "?format=JSON&lang=EN&geo=PL&sex=T&age=TOTAL&unit=PC_ACT&s_adj=SA"
+          261: )
+          262: 
+          263: with urlopen(URL, timeout=60) as response:
+          264:     dataset = json.load(response)
+          265: 
+          266: time_index = dataset["dimension"]["time"]["category"]["index"]
+          267: index_to_period = {position: period for period, position in time_index.items()}
+          268: rows = sorted(
+          269:     (index_to_period[int(key)], value)
+          270:     for key, value in dataset["value"].items()
+          271: )
+          272: print(rows[0], rows[-1])
+          273: ```
+          274: 
+          275: ### General flat-index decoder
+          276: 
+          277: For a response with more than one non-time category, compute the flat index with the full formula:
+          278: 
+          279: ```text
+          280: flat = sum(category_index[d] * stride[d] for d in dimensions)
+          281: ```
+          282: 
+          283: Do not assume that the `value` key is a time index unless every other dimension has size 1.
+          284: 
+          285: ## Invalid codes
+          286: 
+          287: Eurostat does **not** return an HTTP error for an invalid dimension code. It returns HTTP 200 with an empty
+          288: category and an empty value object. Verified examples:
+          289: 
+          290: | Request | Observed |
+          291: | :--- | :--- |
+          292: | `age=Y15-74` | `dimension.age.category.index = {}`; `value = {}` |
+          293: | `geo=XX` | `dimension.geo.category.index = {}`; `value = {}` |
+          294: 
+          295: This looks like "no data available" rather than "wrong parameter". Validate codes against the allowlists before
+          296: requesting. The valid age codes are `TOTAL`, `Y_LT25`, and `Y25-74`; `Y15-74` is not valid for this dataset.
+          297: 
+          298: ## Errors, CORS, and limits
+          299: 
+          300: ### HTTP and network errors
+          301: 
+          302: - A malformed URL or unsupported format can return a 4xx response.
+          303: - A server-side problem can return a 5xx response.
+          304: - A network failure or a CORS change appears as a browser fetch rejection, not as a JSON error.
+          305: - The API does not use an API key, so there is no 401 path for this source.
+          306: 
+          307: ### CORS
+          308: 
+          309: The live response includes:
+          310: 
+          311: ```text
+          312: Access-Control-Allow-Origin: *
+          313: Access-Control-Allow-Methods: GET
+          314: Access-Control-Allow-Headers: Content-Type, Accept, X-Requested-With
+          315: ```
+          316: 
+          317: This permits direct browser requests. If Eurostat changes the CORS policy, a browser client needs a proxy or
+          318: a server-side component. The repository's registered Zetaris table is not a browser proxy.
+          319: 
+          320: ### Rate limits and caching
+          321: 
+          322: The source is public and does not publish a numeric rate limit in the response. Treat it as a shared public
+          323: service:
+          324: 
+          325: - Request one series at a time.
+          326: - Cache responses for a short period, such as five minutes.
+          327: - Do not loop over all 38 countries and 3 sex codes on every page load.
+          328: - Do not fetch the full 10 MB dataset for a single-series view.
+          329: 
+          330: The full dataset is 757,828 values and is not appropriate for a browser page that needs one country/sex pair.
+          331: 
+          332: ## Data freshness and revisions
+          333: 
+          334: - `updated` is the authoritative source timestamp for the current vintage.
+          335: - The latest PL month is `2026-08`; `2026-09` is present but empty.
+          336: - Eurostat publishes monthly data approximately 31 days after the reference month.
+          337: - Routine revisions, annual seasonal-adjustment reviews, and major revisions can change historical values.
+          338: - The API does not expose a vintage history. Store the `updated` value alongside any derived artifact if
+          339:   reproducibility matters.
+          340: 
+          341: ## References
+          342: 
+          343: - [Eurostat API Statistics guide](https://wikis.ec.europa.eu/display/EUROSTATHELP/API+Statistics+-+data+query)
+          344: - [JSON-stat specification](https://json-stat.org/)
+          345: - [Eurostat ESMS metadata for `une_rt_m`](https://ec.europa.eu/eurostat/cache/metadata/en/une_rt_m_esms.htm)
+          346: - [Eurostat copyright notice](https://ec.europa.eu/eurostat/en/help/copyright-notice)
+          347: - [Dataset DOI](https://doi.org/10.2908/UNE_RT_M)
+
+          (End of file - total 347 lines)
+          </content>
+    time: 10/23/2026, 8:24:17.817 PM UTC
+    response: "\n\n"
+    duration: 9.136s
+    duration_ms: 9136
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      We need respond to user. They may want app to use Zetaris REST interface. Need understand Zetaris REST API details. The dossier says Zetaris REST table is not a browser proxy, and API key must not be in browser. So direct use in Angular requires exposing key or BFF. Need likely propose BFF. But maybe "zetaris euro stat database rest interface" refers to Zetaris's REST endpoint for querying, not the app. We can offer to wire app through a small local backend proxy. Need ask clarifying because significant architecture change.
+
+      We need inspect `.env.local` keys? Do not print secrets. Could read scripts to know REST API path and query format. `scripts/run_sql.py` and `scripts/preflight.py`; `docs/connections` maybe. We need know if Zetaris REST supports SQL query and result shape. Let's read `scripts/run_sql.py`, `preflight.py`, maybe `docs/guides/connections`. Use read.
+    thinking_duration: 1.699s
+    thinking_duration_ms: 1699
+    tool_calls:
+      - tool: read
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scripts/preflight.py
+        result: |-
+          <path>/home/ext_root/lab-data/zetaris-getting-started/scripts/run_sql.py</path>
+          <type>file</type>
+          <content>
+          1: #!/usr/bin/env python3
+          2: """Run a Zetaris SQL script one statement at a time.
+          3: 
+          4:     python3 scripts/run_sql.py open_data/rest_apis/sql/rate_limited/12_company_dns_create.sql
+          5:     python3 scripts/run_sql.py --channel jdbc --jar /path/to/driver.jar FILE.sql
+          6:     python3 scripts/run_sql.py -e "SELECT 1"
+          7:     python3 scripts/run_sql.py --dry-run FILE.sql
+          8: 
+          9: Splits the script on semicolons (quote- and comment-aware), keeps a
+          10: multi-table COMPILE USL whole, fills in the user-agent placeholder from
+          11: ZETARIS_USER_AGENT, and stops at the first error. It never prints credentials.
+          12: Creating objects changes the instance, so use --dry-run first if unsure.
+          13: """
+          14: 
+          15: from __future__ import annotations
+          16: 
+          17: import argparse
+          18: import sys
+          19: from pathlib import Path
+          20: 
+          21: sys.path.insert(0, str(Path(__file__).resolve().parent))
+          22: import zetaris_sql as z  # noqa: E402
+          23: 
+          24: 
+          25: def one_line(sql: str, n: int = 100) -> str:
+          26:     s = " ".join(sql.split())
+          27:     return s if len(s) <= n else s[: n - 3] + "..."
+          28: 
+          29: 
+          30: def main() -> int:
+          31:     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+          32:     p.add_argument("file", nargs="?", help="SQL file to run")
+          33:     p.add_argument("-e", "--execute", help="run this SQL text instead of a file")
+          34:     p.add_argument("--channel", choices=["rest", "jdbc"], default="rest")
+          35:     p.add_argument("--jar", help="JDBC driver JAR (or set ZETARIS_JDBC_JAR)")
+          36:     p.add_argument("--env-file", help="env file to load (default: .env.local in the repo root, or the top-level checkout for a worktree)")
+          37:     p.add_argument("--limit", type=int, default=20, help="max result rows to print per statement")
+          38:     p.add_argument("--skip-exists", action="store_true", help="treat 'already exists' errors as skipped, not failures")
+          39:     p.add_argument("--dry-run", action="store_true", help="print the statements without connecting")
+          40:     args = p.parse_args()
+          41: 
+          42:     if bool(args.file) == bool(args.execute):
+          43:         p.error("give either a SQL file or -e SQL")
+          44: 
+          45:     try:
+          46:         env = z.load_env(args.env_file)
+          47:         text = args.execute if args.execute else Path(args.file).read_text(encoding="utf-8")
+          48:         statements = z.split_statements(text)
+          49:         if not statements:
+          50:             raise z.ZetarisError("No SQL statements found.")
+          51: 
+          52:         if args.dry_run:
+          53:             try:
+          54:                 statements = z.apply_user_agent(statements)
+          55:             except z.ZetarisError as e:
+          56:                 print(f"warning: {e}", file=sys.stderr)
+          57:             for i, s in enumerate(statements, 1):
+          58:                 print(f"{i:>3}. {one_line(s)}")
+          59:             print(f"{len(statements)} statements (dry run, nothing sent)")
+          60:             return 0
+          61: 
+          62:         statements = z.apply_user_agent(statements)
+          63:         z.reexec_in_venv_if_needed(args.channel)
+          64:         print(f"channel={args.channel} env={env or 'process environment'} statements={len(statements)}")
+          65:         channel = z.open_channel(args.channel, args.jar)
+          66:     except (z.ZetarisError, OSError) as e:
+          67:         print(f"error: {e}", file=sys.stderr)
+          68:         return 1
+          69: 
+          70:     failed = skipped = 0
+          71:     try:
+          72:         for i, stmt in enumerate(statements, 1):
+          73:             print(f"{i:>3}. {one_line(stmt)}")
+          74:             try:
+          75:                 result = channel.run(stmt, limit=args.limit)
+          76:             except z.ZetarisError as e:
+          77:                 if args.skip_exists and z.ALREADY_EXISTS.search(str(e)):
+          78:                     skipped += 1
+          79:                     print("     skipped (already exists)")
+          80:                     continue
+          81:                 failed += 1
+          82:                 print(f"     ERROR {e}", file=sys.stderr)
+          83:                 break
+          84:             for row in result.rows[: args.limit]:
+          85:                 print("     ", row)
+          86:             if len(result.rows) > args.limit:
+          87:                 print(f"      ... {len(result.rows) - args.limit} more rows")
+          88:     finally:
+          89:         channel.close()
+          90: 
+          91:     ran = i - failed
+          92:     print(f"done: {ran}/{len(statements)} statements ok" + (f", {skipped} skipped" if skipped else "") + (", STOPPED on error" if failed else ""))
+          93:     return 1 if failed else 0
+          94: 
+          95: 
+          96: if __name__ == "__main__":
+          97:     sys.exit(main())
+
+          (End of file - total 97 lines)
+          </content>
+      - tool: read
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scripts/preflight.py
+        result: |-
+          <path>/home/ext_root/lab-data/zetaris-getting-started/scripts/preflight.py</path>
+          <type>file</type>
+          <content>
+          1: #!/usr/bin/env python3
+          2: """Check that this machine and instance are ready before onboarding data.
+          3: 
+          4:     python3 scripts/preflight.py            # REST checks
+          5:     python3 scripts/preflight.py --jdbc     # also check JDBC (Java, jaydebeapi, driver JAR)
+          6: 
+          7: Read-only: it reports what is missing and installs or creates nothing. Exits 1
+          8: if any check fails. Credentials are checked for presence and never printed.
+          9: """
+          10: 
+          11: from __future__ import annotations
+          12: 
+          13: import argparse
+          14: import os
+          15: import socket
+          16: import sys
+          17: from pathlib import Path
+          18: 
+          19: sys.path.insert(0, str(Path(__file__).resolve().parent))
+          20: import zetaris_sql as z  # noqa: E402
+          21: 
+          22: failures = 0
+          23: 
+          24: 
+          25: def report(ok: bool | None, label: str, detail: str = "") -> None:
+          26:     """ok=True pass, False fail, None informational."""
+          27:     global failures
+          28:     mark = {True: "PASS", False: "FAIL", None: "INFO"}[ok]
+          29:     failures += ok is False
+          30:     print(f"[{mark}] {label}" + (f": {detail}" if detail else ""))
+          31: 
+          32: 
+          33: def check_env(args) -> None:
+          34:     env = z.load_env(args.env_file)
+          35:     report(env is not None, "env file", str(env) if env else "no .env.local found (looked in: " + ", ".join(map(str, z.env_file_candidates())) + ")" + (f". {h}" if (h := z.stray_env_hint()) else ""))
+          36:     for name, why in (
+          37:         ("ZETARIS_API_KEY", "REST bearer key, created in the Zetaris GUI"),
+          38:         ("ZETARIS_USERNAME", "spec fetch and JDBC"),
+          39:         ("ZETARIS_PASSWORD", "spec fetch and JDBC"),
+          40:     ):
+          41:         report(bool(os.environ.get(name)), name, "set" if os.environ.get(name) else f"MISSING ({why})")
+          42:     ua = os.environ.get("ZETARIS_USER_AGENT")
+          43:     if not ua:
+          44:         report(None, "ZETARIS_USER_AGENT", "not set (needed by any script with the YOUR_APP_NAME placeholder, such as the company_dns scripts and SEC EDGAR: set it to 'app_name user@domain.tld')")
+          45:     elif z.valid_user_agent(ua):
+          46:         report(True, "ZETARIS_USER_AGENT", "set, in the form app_name user@domain.tld")
+          47:     else:
+          48:         report(False, "ZETARIS_USER_AGENT", "set, but it does not identify you: use 'app_name user@domain.tld' (company_dns V4 gives anything vaguer the strict rate limit)")
+          49: 
+          50: 
+          51: def check_rest() -> None:
+          52:     try:
+          53:         ch = z.RestChannel()
+          54:     except z.ZetarisError as e:
+          55:         report(False, "REST", str(e))
+          56:         return
+          57:     try:
+          58:         ds = ch.datasources()
+          59:         names = [d.get("name") for d in (ds if isinstance(ds, list) else ds.get("data", []))]
+          60:         report(True, "REST datasources", f"HTTP 200, {len(names)} listed: {', '.join(map(str, names))}")
+          61:         report(ch.run("SELECT 1").rows == [["1"]], "REST SELECT 1")
+          62:         state(ch)
+          63:     except z.ZetarisError as e:
+          64:         hint = " (401: bad key; 400: bad X-Org-ID or request id)" if "HTTP 40" in str(e) else ""
+          65:         report(False, "REST", str(e) + hint)
+          66: 
+          67: 
+          68: def check_jdbc(args) -> None:
+          69:     host, port = "localhost", 10000
+          70:     try:
+          71:         socket.create_connection((host, port), timeout=3).close()
+          72:         report(True, f"JDBC port {port}", "open")
+          73:     except OSError:
+          74:         report(False, f"JDBC port {port}", "closed")
+          75:     home = z.find_java_home()
+          76:     report(home is not None, "Java (JDK 11+)", home or "none found. On macOS `java` can be a stub; try `brew install openjdk@17` (the temurin cask needs sudo)")
+          77:     venv = z.venv_python()
+          78:     report(venv is not None, ".venv", str(venv) if venv else "missing; run `python3 -m venv .venv && .venv/bin/pip install -r scripts/requirements.txt`")
+          79:     try:
+          80:         import jaydebeapi  # noqa: F401
+          81:         have = True
+          82:     except ImportError:
+          83:         have = False
+          84:     report(have, "jaydebeapi", "importable" if have else "not installed in this Python (create .venv and install scripts/requirements.txt)")
+          85:     jar = args.jar or os.environ.get("ZETARIS_JDBC_JAR")
+          86:     if not jar:
+          87:         report(False, "driver JAR", "path not set. Ask the user; pass --jar or set ZETARIS_JDBC_JAR")
+          88:     else:
+          89:         report(Path(jar).is_file(), "driver JAR", jar if Path(jar).is_file() else f"not found: {jar}")
+          90:     if home and have and jar and Path(jar).is_file():
+          91:         try:
+          92:             ch = z.JdbcChannel(jar)
+          93:             report(ch.run("SELECT 1").rows in ([[1]], [["1"]]), "JDBC SELECT 1")
+          94:             state(ch)
+          95:             ch.close()
+          96:         except z.ZetarisError as e:
+          97:             report(False, "JDBC SELECT 1", str(e))
+          98: 
+          99: 
+          100: def state(ch) -> None:
+          101:     """What is already on the instance. SHOW DATASOURCES omits Lightning sources."""
+          102:     for sql, label in (
+          103:         ("SHOW DATASOURCES", "datasources"),
+          104:         ("SHOW LIGHTNING DATABASES", "lightning databases"),
+          105:         ("SHOW NAMESPACES OR TABLES IN lightning.metastore", "USL namespaces"),
+          106:     ):
+          107:         try:
+          108:             rows = ch.run(sql).rows
+          109:             report(None, label, ", ".join(str(r[0]) for r in rows) if rows else "none")
+          110:         except z.ZetarisError as e:
+          111:             report(None, label, f"query failed: {e}")
+          112: 
+          113: 
+          114: def main() -> int:
+          115:     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+          116:     p.add_argument("--jdbc", action="store_true", help="also check JDBC prerequisites and connection")
+          117:     p.add_argument("--jar", help="JDBC driver JAR path (or set ZETARIS_JDBC_JAR)")
+          118:     p.add_argument("--env-file", help="env file to load")
+          119:     args = p.parse_args()
+          120:     if args.jdbc:
+          121:         z.reexec_in_venv_if_needed("jdbc")  # hop into .venv when it has jaydebeapi
+          122:     check_env(args)
+          123:     check_rest()
+          124:     if args.jdbc:
+          125:         check_jdbc(args)
+          126:     print()
+          127:     print("READY" if not failures else f"NOT READY: {failures} check(s) failed")
+          128:     return 1 if failures else 0
+          129: 
+          130: 
+          131: if __name__ == "__main__":
+          132:     sys.exit(main())
+
+          (End of file - total 132 lines)
+          </content>
+    time: 10/23/2026, 8:24:27.124 PM UTC
+    response: "\n\n"
+    duration: 4.589s
+    duration_ms: 4589
+  - agent: compaction
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      We need produce structured summary combining prior and current conversation. Need reflect completion status. Need be terse but comprehensive. Need include objective, important details, work state completed/active/blocked, next move, relevant files. Since work appears essentially complete. Need mention no commit/push, local-only plan/task. Need carry constraints: no secrets, app no Zetaris, etc.
+
+      Need reconstruct all key facts from prior and current.
+
+      Current conversation includes:
+      - Implemented core models, labels, Eurostat models/service, store, app shell/config/routes/html/css/styles/index, RateChart, SeriesList, SeriesForm, SeriesDetail, README.
+      - Build errors fixed: `override readonly cause`.
+      - Tests written: EurostatService 5, store 7, app 2, list 2, form 3, detail 2 = 21 tests, 6 files pass.
+      - Test fixes: invalid geo cast, URL matching `urlWithParams.startsWith`, URL search params parse via `new URL`.
+      - Build passes; production bundle main 331.40 kB, styles 6.81 kB.
+      - Playwright install under mise: `mise use --global npm:playwright@1.64.1`; browser install succeeded; `playwright install-deps chromium` installed system deps (sudo passwordless); browser smoke tests pass:
+        - CRUD smoke with route interception: empty state, create/read, reload persistence, update, delete; screenshot path `scratch/.../browser-smoke.png`.
+        - Live Eurostat fetch: PL/T latest 2026-08 = 3.4.
+      - Dev server started and stopped; PID 2494354 killed.
+      - App README written and lint clean.
+      - Task checklist marked COMPLETED at 2026-10-23 20:12; all phases checked; verification updated.
+      - Final lint: dossier + app README 0 issues; root README/catalog 56 pre-existing issues; link audit 70 links 0 missing.
+      - `ng version`: Angular CLI 22.2.4, Angular 22.2.3, Node 26.10.0, npm 11.19.1.
+      - git status: modified `.env.example` (pre-existing?), README, rest-api-sources; untracked `.markdownlint-cli2.jsonc`, docs/data-sources, examples/eurostat-crud, examples/eurostat-crud-java, key.txt. Need not say `.env.example` modified? It was prior? Could mention no commit. Need avoid exposing secrets. `key.txt` maybe secret? Do not mention contents. Could mention untracked files exist; not needed.
+
+      - Potential DOX open question: child AGENTS not created; examples folder has eurostat-crud, eurostat-crud-java, pudl-chart. The conversation ended before deciding. We should not introduce unresolved blocker unless needed. The final next move could be "report completion; optionally decide DOX/AGENTS." But task complete. The template asks Next Move; can say "(none)" or "Report results; no commit." Need maybe "No further implementation required." But user asked to continue; final answer likely just report. However summary should guide another agent. Could say immediate next action is final user-facing report; optionally DOX decision. Need not mention unresolved DOX unless relevant. Since work state completed, Active none, Blocked none. But task says no commit/push. Next move: report completion, leave uncommitted. Also maybe optional: decide whether to add `examples/eurostat-crud/AGENTS.md` per DOX; but this is not requested and may be overreach. Do we include as an open consideration? The conversation ended at listing examples; no decision. But "Blocked" should not have. Could mention in Important Details "DOX child AGENTS not added; no existing child index covers examples/." But that may be a residual. Is it necessary? The DOX framework might require. However final answer likely should not highlight. The summary should carry context. Maybe include "DOX/AGENTS: no new child AGENTS was created; root AGENTS unchanged." This is a fact. Could be in Important Details or Blocked? It's not blocking. Hmm.
+
+      Need include exact paths:
+      - app root `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud`
+      - plan/task paths.
+      - key source files.
+      - scratch smoke scripts paths.
+      - Playwright install location maybe `/home/ext_root/.local/share/mise/installs/npm-playwright/1.64.1/node_modules`.
+      - Browser cache `/home/ext_root/.cache/ms-playwright/chromium-1248`.
+      - global mise config changed with `npm:playwright@1.64.1`. Important.
+      - system deps installed via `playwright install-deps chromium`.
+      - dev server stopped.
+      - no commit.
+
+      Need mention app details:
+      - Routes; storage key; allowlists; fixed filters; caching 5 min; latest 24; etc.
+      - Models/service/store/component details.
+      - tests.
+      - README.
+      - lint/link audit.
+      - source facts maybe dossier facts from prior summary; keep enough? The dossier is complete; do we need source facts? For future app work, not much. But "carry forward objectives, constraints, decisions, and parallel workstreams" and "anything not carried lost." We can condense dossier facts: dossier 8 docs complete, source facts (PL/T 356 values 1997-01..2026-08, latest 3.4) maybe useful for smoke. But now app tested live 2026-08 3.4. Include key source facts briefly. We don't need all coverage counts maybe, but could include. Desired oververbosity 5; summary can be detailed. Need not include every Zetaris table? Prior summary had Zetaris verification. The dossier is complete; app doesn't use Zetaris. But constraints "no Zetaris key" important. Could keep Zetaris table info in Important Details? Maybe not necessary for continuation, but dossier is part of objective and completed. We can mention Zetaris verified: table `EUROSTAT_REST.une_rt_m_pl`, views, series 356 rows. This may be relevant if user asks. But summary should focus current work. We can include a compact "Source/dossier facts" bullet.
+
+      Need output exact template. Use `## Objective`, `## Important Details`, `## Work State` with subheadings, `## Next Move`, `## Relevant Files`.
+
+      Need ensure no mention "summary process." Use terse bullets.
+
+      Let's draft.
+
+      Objective:
+      - "Finish and verify the approved Eurostat dossier + Angular CRUD example..." Since completed, objective can be "Deliver..." but current work state complete. Maybe "Deliver the approved Eurostat dossier and Angular 22 CRUD example, verified by tests, production build, browser CRUD smoke test, and live Eurostat fetch; leave uncommitted." Good.
+
+      Important Details:
+      - Plan/task local-only paths, status COMPLETED; never commit.
+      - User directive approved plan; no commit/push.
+      - App path, stack.
+      - Routes, storage key, envelope, corrupt key.
+      - allowlists/fixed filters/API URL.
+      - service behavior.
+      - store behavior.
+      - UI behavior.
+      - no secrets; app no Zetaris/BFF.
+      - Playwright under mise + system deps; global config change.
+      - lint config and pre-existing debt.
+      - source facts maybe.
+      - DOX no new child AGENTS? Maybe skip or include "No root/child AGENTS changes were made." Is that a decision? The conversation didn't explicitly decide. Better not assert decision; but it is a fact. Could include in Work State Completed? "Root AGENTS unchanged; no child AGENTS added." But why? It may invite issue. Since final summary should be accurate. Hmm.
+
+      Work State Completed:
+      - All 8 dossier docs complete; 2,038 lines; lint 0; root README/catalog updated; link audit 70/0.
+      - App scaffolded/installed; all source files written.
+      - Build passed; tests 21 pass; ng version.
+      - Browser CRUD smoke test passed with route fixture; live fetch passed.
+      - App README; task checklist complete.
+      - Lint: dossier/app README 0; root/catalog 56 pre-existing; no new.
+      - Dev server stopped; no commit.
+      - Playwright install completed and browser deps.
+
+      Active:
+      - "(none)" or "Final user-facing report only." The work is complete. Could say "None; implementation and verification are complete." Active section could be "(none)".
+
+      Blocked:
+      - "(none)".
+      - But note `npm install` reported 2 vulnerabilities and install-script warnings? Build/tests pass, so not blocker. Could mention as residual in Important Details? Maybe "npm install reported 2 vulnerabilities; no impact observed." Not necessary. But if carrying forward blockers, resolved. Could include in Completed? "Install warnings/vulnerabilities remain informational." Hmm.
+
+      Next Move:
+      1. "Report completion and leave changes uncommitted; do not push."
+      2. "If requested, address pre-existing root README/catalog lint debt or add DOX child AGENTS; otherwise no further action." This is optional. Maybe keep only one bullet? Template expects 1 and 2. We can put 1 final report, 2 optional follow-ups. Need not overdo.
+
+      Relevant Files:
+      - plan, task
+      - app directory and key files: app.config, routes, core services, components, tests, README, styles.
+      - dossier dir.
+      - root README, catalog, lint config.
+      - scratch smoke scripts and screenshot.
+      - global mise config? Path `~/.config/mise/config.toml`.
+      - browser cache maybe.
+      - no secrets.
+
+      Need preserve exact error strings? We can mention fixed errors:
+      - `TS4115: This parameter property must have an 'override' modifier...` fixed.
+      - Test failures fixed.
+      Maybe not needed but "verified facts" can mention. The instruction says preserve exact error strings when known. Could include in Completed "Fixed `TS4115` by adding `override readonly cause`." Good.
+
+      Need mention `ng test --watch=false` passes 21. `npm run build` passes. `ng version` details.
+
+      Need mention app file names:
+      - `src/app/core/eurostat/eurostat.models.ts`, `eurostat.service.ts`, `eurostat.service.spec.ts`
+      - `core/series/saved-series.model.ts`, `series-labels.ts`, `series-store.service.ts`, spec
+      - `features/series-list/*`, `series-form/*`, `series-detail/*`, `shared/rate-chart/*`
+      - `app.ts/html/css`, `app.config.ts`, `app.routes.ts`, `styles.css`, `index.html`
+      - `README.md`.
+      - tests 6 files, 21 tests.
+      - `package.json`.
+
+      Need mention app source code details enough for continuation:
+      - `SeriesForm` uses reactive forms, trims, navigates to detail.
+      - `SeriesDetail` loads on init, latest 24, show all, delete confirm, retry.
+      - `RateChart` SVG.
+      - App shell header/nav/footer attribution.
+      - No BFF.
+
+      Need mention storage corrupt key exact: `eurostat-crud.saved-series.v1.corrupt`.
+      - Envelope `{ version: 1, items: SavedSeries[] }`.
+      - Cache key `${geo}:${sex}` 5 min.
+
+      Need mention API endpoint exact. Yes.
+
+      Need mention fixed filters `format=JSON`, `lang=EN`, `freq=M`, `s_adj=SA`, `age=TOTAL`, `unit=PC_ACT`.
+
+      Need mention JSON-stat decode strides and drops non-finite, sorted.
+
+      Need mention latest live fetch PL/T `2026-08 3.4`.
+
+      Need mention source facts maybe:
+      - `une_rt_m`, label, `ESTAT`, JSON-stat 2.0, DOI, updated.
+      - PL/T 356 values, 1997-01..2026-08, 169 missing; latest 3.4.
+      - five-country coverage and full dataset counts? Could omit to keep concise. But prior summary had them; they may be lost. The instruction says carry forward important facts. Are these important? Dossier complete; app only uses allowlist. Maybe include compact "Dossier source facts: ..." with core. Could include Zetaris table/views as verified. But the current objective app; not needed for continuation. Yet the overall objective includes dossier. Completed docs contain details. Summary can reference dossier. I think include a bullet: "Dossier facts: `une_rt_m`, JSON-stat 2.0, DOI 10.2908/UNE_RT_M, updated 2026-10-21T11:00:00+0200; PL/T 356 values 1997-01..2026-08, latest 2026-08=3.4; Zetaris `EUROSTAT_REST.une_rt_m_pl` + 3 views verified." That's enough. Maybe include coverage counts? Not needed.
+
+      Need mention root README/catalog pre-existing lint 56 (baseline 57). Dossier/app README 0. Link audit 70/0. Good.
+
+      Need mention `task.md` status `COMPLETED` and all checklist boxes checked, updated 2026-10-23 20:12. Plan no status. Good.
+
+      Need mention `git status` untracked `examples/eurostat-crud/`, docs/data-sources etc. No commit. Also `.env.example` modified? That may be pre-existing and not ours; don't imply we changed. But summary could say "Git status also shows unrelated pre-existing changes: `.env.example`, `examples/eurostat-crud-java/`, `key.txt`; do not touch." This is useful to avoid another agent committing. Should we mention `key.txt`? It might be secret. The instruction says never print credentials. Mentioning filename is okay but maybe avoid. We can say "unrelated untracked/pre-existing changes exist; do not include in commit." But no commit anyway. Could mention "no commit/push; working tree contains app/docs plus unrelated pre-existing changes." Good.
+
+      Need mention Playwright install under mise:
+      - `mise use --global npm:playwright@1.64.1`; `mise exec node@26 -- playwright install chromium`; `mise exec node@26 -- playwright install-deps chromium` (sudo) succeeded.
+      - Browser cache `chromium-1248`.
+      - Smoke script uses `NODE_PATH=/home/ext_root/.local/share/mise/installs/npm-playwright/1.64.1/node_modules`.
+      - Global config `~/.config/mise/config.toml` changed.
+      - Browser smoke route-intercepted JSON-stat fixture; live script no route.
+      - Dev server stopped.
+
+      Potential issue: `playwright` global install not app dependency; smoke tests not committed. Mention scratch scripts local-only.
+
+      Need mention app README relative link to docs dossier and license attribution. Fine.
+
+      Need mention no BFF/SQLite/Zetaris key. Good.
+
+      Need output no extra text.
+
+      Let's ensure sections:
+      ## Objective
+      - one or two bullets.
+      ## Important Details
+      - many bullets.
+      ## Work State
+      ### Completed
+      - many.
+      ### Active
+      - None.
+      ### Blocked
+      - None.
+      ## Next Move
+      1. ...
+      2. ...
+      ## Relevant Files
+      - paths.
+
+      Need decide "Active" maybe "None; all planned implementation and verification steps are complete." That's okay.
+
+      Need include "Next Move" maybe final report. Since the user asked "proceed" and all done, next action is report completion. Another coding agent could continue with optional DOX. Use:
+      1. "Send the final completion report: app and dossier done, 21 tests, build, browser CRUD + live fetch, lint/link results, no commit."
+      2. "Only if requested: resolve pre-existing root README/catalog lint debt or add DOX child AGENTS; otherwise stop."
+      This is good.
+
+      Need mention no commit/push strongly.
+
+      Let's craft polished summary.
+
+      Potential exact paths:
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/core/eurostat/eurostat.service.ts`
+      - `.../core/series/series-store.service.ts`
+      - `.../features/series-detail/series-detail.ts`
+      - `.../shared/rate-chart/rate-chart.ts`
+      - `.../README.md`
+      - `.../src/styles.css`
+      - `.../src/index.html`
+      - `.../src/app/app.routes.ts`
+      - `.../src/app/app.config.ts`
+      - `.../src/app/app.spec.ts`
+      - tests.
+
+      Need mention `SeriesStoreService` sort by updatedAt desc then name asc; cross-tab storage listener; loadWarning. Fine.
+
+      Need mention app build output sizes? Maybe not necessary but useful evidence: main 331.40 kB, styles 6.81 kB. Could include compact.
+
+      Need mention `ng version` exact: CLI 22.2.4, Angular 22.2.3, Node 26.10.0, npm 11.19.1. Good.
+
+      Need mention tests count by file? 5 service, 7 store, 2 app, 2 list, 3 form, 2 detail = 21. This is useful. Include.
+
+      Need mention fixed test issues:
+      - `HttpTestingController` request match via `urlWithParams.startsWith(API_URL)`; query params parsed with `new URL(...).searchParams`.
+      - invalid geo cast in store spec.
+      - `override readonly cause` for TS4115.
+      Maybe in Completed as "Fixed build/test issues". Good.
+
+      Need mention no `ng test` blocker. Good.
+
+      Need mention npm install vulnerabilities? Maybe in Important Details "npm install reported 2 vulnerabilities (1 low, 1 high); build/tests unaffected." Is that important? It was a blocker prior but resolved. Could include as residual. It may be noise. The instruction says carry constraints/unknowns. Since no action, maybe not. But "npm install reported 2 vulnerabilities" could be relevant. We can include in Important Details "npm install reported 2 vulnerabilities; no functional impact." Terse. However final summary shouldn't overdo.
+
+      Need mention markdownlint root 56 vs baseline 57. Good.
+
+      Need mention `task.md` marked completed; plan local-only. Good.
+
+      Need mention `docs/data-sources/eurostat/` 8 docs. Good.
+
+      Need mention source facts/Zetaris:
+      - Zetaris REST table id 917, container `eurostat`, table `EUROSTAT_REST.une_rt_m_pl`, views `..._metadata_table`, `..._snapshot_table`, `..._series_table`; series view 356 rows. Could include one bullet.
+      - License distinction: editorial CC BY 4.0; statistical data reuse under Decision 2011/833/EU with attribution; app attribution link; not call data CC BY 4.0. Important constraint. Include.
+      - Commercial reuse restricted outside EU/EFTA/candidates. Maybe include.
+      This is dossier context; useful.
+
+      Need mention "No live Zetaris edits" maybe. Dossier verification used REST. Not necessary.
+
+      Let's write final.
+    thinking_duration: 22.197s
+    thinking_duration_ms: 22197
+    time: 10/23/2026, 8:24:32.104 PM UTC
+    response: |-
+      ## Objective
+      - Deliver the approved Eurostat data-source dossier and pure Angular 22 CRUD example, verified by unit tests, production build, browser CRUD smoke test, and live Eurostat fetch.
+      - Leave all changes uncommitted; no commit or push.
+
+      ## Important Details
+      - User approved the implementation plan; the app phase is complete.
+      - Local-only plan/task, never commit:
+        - `/home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md`
+        - `/home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_task.md`
+      - App: `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/`; Angular 22.2.4, standalone, zoneless, strict, Vitest, CSS, no SSR.
+      - Routes: `/series`, `/series/new`, `/series/:id`, `/series/:id/edit`; `/` and unknown routes redirect to `/series`.
+      - Storage key: `eurostat-crud.saved-series.v1`; envelope `{ version: 1, items: SavedSeries[] }`; corrupt JSON backup key: `eurostat-crud.saved-series.v1.corrupt`.
+      - Allowlists: geo `PL|DE|FR|ES|IT`; sex `T|M|F`.
+      - Eurostat API: `https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_m`; fixed params `format=JSON`, `lang=EN`, `freq=M`, `s_adj=SA`, `age=TOTAL`, `unit=PC_ACT`.
+      - `EurostatService` validates JSON-stat `class=dataset`, `id`/`size` alignment, time dimension, and `value`; decodes flat indices with strides; drops non-finite values; sorts periods ascending; throws on empty/malformed responses; caches successful responses by `geo:sex` for 5 minutes.
+      - `SeriesStoreService` trims name to 1–80 chars and note to 0–2000; validates filters/timestamps; drops invalid loaded items; sorts by `updatedAt` desc then name asc; persists on every mutation; listens for cross-tab `storage` events.
+      - `SeriesDetail` shows latest 24 observations newest first, supports “Show all”, loading/error/retry, edit, delete confirmation, source timestamps, and attribution.
+      - No BFF, SQLite, Zetaris API key, secrets, accounts, or server sync in the app.
+      - Dossier facts: `une_rt_m`, “Unemployment by sex and age - monthly data”, `ESTAT`, JSON-stat `2.0`, DOI `10.2908/UNE_RT_M`, updated `2026-10-21T11:00:00+0200`; PL/T has 356 values `1997-01`..`2026-08`, latest `2026-08` = `3.4`.
+      - Zetaris verified: REST id 917, container `eurostat`, table `EUROSTAT_REST.une_rt_m_pl`, views `une_rt_m_pl_metadata_table`, `une_rt_m_pl_snapshot_table`, `une_rt_m_pl_series_table`; series view has 356 rows.
+      - License: editorial content CC BY 4.0; statistical data reuse under Decision 2011/833/EU with attribution; commercial reuse restricted outside EU/EFTA/candidates; do not call the data “CC BY 4.0”.
+      - Playwright installed under mise: `mise use --global npm:playwright@1.64.1`; browser cache `/home/ext_root/.cache/ms-playwright/chromium-1248`; system deps installed via `mise exec node@26 -- playwright install-deps chromium`.
+      - `npm install` reported 2 vulnerabilities (1 low, 1 high); build/tests unaffected.
+      - Root README and REST catalog retain pre-existing lint debt: 56 issues, baseline 57. Dossier and app README lint clean.
+      - No commit or push. Working tree also contains unrelated pre-existing changes/untracked files; do not include them in any commit.
+
+      ## Work State
+
+      ### Completed
+      - All 8 dossier documents written in `docs/data-sources/eurostat/`, total 2,038 lines; `markdownlint-cli2 "docs/data-sources/eurostat/*.md"` exits 0.
+      - Root `.markdownlint-cli2.jsonc` created.
+      - Root `README.md` updated with `docs/data-sources/` table row and folder-map line.
+      - REST catalog section 7 updated with Decision 2011/833/EU wording, CC BY 4.0 editorial distinction, commercial country exception, and full-dossier link.
+      - Relative-link audit: 70 links checked across 11 files, 0 missing.
+      - Angular app scaffolded and dependencies installed.
+      - Implemented:
+        - `src/app/core/series/saved-series.model.ts`
+        - `src/app/core/series/series-labels.ts`
+        - `src/app/core/series/series-store.service.ts`
+        - `src/app/core/eurostat/eurostat.models.ts`
+        - `src/app/core/eurostat/eurostat.service.ts`
+        - `src/app/shared/rate-chart/*`
+        - `src/app/features/series-list/*`
+        - `src/app/features/series-form/*`
+        - `src/app/features/series-detail/*`
+        - `src/app/app.ts`, `app.html`, `app.css`, `app.config.ts`, `app.routes.ts`
+        - `src/styles.css`, `src/index.html`
+      - App shell includes header/nav/footer and Eurostat attribution links.
+      - App README written with setup, routes, data/storage details, limitations, attribution, and structure.
+      - Fixed build error `TS4115` by using `override readonly cause` in `EurostatDataError` and `SeriesStorageError`.
+      - Fixed test issues: invalid geo cast in store spec; `HttpTestingController` matching via `urlWithParams.startsWith(API_URL)`; query assertions via `new URL(...).searchParams`.
+      - Unit tests: 6 files, 21 tests pass (`EurostatService` 5, `SeriesStoreService` 7, app shell 2, list 2, form 3, detail 2).
+      - `npm run build` passes: main `331.40 kB`, styles `6.81 kB`.
+      - `ng version`: Angular CLI `22.2.4`, Angular `22.2.3`, Node `26.10.0`, npm `11.19.1`.
+      - Browser CRUD smoke test passed with intercepted JSON-stat fixture: empty state, create/read, reload persistence, update, delete; screenshot at `scratch/e95db8a7dffeuYlna87fyPRaWJ/browser-smoke.png`.
+      - Live browser Eurostat fetch passed: PL/T latest row `2026-08 3.4`.
+      - Dev server started on `127.0.0.1:4200` and stopped; PID 2494354 killed.
+      - `task.md` marked `COMPLETED`, all checklist boxes checked, updated `2026-10-23 20:12`; verification notes updated for 21 tests, browser/live fetch, and lint status.
+      - Final lint: dossier + app README 0 issues; root README/catalog 56 pre-existing issues; link audit 70/0.
+      - No commit or push.
+
+      ### Active
+      - None; implementation and verification are complete.
+
+      ### Blocked
+      - None.
+
+      ## Next Move
+      1. Send the final completion report with test/build/browser/lint results and confirm no commit was made.
+      2. Only if requested: address pre-existing root README/catalog lint debt, or add DOX child `AGENTS.md` files; otherwise stop.
+
+      ## Relevant Files
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md`: approved plan and acceptance criteria.
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_task.md`: completed local-only checklist.
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/data-sources/eurostat/`: completed 8-file dossier.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/`: completed Angular app.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/README.md`: app documentation and attribution.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/app.routes.ts`: four routes.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/app.config.ts`: router + `provideHttpClient(withFetch())`.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/core/eurostat/eurostat.service.ts`: API client, JSON-stat decode, cache.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/core/series/series-store.service.ts`: localStorage CRUD/validation.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/features/series-detail/series-detail.ts`: detail fetch/table/chart/delete logic.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/shared/rate-chart/rate-chart.ts`: SVG chart.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/styles.css`: global design system.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/index.html`: title/meta.
+      - `/home/ext_root/lab-data/zetaris-getting-started/README.md`: updated docs table/folder map; pre-existing lint debt.
+      - `/home/ext_root/lab-data/zetaris-getting-started/open_data/rest_apis/rest-api-sources.md`: updated Eurostat catalog section; pre-existing lint debt.
+      - `/home/ext_root/lab-data/zetaris-getting-started/.markdownlint-cli2.jsonc`: root lint config.
+      - `/home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/browser-smoke.cjs`: browser CRUD smoke script.
+      - `/home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/browser-live.cjs`: live Eurostat browser smoke script.
+      - `/home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/browser-smoke.png`: smoke-test screenshot.
+      - `/home/ext_root/.config/mise/config.toml`: global config now includes `npm:playwright@1.64.1`.
+      - `/home/ext_root/lab-data/zetaris-getting-started/AGENTS.md`: repo operating rules; unchanged.
+    duration: 35.349s
+    duration_ms: 35349
+

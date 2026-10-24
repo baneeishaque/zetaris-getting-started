@@ -1,0 +1,13 @@
+user:
+  text: Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+assistant:
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: |-
+      Found and verified the driver: `/home/ext_root/lab-data/ndp-jdbc-driver-2.1.0.13-driver.jar` — 31 MB, Zetaris Lightning JDBC Driver 2.1.0, contains `com.zetaris.lightning.jdbc.LightningDriver`. Plan Q3 is now resolved.
+
+      On H2: yes, it can be removed, but Eurostat is read-only through Zetaris, so without H2 there is no persistent store for notes and true CRUD is not possible.
+
+      Recommended: **A) read-only Eurostat JDBC explorer** — list/filter/paginate/detail, no H2, simplest demo. Alternative: **B) in-memory CRUD** (no persistence) or another writable DB (Postgres/MySQL).
+
+      Confirm A or B; if A, I’ll produce the v2 plan (read-only, no H2) for approval. v1 remains CRUD+H2 until then.

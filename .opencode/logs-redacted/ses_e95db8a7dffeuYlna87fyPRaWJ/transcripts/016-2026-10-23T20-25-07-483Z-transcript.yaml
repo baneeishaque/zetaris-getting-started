@@ -1,0 +1,100 @@
+user:
+  text: i want to use zetaris euro stat database rest interface
+assistant:
+  - response: "\n\n"
+  - response: "\n\n"
+  - agent: compaction
+    response: |-
+      ## Objective
+      - Deliver the approved Eurostat data-source dossier and pure Angular 22 CRUD example, verified by unit tests, production build, browser CRUD smoke test, and live Eurostat fetch.
+      - Leave all changes uncommitted; no commit or push.
+
+      ## Important Details
+      - User approved the implementation plan; the app phase is complete.
+      - Local-only plan/task, never commit:
+        - `/home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md`
+        - `/home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_task.md`
+      - App: `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/`; Angular 22.2.4, standalone, zoneless, strict, Vitest, CSS, no SSR.
+      - Routes: `/series`, `/series/new`, `/series/:id`, `/series/:id/edit`; `/` and unknown routes redirect to `/series`.
+      - Storage key: `eurostat-crud.saved-series.v1`; envelope `{ version: 1, items: SavedSeries[] }`; corrupt JSON backup key: `eurostat-crud.saved-series.v1.corrupt`.
+      - Allowlists: geo `PL|DE|FR|ES|IT`; sex `T|M|F`.
+      - Eurostat API: `https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/une_rt_m`; fixed params `format=JSON`, `lang=EN`, `freq=M`, `s_adj=SA`, `age=TOTAL`, `unit=PC_ACT`.
+      - `EurostatService` validates JSON-stat `class=dataset`, `id`/`size` alignment, time dimension, and `value`; decodes flat indices with strides; drops non-finite values; sorts periods ascending; throws on empty/malformed responses; caches successful responses by `geo:sex` for 5 minutes.
+      - `SeriesStoreService` trims name to 1–80 chars and note to 0–2000; validates filters/timestamps; drops invalid loaded items; sorts by `updatedAt` desc then name asc; persists on every mutation; listens for cross-tab `storage` events.
+      - `SeriesDetail` shows latest 24 observations newest first, supports “Show all”, loading/error/retry, edit, delete confirmation, source timestamps, and attribution.
+      - No BFF, SQLite, Zetaris API key, secrets, accounts, or server sync in the app.
+      - Dossier facts: `une_rt_m`, “Unemployment by sex and age - monthly data”, `ESTAT`, JSON-stat `2.0`, DOI `10.2908/UNE_RT_M`, updated `2026-10-21T11:00:00+0200`; PL/T has 356 values `1997-01`..`2026-08`, latest `2026-08` = `3.4`.
+      - Zetaris verified: REST id 917, container `eurostat`, table `EUROSTAT_REST.une_rt_m_pl`, views `une_rt_m_pl_metadata_table`, `une_rt_m_pl_snapshot_table`, `une_rt_m_pl_series_table`; series view has 356 rows.
+      - License: editorial content CC BY 4.0; statistical data reuse under Decision 2011/833/EU with attribution; commercial reuse restricted outside EU/EFTA/candidates; do not call the data “CC BY 4.0”.
+      - Playwright installed under mise: `mise use --global npm:playwright@1.64.1`; browser cache `/home/ext_root/.cache/ms-playwright/chromium-1248`; system deps installed via `mise exec node@26 -- playwright install-deps chromium`.
+      - `npm install` reported 2 vulnerabilities (1 low, 1 high); build/tests unaffected.
+      - Root README and REST catalog retain pre-existing lint debt: 56 issues, baseline 57. Dossier and app README lint clean.
+      - No commit or push. Working tree also contains unrelated pre-existing changes/untracked files; do not include them in any commit.
+
+      ## Work State
+
+      ### Completed
+      - All 8 dossier documents written in `docs/data-sources/eurostat/`, total 2,038 lines; `markdownlint-cli2 "docs/data-sources/eurostat/*.md"` exits 0.
+      - Root `.markdownlint-cli2.jsonc` created.
+      - Root `README.md` updated with `docs/data-sources/` table row and folder-map line.
+      - REST catalog section 7 updated with Decision 2011/833/EU wording, CC BY 4.0 editorial distinction, commercial country exception, and full-dossier link.
+      - Relative-link audit: 70 links checked across 11 files, 0 missing.
+      - Angular app scaffolded and dependencies installed.
+      - Implemented:
+        - `src/app/core/series/saved-series.model.ts`
+        - `src/app/core/series/series-labels.ts`
+        - `src/app/core/series/series-store.service.ts`
+        - `src/app/core/eurostat/eurostat.models.ts`
+        - `src/app/core/eurostat/eurostat.service.ts`
+        - `src/app/shared/rate-chart/*`
+        - `src/app/features/series-list/*`
+        - `src/app/features/series-form/*`
+        - `src/app/features/series-detail/*`
+        - `src/app/app.ts`, `app.html`, `app.css`, `app.config.ts`, `app.routes.ts`
+        - `src/styles.css`, `src/index.html`
+      - App shell includes header/nav/footer and Eurostat attribution links.
+      - App README written with setup, routes, data/storage details, limitations, attribution, and structure.
+      - Fixed build error `TS4115` by using `override readonly cause` in `EurostatDataError` and `SeriesStorageError`.
+      - Fixed test issues: invalid geo cast in store spec; `HttpTestingController` matching via `urlWithParams.startsWith(API_URL)`; query assertions via `new URL(...).searchParams`.
+      - Unit tests: 6 files, 21 tests pass (`EurostatService` 5, `SeriesStoreService` 7, app shell 2, list 2, form 3, detail 2).
+      - `npm run build` passes: main `331.40 kB`, styles `6.81 kB`.
+      - `ng version`: Angular CLI `22.2.4`, Angular `22.2.3`, Node `26.10.0`, npm `11.19.1`.
+      - Browser CRUD smoke test passed with intercepted JSON-stat fixture: empty state, create/read, reload persistence, update, delete; screenshot at `scratch/e95db8a7dffeuYlna87fyPRaWJ/browser-smoke.png`.
+      - Live browser Eurostat fetch passed: PL/T latest row `2026-08 3.4`.
+      - Dev server started on `127.0.0.1:4200` and stopped; PID 2494354 killed.
+      - `task.md` marked `COMPLETED`, all checklist boxes checked, updated `2026-10-23 20:12`; verification notes updated for 21 tests, browser/live fetch, and lint status.
+      - Final lint: dossier + app README 0 issues; root README/catalog 56 pre-existing issues; link audit 70/0.
+      - No commit or push.
+
+      ### Active
+      - None; implementation and verification are complete.
+
+      ### Blocked
+      - None.
+
+      ## Next Move
+      1. Send the final completion report with test/build/browser/lint results and confirm no commit was made.
+      2. Only if requested: address pre-existing root README/catalog lint debt, or add DOX child `AGENTS.md` files; otherwise stop.
+
+      ## Relevant Files
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_implementation-plan_v1.md`: approved plan and acceptance criteria.
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/plans/2026-10-23_e95db8a7dffeuYlna87fyPRaWJ_eurostat-data-dossier-and-angular-crud_task.md`: completed local-only checklist.
+      - `/home/ext_root/lab-data/zetaris-getting-started/docs/data-sources/eurostat/`: completed 8-file dossier.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/`: completed Angular app.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/README.md`: app documentation and attribution.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/app.routes.ts`: four routes.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/app.config.ts`: router + `provideHttpClient(withFetch())`.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/core/eurostat/eurostat.service.ts`: API client, JSON-stat decode, cache.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/core/series/series-store.service.ts`: localStorage CRUD/validation.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/features/series-detail/series-detail.ts`: detail fetch/table/chart/delete logic.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/app/shared/rate-chart/rate-chart.ts`: SVG chart.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/styles.css`: global design system.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/src/index.html`: title/meta.
+      - `/home/ext_root/lab-data/zetaris-getting-started/README.md`: updated docs table/folder map; pre-existing lint debt.
+      - `/home/ext_root/lab-data/zetaris-getting-started/open_data/rest_apis/rest-api-sources.md`: updated Eurostat catalog section; pre-existing lint debt.
+      - `/home/ext_root/lab-data/zetaris-getting-started/.markdownlint-cli2.jsonc`: root lint config.
+      - `/home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/browser-smoke.cjs`: browser CRUD smoke script.
+      - `/home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/browser-live.cjs`: live Eurostat browser smoke script.
+      - `/home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/browser-smoke.png`: smoke-test screenshot.
+      - `/home/ext_root/.config/mise/config.toml`: global config now includes `npm:playwright@1.64.1`.
+      - `/home/ext_root/lab-data/zetaris-getting-started/AGENTS.md`: repo operating rules; unchanged.

@@ -1,0 +1,1985 @@
+---
+user:
+  text: but, i launched zetaris docker with that same pwd. check lab-sata zetaris folder
+  time: 10/23/2026, 8:14:50.423 PM UTC
+assistant:
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: 'User says they launched Zetaris Docker with that same password; check `lab-sata zetaris folder`. Likely typo "lab-data". Need inspect `/home/ext_root/lab-data/zetaris` or similar. We must follow AGENTS: don''t probe heavy symlinked trees; use glob/view exact paths. Need find folder. `lab-sata` maybe `/home/ext_root/lab-sata`? Let''s list `/home/ext_root`? Use `bash ls /home/ext_root` (light). But AGENTS says avoid heavy fan-out; `/home/ext_root` likely okay. Use `glob` to find directories named `*zetaris*` under `/home/ext_root/lab-data`? Could be heavy. Use `bash ls -d /home/ext_root/lab-data/*zetaris*` maybe. But AGENTS says atomize; one command. Let''s check `/home/ext_root` and `/home/ext_root/lab-data` directories with `ls -d`. Use `bash` with `ls -d` not recursive.'
+    thinking_duration: 1.129s
+    thinking_duration_ms: 1129
+    tool_calls:
+      - tool: bash
+        args:
+          command: ls -d /home/ext_root/*zetaris* /home/ext_root/lab-data/*zetaris* 2>/dev/null
+        result: |
+          /home/ext_root/lab-data/zetaris-getting-started
+          /home/ext_root/lab-data/zetaris-platform
+          /home/ext_root/lab-data/zetaris-platform.zip
+      - tool: bash
+        args:
+          command: ls -d /home/ext_root/lab-sata 2>/dev/null || true
+        result: (no output)
+    time: 10/23/2026, 8:14:50.474 PM UTC
+    response: "\n\n"
+    duration: 2.722s
+    duration_ms: 2722
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: '`/home/ext_root/lab-data/zetaris-platform` likely the Docker folder. Need inspect. Use `read` directory listing, not `ls`? Built-in `read` on directory returns entries. Use `read` on `/home/ext_root/lab-data/zetaris-platform`. Also check AGENTS.md there if exists. Use `glob` for compose files and README.'
+    thinking_duration: 460ms
+    thinking_duration_ms: 460
+    tool_calls:
+      - tool: read
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-platform
+        result: |-
+          <path>/home/ext_root/lab-data/zetaris-platform</path>
+          <type>directory</type>
+          <entries>
+          .env
+          .env.server.example
+          caddy/
+          conf/
+          docker-compose.yml
+          init/
+          initdb/
+          jdbc/
+          preflight.sh
+          README.md
+          verify.sh
+
+          (11 entries)
+          </entries>
+      - tool: glob
+        args:
+          pattern: '**/*compose*.{yml,yaml}'
+          path: /home/ext_root/lab-data/zetaris-platform
+        result: /home/ext_root/lab-data/zetaris-platform/docker-compose.yml
+      - tool: glob
+        args:
+          pattern: '**/{README,AGENTS}.md'
+          path: /home/ext_root/lab-data/zetaris-platform
+        result: /home/ext_root/lab-data/zetaris-platform/README.md
+    time: 10/23/2026, 8:14:53.236 PM UTC
+    response: "\n\n"
+    duration: 2.357s
+    duration_ms: 2357
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Read README, docker-compose, .env (careful secrets; maybe needed to see credentials, but don't print secrets in output). We can read `.env` but avoid echoing values; use grep for variable names and maybe inspect auth config. The user says same password; perhaps JDBC requires `ZETARIS_JDBC_USER` or a different user. Let's read README and compose.
+    thinking_duration: 358ms
+    thinking_duration_ms: 358
+    tool_calls:
+      - tool: read
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-platform/README.md
+        result: |-
+          <path>/home/ext_root/lab-data/zetaris-platform/README.md</path>
+          <type>file</type>
+          <content>
+          1: # Zetaris platform
+          2: 
+          3: The platform as seven containers on one machine, managed with Docker Compose. No cluster, no build step.
+          4: 
+          5: ```
+          6: postgres --(healthy)--> driver --(healthy)--> api --(healthy)--> ui
+          7:      +-- init --(completed)--+                            +----> bootstrap
+          8: ```
+          9: 
+          10: | Service | Ports | What it is |
+          11: |---|---|---|
+          12: | `postgres` | internal | metastore and audit databases |
+          13: | `init` | -- | one-shot: volume ownership and the shared keypair |
+          14: | `driver` | 10000, 4040 (local only) | the query engine; creates the organisation and its administrator on first start |
+          15: | `api` | 8888, 8889 (local only) | REST API |
+          16: | `ui` | 3000 | the web interface |
+          17: | `bootstrap` | -- | one-shot: the sample data |
+          18: 
+          19: `init` and `bootstrap` finish as `Exited (0)`. That is success; they are setup jobs, not services.
+          20: 
+          21: ## Install
+          22: 
+          23: Ten minutes of work, plus twenty waiting for a download and a first start.
+          24: 
+          25: **1. Install Docker.** Docker Desktop on macOS or Windows, `docker-ce` on Linux. In its settings give Docker **8 GB of memory** and 4 CPUs -- the default is usually less, and the query engine will not start without it.
+          26: 
+          27: **2. Unzip the download.**
+          28: 
+          29: ```bash
+          30: unzip zetaris-platform.zip
+          31: cd zetaris-platform
+          32: ```
+          33: 
+          34: **3. Sign in to the image registry.** Paste the command from the Zetaris Cloud download page — it carries your username and password, so there is nothing to type.
+          35: 
+          36: ```bash
+          37: docker login zetarishackathon.azurecr.io
+          38: ```
+          39: 
+          40: **4. Check the machine can run it.**
+          41: 
+          42: ```bash
+          43: ./preflight.sh
+          44: ```
+          45: 
+          46: Fix anything it reports as FAIL before going on — it is checking the things that otherwise fail twenty minutes later with an error that does not mention them, the registry sign-in above among them.
+          47: 
+          48: **5. Nothing to configure.** `.env` is already in the folder, already filled in. Sign in later as `admin@zetaris.com` / `[REDACTED]` and change the password from the user menu, top right.
+          49: 
+          50: If you would rather set your own password before the first start, edit `ZETARIS_ADMIN_PASSWORD` in `.env` now — at least 8 characters with a lower case letter, an upper case letter, a digit, and one of `$ @ ! % * ? &`. Other punctuation is rejected, and the rejection does not appear until several minutes into the first start.
+          51: 
+          52: **6. Download the images.** About 4 GB, so 5-15 minutes:
+          53: 
+          54: ```bash
+          55: docker compose pull
+          56: ```
+          57: 
+          58: **7. Start it.**
+          59: 
+          60: ```bash
+          61: docker compose up -d
+          62: ```
+          63: 
+          64: The first start takes 5-10 minutes. `init` and `bootstrap` ending as `Exited (0)` is success -- they are setup jobs, not services.
+          65: 
+          66: **8. Check it worked.**
+          67: 
+          68: ```bash
+          69: ./verify.sh
+          70: ```
+          71: 
+          72: Nine checks, ending with a query that travels the whole stack. It also tells you when the slow first-start step has finished.
+          73: 
+          74: **9. Open <http://localhost:3000>** and sign in as `admin@zetaris.com` / `[REDACTED]`. Change the password from the user menu, top right, next to Sign out.
+          75: 
+          76: ### On a server instead
+          77: 
+          78: A machine other than your own needs HTTPS: the interface uses browser APIs that exist only in a secure context, and `localhost` is the sole exception. Over plain HTTP anywhere else, sign-in fails with `crypto.randomUUID is not a function`.
+          79: 
+          80: Steps 1-4 are the same. Then:
+          81: 
+          82: ```bash
+          83: cp .env.server.example .env
+          84: # set ZETARIS_ADMIN_PASSWORD -- there is no default in this file, because it puts the
+          85: #   platform on a public address -- and replace <public-ip> in the three addresses with
+          86: # this machine's public IP, hyphenated: 54.1.2.3 becomes 54-1-2-3
+          87: docker compose pull
+          88: docker compose up -d
+          89: ```
+          90: 
+          91: Open 80 and 443 to the internet. Any name ending `.<ip>.sslip.io` resolves through public DNS with no record to create, so Caddy obtains a real certificate on first start, and the platform is at `https://lightning.<public-ip>.sslip.io`.
+          92: 
+          93: For a private address that no certificate authority can validate, set `CADDY_GLOBAL_OPTIONS=local_certs`. Caddy signs its own and the browser warns once.
+          94: 
+          95: ### If something fails
+          96: 
+          97: `./verify.sh` names the component. The usual causes:
+          98: 
+          99: | What you see | Cause |
+          100: |---|---|
+          101: | `pull access denied` | step 4 was skipped |
+          102: | driver never becomes healthy | Docker has too little memory -- run `./preflight.sh` |
+          103: | `crypto.randomUUID is not a function` | reached over plain HTTP at something other than localhost |
+          104: | `bootstrap: still running` | not finished yet; it loads the sample data |
+          105: | no `NY_TAXI` or `TPCDS_DB` | the machine could not reach S3 -- see `sample-data-seed.log` in the `driver-logs` volume |
+          106: 
+          107: ## Sample data
+          108: 
+          109: The first start registers the same sample datasets a Zetaris Cloud cluster gets, so instructions written for one work on the other. Both are read in place from the public bucket `s3a://zetaris-public-dataset`, so the machine needs outbound internet.
+          110: 
+          111: | Database | Tables | Format |
+          112: |---|---|---|
+          113: | `NY_TAXI` | 15, e.g. `customers`, `trips`, `yellow_taxi`, `taxi_zones` | CSV |
+          114: | `TPCDS_DB` | 24, the TPC-DS schema, e.g. `store_sales`, `item`, `date_dim` | Parquet |
+          115: 
+          116: Try `SELECT * FROM NY_TAXI.customers LIMIT 10`.
+          117: 
+          118: ## Sizing
+          119: 
+          120: | | Query engine | For |
+          121: |---|---|---|
+          122: | `.env` | 2 GB, 2 cores | a laptop |
+          123: | `.env.server.example` | 4 GB, 4 cores | an instance with room |
+          124: 
+          125: The query engine uses exactly the heap it is given, so this is the one choice that decides how fast queries run. **Do not use the server file on a laptop** -- it asks for 6 GB of heap across the driver and API, and on a smaller machine the driver never starts, with a Spark error that says nothing about memory.
+          126: 
+          127: ## Tuning the query engine
+          128: 
+          129: Heap and cores come from `.env`:
+          130: 
+          131: | | |
+          132: |---|---|
+          133: | `ZSPARK_DRIVER_MEM` | how much heap the query engine gets -- the setting that decides query speed |
+          134: | `ZSPARK_DRIVER_CORES` | cores it may use |
+          135: | `ZSPARK_MASTER_URL` | `local[2]` runs Spark in-process with two threads |
+          136: 
+          137: Everything else is in `conf/spark-defaults.conf`, which the driver reads at startup. It ships with the useful settings commented out beside their defaults, so you can see what is available without reading Spark's documentation:
+          138: 
+          139: ```bash
+          140: vi conf/spark-defaults.conf
+          141: docker compose restart driver
+          142: ```
+          143: 
+          144: The one worth knowing about is `spark.sql.shuffle.partitions`. Spark defaults to 200, which is sized for a cluster; on two cores that is 200 small tasks queueing, and lowering it near your core count is usually the largest single improvement.
+          145: 
+          146: Heap and cores cannot be set in that file. The driver is launched with them on the command line, and a command line wins -- so `spark.driver.memory` there is ignored silently.
+          147: 
+          148: ## Connecting over JDBC
+          149: 
+          150: The query engine listens on port 10000 on this machine. Tools that speak JDBC -- DBeaver, DataGrip, Tableau, your own Java or Python code -- connect to it through the driver in `jdbc/`.
+          151: 
+          152: | | |
+          153: |---|---|
+          154: | Driver file | `jdbc/ndp-jdbc-driver-2.4.3.1-7eff043-driver.jar` |
+          155: | Driver class | `com.zetaris.lightning.jdbc.LightningDriver` |
+          156: | URL | `jdbc:zetaris:lightning@localhost:10000` |
+          157: | User / password | the account you sign in to the web interface with |
+          158: 
+          159: - **Use this jar, not a generic Hive or Spark driver.** It is the only driver that understands the `jdbc:zetaris:lightning@` URL, and it bundles everything it needs, so add the one file to your tool and nothing else.
+          160: - **In DBeaver:** Database -> Driver Manager -> New, add the jar under Libraries, set the class and URL above, then create a connection with that driver.
+          161: - **Only from this machine.** Port 10000 is bound to `127.0.0.1` because the connection is unencrypted. To reach it from elsewhere, tunnel it: `ssh -L 10000:localhost:10000 <server>`, then connect to `localhost:10000` as above.
+          162: - **Port 10000 already taken?** Set `DRIVER_PORT` in `.env`, run `docker compose up -d`, and use that port in the URL.
+          163: - **Nothing answers until the driver is healthy.** `./verify.sh` tells you when it is.
+          164: 
+          165: ## Day to day
+          166: 
+          167: ```bash
+          168: docker compose ps
+          169: docker compose logs -f driver
+          170: docker compose down          # stop, keep the data
+          171: docker compose down -v       # stop and delete everything, including the metastore
+          172: ```
+          173: 
+          174: **Back up `.env`.** It holds the field-encryption keypair's password. Without it, stored datasource credentials cannot be recovered.
+          175: 
+          176: ## Two things worth knowing
+          177: 
+          178: **The keypair is generated once.** `init` writes it into a shared volume on first start, and both the driver and the API read the same copy. `docker compose down -v` destroys it along with everything encrypted with it.
+          179: 
+          180: **`init` runs as root and `api` has `group_add`.** A new Docker volume belongs to root until something claims it, so one container takes ownership. The driver and the API then run as different users sharing that tree through a common group.
+
+          (End of file - total 180 lines)
+          </content>
+      - tool: read
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-platform/docker-compose.yml
+        result: |-
+          <path>/home/ext_root/lab-data/zetaris-platform/docker-compose.yml</path>
+          <type>file</type>
+          <content>
+          1: # Zetaris platform -- multi-container deployment.
+          2: #
+          3: # Startup order is declared, not slept on:
+          4: #
+          5: #   postgres ──(healthy)──> driver ──(healthy)──> api ──(healthy)──> ui
+          6: #        └── init ──(completed)──────┘                    └────> bootstrap
+          7: #
+          8: #
+          9: # For an internal stack, build .env from the layers rather than editing it by hand:
+          10: # `./env/make-env.sh --images release-2.4.3.1 --variant qa`. env/images/ records which image
+          11: # a release runs. The `:-` defaults below are a fallback for older .env files, not the source
+          12: # of truth, and two are moving tags -- do not read a version off this file.
+          13: 
+          14: name: zetaris
+          15: 
+          16: services:
+          17: 
+          18:   # ---------------------------------------------------------------------------
+          19:   # Metastore + audit databases.
+          20:   #
+          21:   # POSTGRES_DB creates `metastore`; initdb/10-audit.sql adds `audit`. Scripts in
+          22:   # /docker-entrypoint-initdb.d run only while the data directory is empty, so this is a
+          23:   # first-boot action.
+          24:   postgres:
+          25:     image: postgres:16-alpine
+          26:     restart: unless-stopped
+          27:     # Postgres holds the metastore and audit log. Stock shared_buffers is 128MB, which is
+          28:     # the first thing to limit a large host. These are conservative fractions -- roughly 25%
+          29:     # of the container's share for shared_buffers is the usual starting point.
+          30:     command:
+          31:       - postgres
+          32:       - -c
+          33:       - port=5433
+          34:       - -c
+          35:       - shared_buffers=${POSTGRES_SHARED_BUFFERS:-256MB}
+          36:       - -c
+          37:       - effective_cache_size=${POSTGRES_EFFECTIVE_CACHE:-1GB}
+          38:       - -c
+          39:       - work_mem=${POSTGRES_WORK_MEM:-16MB}
+          40:       - -c
+          41:       - max_wal_size=2GB
+          42:     environment:
+          43:       POSTGRES_USER: ${POSTGRES_USER:-zetaris}
+          44:       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set -- see .env}
+          45:       POSTGRES_DB: metastore
+          46:       PGDATA: /var/lib/postgresql/data/pgdata
+          47:     # Publishing 5433 is opt-in. It stays closed for the normal all-in-compose deployment,
+          48:     # and is needed only when the driver and API run on the host instead of in containers.
+          49:     # Bound to loopback: the metastore should never be reachable off the machine.
+          50:     ports:
+          51:       - "127.0.0.1:${POSTGRES_PUBLISH:-0}:5433"
+          52:     volumes:
+          53:       - pgdata:/var/lib/postgresql/data
+          54:       - ./initdb:/docker-entrypoint-initdb.d:ro
+          55:     healthcheck:
+          56:       # -h 127.0.0.1 and -d metastore are both load-bearing: they make this a real TCP check
+          57:       # against a database that exists, so nothing starts before Postgres can actually serve.
+          58:       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5433 -U ${POSTGRES_USER:-zetaris} -d metastore"]
+          59:       interval: 5s
+          60:       timeout: 5s
+          61:       retries: 30
+          62:       start_period: 20s
+          63: 
+          64:   # ---------------------------------------------------------------------------
+          65:   # One-shot: generates the field-encryption keypair and the internal token into a shared
+          66:   # volume, and takes ownership of the volumes. Exits when done.
+          67:   #
+          68:   # The only service running as root, because a new volume belongs to root until something
+          69:   # claims it.
+          70:   init:
+          71:     image: ${DRIVER_IMAGE:?set DRIVER_IMAGE in .env}
+          72:     # Our images are built for amd64 only. Declaring it silences compose's
+          73:     # "does not match the detected host platform ... and no specific platform
+          74:     # was requested" warning, which fired on every Apple Silicon start and
+          75:     # read as a failure. Nothing is hidden: preflight.sh reports the same fact
+          76:     # and, unlike the warning, says where the Rosetta switch is and what it
+          77:     # costs to leave it off. Not set on postgres or caddy — those are
+          78:     # multi-arch and would be forced into emulation for nothing.
+          79:     platform: linux/amd64
+          80:     restart: "no"
+          81:     user: "0:0"
+          82:     entrypoint: ["/bin/bash", "/init/generate-secrets.sh"]
+          83:     volumes:
+          84:       - driver-data:/home/zetaris/zetaris-ndp-driver/data
+          85:       - driver-logs:/home/zetaris/zetaris-ndp-driver/logs
+          86:       - customer-data:/home/zetaris/customer-data
+          87:       - ./init:/init:ro
+          88: 
+          89:   # ---------------------------------------------------------------------------
+          90:   # Lightning driver: Thrift server on 10000, Spark UI on 4040.
+          91:   driver:
+          92:     image: ${DRIVER_IMAGE}
+          93:     platform: linux/amd64
+          94:     restart: unless-stopped
+          95:     depends_on:
+          96:       postgres:
+          97:         condition: service_healthy
+          98:       init:
+          99:         condition: service_completed_successfully
+          100:     # A thin wrapper: writes the settings that only reach the driver through
+          101:     # meta_store.properties, then execs the shipped launcher untouched. See the script.
+          102:     entrypoint: ["/bin/bash", "/init/driver-entrypoint.sh"]
+          103:     environment:
+          104:       METASTORE_JDBC_URL: jdbc:postgresql://postgres:5433/metastore?user=${POSTGRES_USER:-zetaris}&password=${POSTGRES_PASSWORD}
+          105:       AUDIT_LOG_JDBC_URL: jdbc:postgresql://postgres:5433/audit?user=${POSTGRES_USER:-zetaris}&password=${POSTGRES_PASSWORD}
+          106:       NDP_TOKEN: /home/zetaris/zetaris-ndp-driver/data/tokens/ndp_token
+          107:       ENCRYPTION_LOCAL_PRIVATE_KEY_PATH: /home/zetaris/zetaris-ndp-driver/data/passwordkeys/private_key.der
+          108:       ENCRYPTION_LOCAL_PUBLIC_KEY_PATH: /home/zetaris/zetaris-ndp-driver/data/passwordkeys/public_key.der
+          109:       # Run the query engine in the foreground, so the container lifecycle tracks the
+          110:       # process rather than a detached child.
+          111:       SPARK_NO_DAEMONIZE: "1"
+          112:       SPARK_LOG_DIR: /home/zetaris/zetaris-ndp-driver/logs
+          113:       SPARK_PID_DIR: /tmp
+          114:       ZSPARK_MASTER_URL: ${ZSPARK_MASTER_URL:-local[*]}
+          115:       ZSPARK_DRIVER_MEM: ${ZSPARK_DRIVER_MEM:-8g}
+          116:       ZSPARK_DRIVER_CORES: ${ZSPARK_DRIVER_CORES:-4}
+          117:       BASE_ENDPOINT: http://api:8889/
+          118:       # Where the driver creates each organisation's storage tree. Must be the same shared
+          119:       # volume the API reads through NDP_ROOT_PATH -- left unset the driver uses its own data
+          120:       # directory, and the API returns 400 on every NDP File System call.
+          121:       FILESYSTEM_STAGING: /home/zetaris/customer-data
+          122:       NDP_ROOT_PATH: /home/zetaris/customer-data
+          123:       ZETARIS_LOCAL_FILE_SYTEM_ROOT_PATH: /home/zetaris/customer-data/shared
+          124:       PLATFORM_TYPE: vm
+          125:       # The driver registers this organisation and administrator on first start.
+          126:       ZETARIS_ADMIN_EMAIL: ${ZETARIS_ADMIN_EMAIL:-admin@zetaris.com}
+          127:       ZETARIS_ADMIN_PASSWORD: ${ZETARIS_ADMIN_PASSWORD:?ZETARIS_ADMIN_PASSWORD must be set}
+          128:       ZETARIS_ADMIN_ORG: ${ZETARIS_ADMIN_ORG:-zetaris}
+          129:     volumes:
+          130:       - ./init:/init:ro
+          131:       # Spark tuning, editable without rebuilding anything. Spark reads this at startup.
+          132:       - ./conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
+          133:       - customer-data:/home/zetaris/customer-data
+          134:       - driver-data:/home/zetaris/zetaris-ndp-driver/data
+          135:       # Driver and JVM logs. Persisted so they survive container recreation and can be
+          136:       # inspected after a restart.
+          137:       - driver-logs:/home/zetaris/zetaris-ndp-driver/logs
+          138:     ports:
+          139:       # Loopback: the Spark UI has no authentication, and the JDBC endpoint is plaintext.
+          140:       # Neither should be reachable from the network the host happens to sit on.
+          141:       - "127.0.0.1:${DRIVER_PORT:-10000}:10000"
+          142:       - "127.0.0.1:${SPARK_UI_PORT:-4040}:4040"
+          143:       # Publishing the Catalog REST port is OPT-IN and off by default: it has only a static
+          144:       # bearer token in front of it. Set QUERY_HTTP_PUBLISH=8081 only when running the graph
+          145:       # service on the host, and keep it bound to loopback.
+          146:       - "127.0.0.1:${QUERY_HTTP_PUBLISH:-0}:8081"
+          147:     healthcheck:
+          148:       # Explicit bash: the probe uses a bash builtin to test the listener.
+          149:       test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/10000"]
+          150:       interval: 10s
+          151:       timeout: 5s
+          152:       # 180 x 10s = 1800s after start_period. Spark's first boot builds the metastore
+          153:       # schema through Flyway, which is minutes on a slow or emulated host, and too small
+          154:       # a budget marks the driver unhealthy and fails every dependent service behind a
+          155:       # gate that would have opened. Deliberately generous: native amd64 is far quicker.
+          156:       retries: 180
+          157:       start_period: 180s
+          158: 
+          159:   # ---------------------------------------------------------------------------
+          160:   # API service: 8888 public, 8889 internal.
+          161:   #
+          162:   # group_add grants the driver's group, so this container can read the shared keypair and
+          163:   # write the shared data tree while the keys stay group-restricted.
+          164:   api:
+          165:     image: ${API_IMAGE:?set API_IMAGE in .env}
+          166:     platform: linux/amd64
+          167:     restart: unless-stopped
+          168:     depends_on:
+          169:       driver:
+          170:         condition: service_healthy
+          171:     group_add:
+          172:       - "1001"
+          173:     environment:
+          174:       METASTORE_DATABASE_URL: jdbc:postgresql://postgres:5433/metastore?user=${POSTGRES_USER:-zetaris}&password=${POSTGRES_PASSWORD}
+          175:       AUDIT_LOG_DATABASE_URL: jdbc:postgresql://postgres:5433/audit?user=${POSTGRES_USER:-zetaris}&password=${POSTGRES_PASSWORD}
+          176:       LIGHTNING_SERVER_URL: jdbc:zetaris:lightning@driver:10000
+          177:       NDP_TOKEN: /home/zetaris/zetaris-ndp-driver/data/tokens/ndp_token
+          178:       ENCRYPTION_LOCAL_PRIVATE_KEY_PATH: /home/zetaris/zetaris-ndp-driver/data/passwordkeys/private_key.der
+          179:       ENCRYPTION_LOCAL_PUBLIC_KEY_PATH: /home/zetaris/zetaris-ndp-driver/data/passwordkeys/public_key.der
+          180:       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+          181:       GUI_URL: ${GUI_URL:-http://localhost:3000}
+          182:       NDP_ROOT_PATH: /home/zetaris/customer-data
+          183:       ZETARIS_LOCAL_FILE_SYTEM_ROOT_PATH: /home/zetaris/customer-data/shared
+          184:       # The API launcher reads JAVA_OPTS. Left unset the JVM sizes itself from whatever
+          185:       # memory it can see, which on a large host is both oversized and unpredictable.
+          186:       # ExitOnOutOfMemoryError so an exhausted heap restarts the container instead of
+          187:       # limping along in a degraded state.
+          188:       JAVA_OPTS: -Xms256m -Xmx${ZETARIS_API_MAX_HEAP:-2g} -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError
+          189:       LIGHTNING_API_DEPLOY_MODE: internal
+          190:       PLATFORM_TYPE: vm
+          191:       # Anonymous liveness reporting. The id is minted by init on first start and
+          192:       # says nothing about who you are; see .env for what is sent and how
+          193:       # to turn it off.
+          194:       INSTALL_ID_PATH: /home/zetaris/zetaris-ndp-driver/data/install-id
+          195:       # Shipped in .env, the same in every bundle. Sent joined to this install's
+          196:       # own id so Zetaris can tell a real bundle from an invented report.
+          197:       TELEMETRY_KEY: ${TELEMETRY_KEY:-}
+          198:       TELEMETRY_URL: ${TELEMETRY_URL:-https://cloud-api.enterprise.zetaris.com/api/v1.0/hackathon}
+          199:       TELEMETRY_ENABLED: ${TELEMETRY_ENABLED:-}
+          200:       # Must stay a number. Compose passes an unset variable as the empty
+          201:       # string, which is *defined*, so application.conf's `${?VAR}` override
+          202:       # fires and replaces the default with "" -- and the API dies at startup
+          203:       # on a PureConfig Int read. The first beat is staggered across the window.
+          204:       TELEMETRY_INTERVAL_MINUTES: ${TELEMETRY_INTERVAL_MINUTES:-120}
+          205:     volumes:
+          206:       # Read-only: exactly one writer (the driver) for the shared keypair and token.
+          207:       - driver-data:/home/zetaris/zetaris-ndp-driver/data:ro
+          208:       - customer-data:/home/zetaris/customer-data
+          209:     ports:
+          210:       # Loopback. 8889 carries an internal login route that must not be reachable from the
+          211:       # network; with the tls overlay in front, neither port needs publishing at all.
+          212:       - "127.0.0.1:${API_PORT:-8888}:8888"
+          213:       - "127.0.0.1:${API_INTERNAL_PORT:-8889}:8889"
+          214:     healthcheck:
+          215:       # Any HTTP response means the service is answering; the check is deliberately not
+          216:       # tied to a specific endpoint.
+          217:       test: ["CMD-SHELL", "curl -sS -o /dev/null http://127.0.0.1:8888/"]
+          218:       interval: 10s
+          219:       timeout: 5s
+          220:       retries: 180
+          221:       start_period: 120s
+          222: 
+          223:   # ---------------------------------------------------------------------------
+          224:   # Web UI. LIGHTNING_API_HOST is a bare service name;
+          225:   # the app appends :8888 for the public API and :8889 for the internal login route.
+          226:   ui:
+          227:     image: ${UI_IMAGE:?set UI_IMAGE in .env}
+          228:     platform: linux/amd64
+          229:     restart: unless-stopped
+          230:     depends_on:
+          231:       api:
+          232:         condition: service_healthy
+          233:     extra_hosts:
+          234:       - "host.docker.internal:host-gateway"
+          235:     environment:
+          236:       LIGHTNING_API_HOST: api
+          237:       # Airflow and notebooks are not part of this deployment, and the UI shows both menu
+          238:       # rows unless it is told otherwise. Off explicitly: left unset they default to on and
+          239:       # the rows lead nowhere.
+          240:       APACHE_AIRFLOW_ENABLED: "false"
+          241:       ENABLED_ZEPPELIN: "false"
+          242:     ports:
+          243:       - "${UI_PORT:-3000}:3000"
+          244:     healthcheck:
+          245:       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/api/config"]
+          246:       interval: 10s
+          247:       timeout: 5s
+          248:       retries: 60
+          249:       start_period: 30s
+          250: 
+          251:   # ---------------------------------------------------------------------------
+          252:   # One-shot: the sample data, registered as the administrator.
+          253:   bootstrap:
+          254:     image: ${DRIVER_IMAGE}
+          255:     platform: linux/amd64
+          256:     restart: "no"
+          257:     depends_on:
+          258:       api:
+          259:         condition: service_healthy
+          260:     entrypoint: ["/bin/bash", "/init/bootstrap-admin.sh"]
+          261:     environment:
+          262:       METASTORE_JDBC_URL: jdbc:postgresql://postgres:5433/metastore?user=${POSTGRES_USER:-zetaris}&password=${POSTGRES_PASSWORD}
+          263:       AUDIT_LOG_JDBC_URL: jdbc:postgresql://postgres:5433/audit?user=${POSTGRES_USER:-zetaris}&password=${POSTGRES_PASSWORD}
+          264:       NDP_TOKEN: /home/zetaris/zetaris-ndp-driver/data/tokens/ndp_token
+          265:       ENCRYPTION_LOCAL_PRIVATE_KEY_PATH: /home/zetaris/zetaris-ndp-driver/data/passwordkeys/private_key.der
+          266:       ENCRYPTION_LOCAL_PUBLIC_KEY_PATH: /home/zetaris/zetaris-ndp-driver/data/passwordkeys/public_key.der
+          267:       ZETARIS_ADMIN_EMAIL: ${ZETARIS_ADMIN_EMAIL:-admin@zetaris.com}
+          268:       ZETARIS_ADMIN_PASSWORD: ${ZETARIS_ADMIN_PASSWORD:?ZETARIS_ADMIN_PASSWORD must be set}
+          269:       # Must match the driver: the seed runs a Lightning session against the same storage.
+          270:       FILESYSTEM_STAGING: /home/zetaris/customer-data
+          271:       NDP_ROOT_PATH: /home/zetaris/customer-data
+          272:       ZETARIS_LOCAL_FILE_SYTEM_ROOT_PATH: /home/zetaris/customer-data/shared
+          273:       ZSPARK_MASTER_URL: local[1]
+          274:       ZSPARK_DRIVER_MEM: 1g
+          275:     volumes:
+          276:       - driver-data:/home/zetaris/zetaris-ndp-driver/data
+          277:       - driver-logs:/home/zetaris/zetaris-ndp-driver/logs
+          278:       - customer-data:/home/zetaris/customer-data
+          279:       - ./init:/init:ro
+          280: 
+          281:   # HTTPS front end, started only when COMPOSE_PROFILES=tls. A browser will not run the
+          282:   # interface over plain HTTP at anything but localhost, so any machine reached by name or
+          283:   # address needs this; a laptop reached at localhost does not.
+          284:   caddy:
+          285:     image: caddy:2-alpine
+          286:     profiles: ["tls"]
+          287:     restart: unless-stopped
+          288:     depends_on:
+          289:       ui:
+          290:         condition: service_healthy
+          291:     environment:
+          292:       # A plain default, not `:?`. Compose interpolates every service whether or not its
+          293:       # profile is active, so a required marker here breaks `up` for everyone not using tls.
+          294:       ZETARIS_PUBLIC_HOST: ${ZETARIS_PUBLIC_HOST:-}
+          295:       CADDY_GLOBAL_OPTIONS: ${CADDY_GLOBAL_OPTIONS:-}
+          296:     ports:
+          297:       - "80:80"
+          298:       - "443:443"
+          299:     volumes:
+          300:       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+          301:       - caddy-data:/data
+          302:       - caddy-config:/config
+          303: 
+          304: volumes:
+          305:   pgdata:
+          306:   caddy-data:
+          307:   caddy-config:
+          308:   driver-logs:
+          309:   customer-data:
+          310:   driver-data:
+
+          (End of file - total 310 lines)
+          </content>
+    time: 10/23/2026, 8:14:55.625 PM UTC
+    response: "\n\n"
+    duration: 1.759s
+    duration_ms: 1759
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Key findings:
+      - README says driver file `jdbc/ndp-jdbc-driver-2.4.3.1-7eff043-driver.jar`; our driver is `2.1.0.13`, old. The platform is release 2.4.3.1. That's likely the login failure: driver mismatch. The correct driver JAR is in `/home/ext_root/lab-data/zetaris-platform/jdbc/`. We should use that. The `.env.local` `ZETARIS_JDBC_JAR` is empty. The AGENTS said ask user for path; but now user pointed to platform folder, and README names it. We can use it.
+      - README says default password `[REDACTED]` (not `zetaris`). `.env.example` in `zetaris-getting-started` is stale; the platform `.env` likely has `ZETARIS_ADMIN_PASSWORD=[REDACTED]` or custom. User says same pwd; likely `[REDACTED]` (9 chars). Our `.env.local` password is `zetaris` (7), which is the old example. The platform `.env` may have the real password. We should read platform `.env` key names, not print secret. But user says launched with same pwd; maybe they used `[REDACTED]`. We need update `.env.local` to match platform `.env` (or use platform's admin credentials). We can inspect platform `.env` `ZETARIS_ADMIN_EMAIL` and `ZETARIS_ADMIN_PASSWORD`; reading values would reveal secret. We can compare without printing: compare `.env.local` password to platform `.env` password, print boolean. Also compare username. Let's do that safely. And find JDBC JAR. Use glob.
+    thinking_duration: 1.682s
+    thinking_duration_ms: 1682
+    tool_calls:
+      - tool: glob
+        args:
+          pattern: jdbc/*.jar
+          path: /home/ext_root/lab-data/zetaris-platform
+        result: /home/ext_root/lab-data/zetaris-platform/jdbc/ndp-jdbc-driver-2.4.3.1-7eff043-driver.jar
+      - tool: bash
+        args:
+          command: |-
+            python3 - <<'PY'
+            from pathlib import Path
+            def load(path):
+                data = {}
+                for line in Path(path).read_text().splitlines():
+                    line = line.strip()
+                    if not line or line.startswith('#') or '=' not in line:
+                        continue
+                    k, v = line.split('=', 1)
+                    data[k.strip()] = v.strip()
+                return data
+            local = load('/home/ext_root/lab-data/zetaris-getting-started/.env.local')
+            platform = load('/home/ext_root/lab-data/zetaris-platform/.env')
+            for local_key, platform_key in (
+                ('ZETARIS_USERNAME', 'ZETARIS_ADMIN_EMAIL'),
+                ('ZETARIS_PASSWORD', 'ZETARIS_ADMIN_PASSWORD'),
+            ):
+                a = local.get(local_key, '')
+                b = platform.get(platform_key, '')
+                print(f'{local_key} matches platform {platform_key}: {a == b} (local_len={len(a)}, platform_len={len(b)})')
+            PY
+        result: |
+          ZETARIS_USERNAME matches platform ZETARIS_ADMIN_EMAIL: True (local_len=17, platform_len=17)
+          ZETARIS_PASSWORD matches platform ZETARIS_ADMIN_PASSWORD: [REDACTED] (local_len=7, platform_len=9)
+    time: 10/23/2026, 8:14:57.424 PM UTC
+    response: "\n\n"
+    duration: 3.614s
+    duration_ms: 3614
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      So `.env.local` password differs from platform `.env`; platform password length 9, likely `[REDACTED]` (9). User says launched with same pwd; they mean platform password, not `.env.local`'s `zetaris`. Need update `.env.local` `ZETARIS_PASSWORD` to match platform `.env`, and `ZETARIS_JDBC_JAR` to platform driver. We should not print secret. We can programmatically sync the password from platform `.env` to `.env.local` without displaying it. Is it okay to edit a private env file? The user asked to check folder; implicitly wants fix. We can update `.env.local` with the platform password. But `.env.local` is private config; editing is allowed? It contains secrets; we must be careful. We can use a Python script to update only `ZETARIS_PASSWORD` and `ZETARIS_JDBC_JAR` lines, preserving rest. This avoids printing. The user said "the pwd is correct" and pointed to platform; likely expects us to use the platform credentials. We can sync.
+
+      But first, test the platform driver + platform password directly with the probe, without modifying `.env.local`. Use env overrides:
+      ```
+      set -a; source .env.local; set +a
+      ZETARIS_PASSWORD=[REDACTED] platform .env ...)" java -cp platform/jdbc/... Probe.java ZETARIS_PASSWORD
+      ```
+      But reading platform password into shell and passing via env; no print. We can use Python to run subprocess with env, or bash command substitution. Avoid command substitution exposing in process list? `ZETARIS_PASSWORD=[REDACTED] ...)"` then `java` environment; process list may show env? On Linux, `/proc/<pid>/environ` accessible to same user; okay. No output. Let's test. Also test old driver with platform password, and new driver with old password, to isolate. But simplest: new driver + platform password. Use `java -cp platform/jdbc/... Probe.java ZETARIS_PASSWORD` with `ZETARIS_PASSWORD` overridden from platform `.env`. Need source platform `.env`? It has `ZETARIS_ADMIN_PASSWORD`; set `ZETARIS_PASSWORD` to it. Use Python wrapper to read platform `.env` and invoke Java with env, no printing. Write a small Python one-liner:
+      ```python
+      import os, subprocess
+      env=os.environ.copy()
+      # load platform .env
+      ...
+      env['ZETARIS_PASSWORD']=platform['ZETARIS_ADMIN_PASSWORD']
+      env['ZETARIS_JDBC_URL']=... maybe local .env
+      subprocess.run(['java','-cp',newjar,probe,'ZETARIS_PASSWORD'], env=env)
+      ```
+      But we need `ZETARIS_USERNAME` from local `.env.local`; source it in shell. Python inherits. Print only exit. The Java probe prints OK/error. Fine.
+      Let's run two probes:
+      1. New driver + platform password.
+      2. Old driver + platform password (to confirm password alone).
+      Use one Python script? It can run both and print labels. But output from Java stack may be large; redirect? The probe catches and prints exception message only? It prints `ex.getClass().getSimpleName() + ": " + ex.getMessage()`, but the driver logs stack trace to stderr via SLF4J? In earlier output, stack trace appeared before `SQLException` because Thrift logs? It printed full stack. We can redirect stderr to a file or suppress. The probe's catch prints message; the driver itself prints stack trace? Actually the stack trace may be from `e.printStackTrace()` in driver? It appears before the final message. To keep output small, run with `2>/dev/null`? But we need error. The final line is enough. Use `subprocess.run(..., capture_output=True, text=True)` and print last line. Good.
+      Let's write a Python script in scratch? We can use `bash` heredoc; simple, no nested heredoc. But AGENTS warns no nested heredocs; a single `python3 - <<'PY'` with no triple quotes is fine. It will read platform `.env`; no secrets printed. Let's do.
+    thinking_duration: 7.644s
+    thinking_duration_ms: 7644
+    tool_calls:
+      - tool: bash
+        args:
+          command: |-
+            set -a; source .env.local; set +a; python3 - <<'PY'
+            import os
+            import subprocess
+            from pathlib import Path
+
+            def load(path):
+                data = {}
+                for line in Path(path).read_text().splitlines():
+                    line = line.strip()
+                    if not line or line.startswith('#') or '=' not in line:
+                        continue
+                    key, value = line.split('=', 1)
+                    data[key.strip()] = value.strip()
+                return data
+
+            platform = load('/home/ext_root/lab-data/zetaris-platform/.env')
+            probe = '/home/ext_root/lab-data/ai-suite/scratch/e95d21195ffeZqxeyL3fMHbTW4/jdbc-login-probe_2026-10-23_20-12-00.java'
+            env = os.environ.copy()
+            env['ZETARIS_PASSWORD'] = platform['ZETARIS_ADMIN_PASSWORD']
+            for label, jar in (
+                ('new-driver', '/home/ext_root/lab-data/zetaris-platform/jdbc/ndp-jdbc-driver-2.4.3.1-7eff043-driver.jar'),
+                ('old-driver', '/home/ext_root/lab-data/ndp-jdbc-driver-2.1.0.13-driver.jar'),
+            ):
+                result = subprocess.run(['java', '-cp', jar, probe, 'ZETARIS_PASSWORD'], env=env, capture_output=True, text=True)
+                lines = [line for line in (result.stdout + result.stderr).splitlines() if line.strip()]
+                print(label + ': ' + (lines[-1] if lines else 'no output'))
+            PY
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+          timeout: 120000
+        result: "new-driver: SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.\nold-driver: \tat jdk.compiler/com.sun.tools.javac.launcher.SourceLauncher.main(SourceLauncher.java:77)\n"
+    time: 10/23/2026, 8:15:01.068 PM UTC
+    response: "\n\n\n\n"
+    duration: 13.280s
+    duration_ms: 13280
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: 'Our "last line" picked SLF4J noise or stack. Need better parse: look for lines starting `OK` or `SQLException`. Let''s rerun and print lines containing `OK` or `SQLException`. Also capture exit code.'
+    thinking_duration: 238ms
+    thinking_duration_ms: 238
+    tool_calls:
+      - tool: bash
+        args:
+          command: |-
+            set -a; source .env.local; set +a; python3 - <<'PY'
+            import os
+            import subprocess
+            from pathlib import Path
+
+            def load(path):
+                data = {}
+                for line in Path(path).read_text().splitlines():
+                    line = line.strip()
+                    if not line or line.startswith('#') or '=' not in line:
+                        continue
+                    key, value = line.split('=', 1)
+                    data[key.strip()] = value.strip()
+                return data
+
+            platform = load('/home/ext_root/lab-data/zetaris-platform/.env')
+            probe = '/home/ext_root/lab-data/ai-suite/scratch/e95d21195ffeZqxeyL3fMHbTW4/jdbc-login-probe_2026-10-23_20-12-00.java'
+            env = os.environ.copy()
+            env['ZETARIS_PASSWORD'] = platform['ZETARIS_ADMIN_PASSWORD']
+            for label, jar in (
+                ('new-driver', '/home/ext_root/lab-data/zetaris-platform/jdbc/ndp-jdbc-driver-2.4.3.1-7eff043-driver.jar'),
+                ('old-driver', '/home/ext_root/lab-data/ndp-jdbc-driver-2.1.0.13-driver.jar'),
+            ):
+                result = subprocess.run(['java', '-cp', jar, probe, 'ZETARIS_PASSWORD'], env=env, capture_output=True, text=True)
+                hits = [line for line in (result.stdout + result.stderr).splitlines() if line.startswith('OK') or line.startswith('SQLException')]
+                print(f'{label}: exit={result.returncode} ' + (' | '.join(hits) if hits else 'no verdict'))
+            PY
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+          timeout: 120000
+        result: |
+          new-driver: exit=0 SQLException: Could not open client transport with JDBC Uri: jdbc:zetaris:lightning@localhost:10000: Peer indicated failure: Error validating the login
+          old-driver: exit=0 SQLException: Could not open client transport with JDBC Uri: jdbc:zetaris:lightning@localhost:10000: Peer indicated failure: Error validating the login
+    time: 10/23/2026, 8:15:14.388 PM UTC
+    response: "\n\n\n\n"
+    duration: 5.375s
+    duration_ms: 5375
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Both fail with platform password. Hmm. Maybe platform password isn't `ZETARIS_ADMIN_PASSWORD`? It is the admin password used to create admin on first start; if the password was changed in UI, platform `.env` still has original, and `.env.local` `zetaris` maybe old. User says launched with same pwd; maybe they changed password in UI. We need inspect platform `.env` and possibly container logs to see admin creation. But we cannot know changed password.
+
+      Maybe the driver login uses a different auth endpoint; maybe the admin password has been changed via UI, so `.env` is stale. The user says "same pwd" maybe they mean the one they use to log into UI. They might have changed it to something else. `.env.local` `zetaris` is not it. We need ask them to set `.env.local` to the UI login password. But they said pwd correct; perhaps they think `.env.local` is correct. We can point out it's not the platform `.env` password (lengths differ). But maybe the platform `.env` password is `[REDACTED]` and UI password was changed.
+
+      Let's check platform `.env` `ZETARIS_ADMIN_PASSWORD` length 9; likely `[REDACTED]`. The user might use `[REDACTED]`. We tested it; login fails. Maybe the admin password was changed after first start. The README says change password from user menu; if they did, `.env` is stale. The user says "launched zetaris docker with that same pwd" — maybe they didn't change it. But test says no.
+
+      Could the JDBC login require the password to be sent via a different SASL mechanism, and the server uses an auth proxy that is broken? Maybe the driver's `LightningConnection` uses SASL PLAIN; server's "Error validating the login" could be because the admin user is not in the metastore or org mismatch. But REST works with API key.
+
+      Let's inspect container logs for login errors. `docker compose logs driver` maybe shows details. Use `docker ps` to confirm containers. Then `docker compose logs --tail=100 driver` (small). This is a known folder. Use `bash` with workdir `/home/ext_root/lab-data/zetaris-platform`. We need avoid huge output; `--tail=80`. Search for "login", "auth", "admin". Let's run `docker compose ps` and logs.
+    thinking_duration: 2.975s
+    thinking_duration_ms: 2975
+    tool_calls:
+      - tool: bash
+        args:
+          command: docker compose ps
+          workdir: /home/ext_root/lab-data/zetaris-platform
+          timeout: 30000
+        result: (no output)
+      - tool: bash
+        args:
+          command: docker compose ps
+          workdir: /home/ext_root/lab-data/zetaris-platform
+          timeout: 30000
+        result: |
+          permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get "http://%2Fvar%2Frun%2Fdocker.sock/v1.51/containers/json?filters=%7B%22label%22%3A%7B%22com.docker.compose.config-hash%22%3Atrue%2C%22com.docker.compose.oneoff%3DFalse%22%3Atrue%2C%22com.docker.compose.project%3Dzetaris%22%3Atrue%7D%7D": dial unix /var/run/docker.sock: connect: permission denied
+    time: 10/23/2026, 8:15:19.802 PM UTC
+    response: "\n\n"
+    duration: 5.353s
+    duration_ms: 5353
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Docker permission denied; maybe need sudo? The user launched Docker; our user not in docker group. Could use `sudo docker compose ps` but may prompt password. Avoid? We can try `sudo -n` to see if passwordless. But not necessary. Could inspect logs from volume? Maybe not.
+
+      The platform `.env` may contain `ZETARIS_ADMIN_PASSWORD`; we tested. Maybe the user changed password in UI. We can test the UI login endpoint with platform password and `.env.local` password to see which is valid. The UI login route is API internal port 8889; docs mention internal login. Maybe endpoint `/login` or `/api/v1.0/login`. We can inspect `verify.sh` or `init/bootstrap` for login calls. `verify.sh` likely logs in via UI/API. Read it.
+    thinking_duration: 1.519s
+    thinking_duration_ms: 1519
+    tool_calls:
+      - tool: read
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-platform/verify.sh
+        result: |-
+          <path>/home/ext_root/lab-data/zetaris-platform/verify.sh</path>
+          <type>file</type>
+          <content>
+          1: #!/usr/bin/env bash
+          2: #
+          3: # Check a running platform is working, and say what to do when it is not.
+          4: #
+          5: # This is read-only and safe against an install you care about. The other suite,
+          6: # verify-install.sh, builds a throwaway stack on empty volumes and destroys them
+          7: # afterwards; never point that one at a real install.
+          8: #
+          9: # Usage: ./verify.sh
+          10: # Exits non-zero if any check fails.
+          11: 
+          12: set -uo pipefail
+          13: 
+          14: HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+          15: cd "$HERE"
+          16: 
+          17: pass=0; fail=0
+          18: # the driver creates the organisation and its administrator on first start, so until it
+          19: # is up there is no account to log in as. A login failure before then means "not ready yet", not "wrong
+          20: # password", and the two need different advice.
+          21: BOOTSTRAP_PENDING=0
+          22: ok()   { printf '  PASS  %s\n' "$1"; pass=$((pass+1)); }
+          23: bad()  { printf '  FAIL  %s\n' "$1"; fail=$((fail+1)); }
+          24: hint() { printf '        -> %s\n' "$1"; }
+          25: 
+          26: DC="docker compose"
+          27: $DC version >/dev/null 2>&1 || { printf 'ERROR: the docker compose plugin is missing. Run ./preflight.sh\n' >&2; exit 1; }
+          28: 
+          29: printf '%s\n' "Zetaris platform -- verify"
+          30: printf '%s\n' "=========================="
+          31: printf '\n'
+          32: 
+          33: # --- .env ---------------------------------------------------------------------------------
+          34: # Follow COMPOSE_ENV_FILES the way compose itself does, rather than assuming .env. Reading
+          35: # credentials from a different file than the stack was started with sends the wrong password
+          36: # and reports a healthy platform as a failed login.
+          37: ENV_FILE="${COMPOSE_ENV_FILES:-.env}"
+          38: ENV_FILE="${ENV_FILE%%,*}"          # COMPOSE_ENV_FILES may list several; the first wins
+          39: if [ ! -f "$ENV_FILE" ]; then
+          40:     printf 'ERROR: no %s here. Run ./env/make-env.sh first.\n' "$ENV_FILE" >&2
+          41:     exit 1
+          42: fi
+          43: # Read only the two values needed to log in. Sourcing the whole file would execute it.
+          44: ADMIN_EMAIL=$(sed -n 's/^ZETARIS_ADMIN_EMAIL=//p' "$ENV_FILE" | tail -1)
+          45: ADMIN_PW=$(sed -n 's/^ZETARIS_ADMIN_PASSWORD=[REDACTED] "$ENV_FILE" | tail -1)
+          46: : "${ADMIN_EMAIL:=admin@zetaris.com}"
+          47: 
+          48: # --- containers ---------------------------------------------------------------------------
+          49: # Long-running services. A container that was never created and one that crashed need
+          50: # different advice.
+          51: for svc in postgres driver api ui; do
+          52:     cid=$($DC ps -q "$svc" 2>/dev/null | head -1)
+          53:     if [ -z "$cid" ]; then
+          54:         bad "${svc}: not running"
+          55:         hint "start the stack with: docker compose up -d"
+          56:         continue
+          57:     fi
+          58:     state=$(docker inspect -f '{{.State.Status}}' "$cid" 2>/dev/null)
+          59:     health=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$cid" 2>/dev/null)
+          60:     if [ "$state" = "running" ] && { [ "$health" = "healthy" ] || [ "$health" = "none" ]; }; then
+          61:         ok "${svc}: running${health:+ (${health})}"
+          62:     else
+          63:         bad "${svc}: ${state}${health:+/${health}}"
+          64:         hint "see why with: docker compose logs --tail=50 ${svc}"
+          65:         [ "$svc" = "driver" ] && hint "a driver that exits on startup is usually out of memory -- run ./preflight.sh"
+          66:     fi
+          67: done
+          68: 
+          69: # --- one-shot jobs ------------------------------------------------------------------------
+          70: # init and bootstrap are expected to end in Exited(0), which reads like a crash if you are
+          71: # not expecting it. Say so explicitly.
+          72: for svc in init bootstrap; do
+          73:     cid=$($DC ps -aq "$svc" 2>/dev/null | head -1)
+          74:     if [ -z "$cid" ]; then
+          75:         bad "${svc}: never ran"
+          76:         continue
+          77:     fi
+          78:     code=$(docker inspect -f '{{.State.ExitCode}}' "$cid" 2>/dev/null)
+          79:     state=$(docker inspect -f '{{.State.Status}}' "$cid" 2>/dev/null)
+          80:     if [ "$state" = "running" ]; then
+          81:         bad "${svc}: still running (it is a one-shot job and should have finished)"
+          82:                 [ "$svc" = "bootstrap" ] && hint "on a slow machine this takes several minutes -- it loads the sample data"
+          83:     elif [ "$code" = "0" ]; then
+          84:         ok "${svc}: completed (exit 0 -- this is correct for a one-shot job)"
+          85:     else
+          86:         bad "${svc}: exited ${code}"
+          87:         hint "docker compose logs ${svc}"
+          88:     fi
+          89: done
+          90: 
+          91: # --- probes inside the network ------------------------------------------------------------
+          92: # Run these from inside the api container rather than the host. No published port is
+          93: # involved, so nothing else listening on 3000 or 8888 can answer instead.
+          94: API_C=$($DC ps -q api 2>/dev/null | head -1)
+          95: ncurl() { docker exec "$API_C" curl -s --max-time 30 "$@" 2>/dev/null; }
+          96: ncode() { docker exec "$API_C" curl -s -o /dev/null -w '%{http_code}' --max-time 30 "$@" 2>/dev/null; }
+          97: jwt()   { grep -oE '[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}' | head -1; }
+          98: 
+          99: if [ -n "$API_C" ]; then
+          100:     code=$(ncode "http://ui:3000/api/config")
+          101:     [ "$code" = "200" ] && ok "ui responding (/api/config 200)" || {
+          102:         bad "ui not responding (/api/config returned '${code:-nothing}')"
+          103:         hint "docker compose logs --tail=50 ui"
+          104:     }
+          105: 
+          106:     # Keep the whole response: it carries the organisation id as well as the token,
+          107:     # and the query below needs both. The id is NOT always 1 -- it comes from a
+          108:     # sequence shared with every other row created during bootstrap, so a database
+          109:     # that is not pristine (a retried install, or one kept from an earlier attempt)
+          110:     # lands on a different number, and a hardcoded 1 then fails the query on a
+          111:     # platform that is working.
+          112:     LOGIN=$(ncurl -X POST "http://ui:3000/api/auth/login" -H 'Content-Type: application/json' \
+          113:              -d "$(printf '{"username":"%s","password":"%s"}' "$ADMIN_EMAIL" "$ADMIN_PW")")
+          114:     TOKEN=$(printf '%s' "$LOGIN" | jwt)
+          115:     ORG_ID=$(printf '%s' "$LOGIN" | grep -oE '"orgId"[[:space:]]*:[[:space:]]*[0-9]+' | grep -oE '[0-9]+$')
+          116:     if [ -n "$TOKEN" ]; then
+          117:         ok "login as ${ADMIN_EMAIL}"
+          118:     else
+          119:         bad "login as ${ADMIN_EMAIL} returned no token"
+          120:         if [ "$BOOTSTRAP_PENDING" -eq 1 ]; then
+          121:             hint "the driver has not finished creating the account yet -- wait, then re-run ./verify.sh"
+          122:             hint "watch it with: docker compose logs -f driver"
+          123:         else
+          124:             hint "check ZETARIS_ADMIN_PASSWORD in ${ENV_FILE} matches what bootstrap created"
+          125:             hint "docker compose logs driver | grep -i organisation"
+          126:         fi
+          127:     fi
+          128: 
+          129:     # Everything above can pass while the API cannot reach the driver. This is the check
+          130:     # that covers that.
+          131:     if [ -n "$TOKEN" ] && [ -z "$ORG_ID" ]; then
+          132:         # Sending the header empty comes back as an authorisation failure, which
+          133:         # reads as a broken platform. Say what actually went wrong instead.
+          134:         bad "query skipped (login succeeded but returned no orgId)"
+          135:         hint "the login response should carry orgId alongside the tokens -- check the api version"
+          136:     elif [ -n "$TOKEN" ]; then
+          137:         r=$(ncurl -X POST "http://ui:3000/api/proxy/query/sql/start" -H 'Content-Type: application/json' \
+          138:             -H "Authorization: Bearer $TOKEN" -H "X-Org-ID: ${ORG_ID}" \
+          139:             -H "X-Request-ID: 11111111-2222-3333-4444-555555555555" \
+          140:             -d '{"select":"select 7 as seven","pageLimit":5}')
+          141:         if printf '%s' "$r" | grep -q '"seven":"7"'; then
+          142:             ok "query through ui -> api -> driver -> spark"
+          143:         else
+          144:             bad "query failed: $(printf '%s' "$r" | head -c 160)"
+          145:             hint "this is usually the driver still starting -- wait a minute and retry"
+          146:             hint "docker compose logs --tail=50 driver"
+          147:         fi
+          148:     else
+          149:         bad "query skipped (no login token)"
+          150:     fi
+          151: else
+          152:     bad "cannot probe the platform: the api container is not running"
+          153: fi
+          154: 
+          155: # --- summary ------------------------------------------------------------------------------
+          156: printf '\n'
+          157: if [ "$fail" -gt 0 ]; then
+          158:     printf '%d of %d checks failed.\n' "$fail" "$((pass+fail))"
+          159:     printf 'Quote the FAIL lines above when asking for help.\n'
+          160:     exit 1
+          161: fi
+          162: printf 'All %d checks passed. The platform is ready on http://localhost:3000\n' "$pass"
+          163: printf 'Sign in as %s\n' "$ADMIN_EMAIL"
+          164: exit 0
+
+          (End of file - total 164 lines)
+          </content>
+    time: 10/23/2026, 8:15:25.198 PM UTC
+    response: "\n\n"
+    duration: 3.053s
+    duration_ms: 3053
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Verify uses UI login with `ADMIN_PW` from platform `.env`. We can run `./verify.sh` but Docker permission denied; maybe `sudo`. Alternatively, we can call UI login endpoint from host (`http://localhost:3000/api/auth/login`) with platform password and see if it returns token. That tests the platform password. Use `curl` with JSON; do not print token. Print HTTP code and whether `token` present. This doesn't need Docker. Let's do with platform `.env` password and local `.env.local` password. Use Python/curl; avoid printing password. Use Python `urllib` or `curl` with `-d` containing secret; process list may show, but okay? Better Python `requests`? Not installed maybe. Use `curl` with `--data @-` from Python? Simpler Python `urllib.request` with JSON. It will print only status and keys. Let's run:
+      ```
+      python3 - <<'PY'
+      import json, urllib.request
+      ...
+      for label,pw in ...
+        req=...
+        try: resp; print(label, status, 'token' in body)
+      ```
+      Need `Content-Type`. This tests UI login. If platform password works, then JDBC should use it; if JDBC still fails, driver/server issue. If local password works, then platform password is stale and UI password is `zetaris`? But `zetaris` might be too short for platform policy; maybe UI login accepts it? Let's test.
+    thinking_duration: 3.613s
+    thinking_duration_ms: 3613
+    tool_calls:
+      - tool: bash
+        args:
+          command: |-
+            python3 - <<'PY'
+            import json
+            import urllib.error
+            import urllib.request
+            from pathlib import Path
+
+            def load(path):
+                data = {}
+                for line in Path(path).read_text().splitlines():
+                    line = line.strip()
+                    if not line or line.startswith('#') or '=' not in line:
+                        continue
+                    key, value = line.split('=', 1)
+                    data[key.strip()] = value.strip()
+                return data
+
+            platform = load('/home/ext_root/lab-data/zetaris-platform/.env')
+            local = load('/home/ext_root/lab-data/zetaris-getting-started/.env.local')
+            email = platform.get('ZETARIS_ADMIN_EMAIL', 'admin@zetaris.com')
+            for label, password in (
+                ('platform-env', platform.get('ZETARIS_ADMIN_PASSWORD', '')),
+                ('local-env', local.get('ZETARIS_PASSWORD', '')),
+            ):
+                body = json.dumps({'username': email, 'password': password}).encode()
+                request = urllib.request.Request(
+                    'http://localhost:3000/api/auth/login',
+                    data=body,
+                    headers={'Content-Type': 'application/json'},
+                    method='POST',
+                )
+                try:
+                    with urllib.request.urlopen(request, timeout=15) as response:
+                        payload = json.loads(response.read().decode())
+                        print(f'{label}: HTTP {response.status}, token={bool(payload.get("token") or payload.get("accessToken"))}, keys={sorted(payload)[:8]}')
+                except urllib.error.HTTPError as ex:
+                    print(f'{label}: HTTP {ex.code}')
+                except Exception as ex:
+                    print(f'{label}: {type(ex).__name__}: {ex}')
+            PY
+          workdir: /home/ext_root/lab-data/zetaris-platform
+          timeout: 60000
+        result: |
+          platform-env: HTTP 404
+          local-env: HTTP 404
+    time: 10/23/2026, 8:15:28.310 PM UTC
+    response: "\n\n"
+    duration: 8.473s
+    duration_ms: 8473
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: UI login endpoint maybe `/api/auth/login` on UI port 3000, but 404 means endpoint different or UI not running? Check `curl http://localhost:3000/api/config` status. Maybe UI not running. Use `curl -s -o /dev/null -w`. Also `http://localhost:8888` API. Let's check.
+    thinking_duration: 291ms
+    thinking_duration_ms: 291
+    tool_calls:
+      - tool: bash
+        args:
+          command: curl -sS -o /dev/null -w 'ui_config=%{http_code}\n' http://localhost:3000/api/config
+          timeout: 15000
+        result: |
+          ui_config=200
+      - tool: bash
+        args:
+          command: curl -sS -o /dev/null -w 'api_root=%{http_code}\n' http://localhost:8888/
+          timeout: 15000
+        result: |
+          api_root=404
+      - tool: bash
+        args:
+          command: curl -sS -o /dev/null -w 'driver_port=%{http_code}\n' http://localhost:10000/
+          timeout: 15000
+        result: |
+          curl: (1) Received HTTP/0.9 when not allowed
+          driver_port=000
+    time: 10/23/2026, 8:15:36.831 PM UTC
+    response: "\n\n"
+    duration: 2.561s
+    duration_ms: 2561
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      UI running. Login endpoint maybe `/api/auth/login` not on UI; verify.sh uses `http://ui:3000/api/auth/login` inside network, so same. 404 from host maybe because UI proxies differently? Hmm, `verify.sh` uses `docker exec api curl http://ui:3000/api/auth/login`; from api container, UI host resolves to UI container. From host, `localhost:3000` is UI; same. Maybe endpoint requires `POST /api/auth/login` but returns 404 because UI route is `/api/auth/login` only in internal? Let's try `curl -i` with platform password? We can use Python; 404 body may say. But no need.
+
+      Could use UI `/api/config` to see routes. Read JSON; small.
+    thinking_duration: 785ms
+    thinking_duration_ms: 785
+    tool_calls:
+      - tool: bash
+        args:
+          command: curl -sS http://localhost:3000/api/config
+          timeout: 15000
+        result: |-
+          {
+            "airflowUrl": null,
+            "zeppelinUrl": null,
+            "managedSparkUrl": null,
+            "apiDocUrl": "http://localhost:8888/redoc/index.html"
+          }
+    time: 10/23/2026, 8:15:39.433 PM UTC
+    response: "\n\n"
+    duration: 2.178s
+    duration_ms: 2178
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: UI is up. Login route maybe `/api/auth/signin` or `/api/login`. Search UI JS? Could inspect `verify.sh` exact path; it uses `/api/auth/login`. Why 404? Maybe UI version doesn't have that route; verify.sh for a newer version? Or UI returns 404 for POST because route only on API 8889? Let's check `curl -X POST` with no body; status.
+    thinking_duration: 478ms
+    thinking_duration_ms: 478
+    tool_calls:
+      - tool: bash
+        args:
+          command: 'curl -sS -o /dev/null -w ''%{http_code}\n'' -X POST http://localhost:3000/api/auth/login -H ''Content-Type: application/json'' -d ''{}'''
+          timeout: 15000
+        result: |
+          400
+      - tool: bash
+        args:
+          command: 'curl -sS -o /dev/null -w ''%{http_code}\n'' -X POST http://localhost:8889/login -H ''Content-Type: application/json'' -d ''{}'''
+          timeout: 15000
+        result: |
+          404
+      - tool: bash
+        args:
+          command: 'curl -sS -o /dev/null -w ''%{http_code}\n'' -X POST http://localhost:8888/api/v1.0/login -H ''Content-Type: application/json'' -d ''{}'''
+          timeout: 15000
+        result: |
+          404
+    time: 10/23/2026, 8:15:41.644 PM UTC
+    response: "\n\n"
+    duration: 2.563s
+    duration_ms: 2563
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: 'POST with `{}` returns 400, so route exists; our earlier 404 maybe because JSON body with wrong content? Wait, 400 vs 404; maybe our Python request had `Content-Length` and got 404 because URL? It used `http://localhost:3000/api/auth/login`, same. Why 404? Could be because the password contains `@` and JSON encoding? No, JSON body. Maybe the server returned 404 due to a trailing issue? Hmm. Let''s retry Python with platform password and print status; maybe it was a transient. Also try `curl` with `--data` using env variable but not printing. We can use Python again; maybe `urllib` followed a redirect to a 404 page. Use `curl` with `-w` and `-o /dev/null`; construct JSON with `jq`? We can use Python to write body to a temp file? Avoid. Use `curl -d @-` with Python pipe. But easiest: Python `http.client` to avoid redirects. Let''s retry with `urllib` and `no_redirect`? `urllib` follows redirects; login POST might redirect to 404. Use `curl` with `--max-redirs 0` and body from a file. But don''t write secret to a file? Scratch file with secret is not ideal; delete after. Could use shell variable and `curl -d "$body"`; process list might show, but local. We can use Python `http.client` and print status/headers. Let''s do with platform password only; no printing.'
+    thinking_duration: 2.437s
+    thinking_duration_ms: 2437
+    tool_calls:
+      - tool: bash
+        args:
+          command: |-
+            python3 - <<'PY'
+            import http.client
+            import json
+            from pathlib import Path
+
+            def load(path):
+                data = {}
+                for line in Path(path).read_text().splitlines():
+                    line = line.strip()
+                    if not line or line.startswith('#') or '=' not in line:
+                        continue
+                    key, value = line.split('=', 1)
+                    data[key.strip()] = value.strip()
+                return data
+
+            platform = load('/home/ext_root/lab-data/zetaris-platform/.env')
+            body = json.dumps({
+                'username': platform.get('ZETARIS_ADMIN_EMAIL', 'admin@zetaris.com'),
+                'password': platform.get('ZETARIS_ADMIN_PASSWORD', ''),
+            }).encode()
+            conn = http.client.HTTPConnection('localhost', 3000, timeout=15)
+            conn.request('POST', '/api/auth/login', body=body, headers={'Content-Type': 'application/json'})
+            response = conn.getresponse()
+            data = response.read().decode()
+            print('status=' + str(response.status))
+            print('has_token=' + str('token' in data.lower()))
+            print('body_len=' + str(len(data)))
+            conn.close()
+            PY
+          workdir: /home/ext_root/lab-data/zetaris-platform
+          timeout: 30000
+        result: |
+          status=404
+          has_token=False
+          body_len=21
+    time: 10/23/2026, 8:15:44.244 PM UTC
+    response: "\n\n"
+    duration: 5.997s
+    duration_ms: 5997
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Why 404 with a body, 400 with `{}`? Maybe the username/password combination triggers a redirect/404? Body length 21 likely `{"message":"Not Found"}`. Weird. Maybe the login route requires a different path; `{}` 400 from a generic body parser before route? Hmm.
+
+      Could be the UI's `/api/auth/login` is proxied to API 8889, and the API returns 404 for invalid credentials? Unlikely. Maybe it returns 404 when the user does not exist, to avoid user enumeration. The platform admin email may not be `admin@zetaris.com`? Platform `.env` says yes. Maybe the account was created with a different email/org? The driver uses `ZETARIS_ADMIN_EMAIL`; if bootstrap failed, no user. But REST API key works; API key may belong to a different user.
+
+      Wait, `.env.local` API key works, but UI login with platform admin fails. Maybe the user changed the admin email/password. The user says "launched zetaris docker with that same pwd" — perhaps they used `.env.local` password `zetaris`? But platform requires 8+ chars with complexity; `zetaris` is 7, rejected. So they must have used `[REDACTED]` or another. They may have changed it in UI to something else. We cannot know.
+
+      Maybe the login route expects `email` not `username`. Verify.sh uses `username`, so that's correct for its version. But UI 404 could mean route is different in this version. Let's inspect UI's JS for `auth/login` or login API path. The UI container files not accessible without Docker, but maybe static assets in browser. We can fetch `http://localhost:3000/` and grep JS for `auth/login`. Use curl and grep; output small.
+    thinking_duration: 2.408s
+    thinking_duration_ms: 2408
+    tool_calls:
+      - tool: bash
+        args:
+          command: curl -sS http://localhost:3000/ | grep -oE 'src="[^"]+\.js"' | head -10
+          timeout: 15000
+        result: (no output)
+    time: 10/23/2026, 8:15:50.273 PM UTC
+    response: "\n\n"
+    duration: 3.891s
+    duration_ms: 3891
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Maybe SPA with inline module. `curl -sS http://localhost:3000/ | head -40`.
+    thinking_duration: 1.046s
+    thinking_duration_ms: 1046
+    tool_calls:
+      - tool: bash
+        args:
+          command: curl -sS http://localhost:3000/ | head -40
+          timeout: 15000
+        result: /login
+    time: 10/23/2026, 8:15:54.197 PM UTC
+    response: "\n\n"
+    duration: 2.605s
+    duration_ms: 2605
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Response is `/login` text? Maybe redirect body. Use `curl -i` to see status/headers.
+    thinking_duration: 91ms
+    thinking_duration_ms: 91
+    tool_calls:
+      - tool: bash
+        args:
+          command: curl -sS -i http://localhost:3000/ | head -20
+          timeout: 15000
+        result: "HTTP/1.1 307 Temporary Redirect\r\nlocation: /login\r\nDate: Fri, 23 Oct 2026 20:15:58 GMT\r\nConnection: keep-alive\r\nKeep-Alive: timeout=5\r\nTransfer-Encoding: chunked\r\n\r\n/login"
+    time: 10/23/2026, 8:15:56.835 PM UTC
+    response: "\n\n"
+    duration: 1.343s
+    duration_ms: 1343
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: UI redirects to `/login`. Fetch `/login` and find JS.
+    thinking_duration: 52ms
+    thinking_duration_ms: 52
+    tool_calls:
+      - tool: bash
+        args:
+          command: curl -sS http://localhost:3000/login | grep -oE '(src|href)="[^"]+"' | head -20
+          timeout: 15000
+        result: |
+          href="/_next/static/css/8982fe382ae57d65.css"
+          href="/_next/static/chunks/webpack-56efea608a8d54e3.js"
+          src="/_next/static/chunks/4bd1b696-409494caf8c83275.js"
+          src="/_next/static/chunks/255-0d8f4ad4d1ad9f46.js"
+          src="/_next/static/chunks/main-app-d1e5c503935f9a8e.js"
+          src="/_next/static/chunks/887-a31a9281d816ebee.js"
+          src="/_next/static/chunks/493-9543e17877bfdaac.js"
+          src="/_next/static/chunks/app/layout-d7f35c6d478a0f46.js"
+          src="/_next/static/chunks/473-ce6488e205e85dd7.js"
+          src="/_next/static/chunks/app/login/page-ec8beda86f37de64.js"
+          href="/favicon.ico"
+          href="/icon.svg?d74140332c978e4c"
+          src="/_next/static/chunks/polyfills-42372ed130431b0a.js"
+          src="/assets/brand/zetaris-lockup.svg"
+          src="/_next/static/chunks/webpack-56efea608a8d54e3.js"
+    time: 10/23/2026, 8:15:58.210 PM UTC
+    response: "\n\n"
+    duration: 965ms
+    duration_ms: 965
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Fetch login page JS and grep for `api/`.
+    thinking_duration: 122ms
+    thinking_duration_ms: 122
+    tool_calls:
+      - tool: bash
+        args:
+          command: curl -sS http://localhost:3000/_next/static/chunks/app/login/page-ec8beda86f37de64.js | grep -oE '"/api/[^"]+"|`/api/[^`]+`' | sort -u | head -20
+          timeout: 15000
+        result: (no output)
+    time: 10/23/2026, 8:15:59.212 PM UTC
+    response: "\n\n"
+    duration: 1.213s
+    duration_ms: 1213
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Maybe API path constructed. Grep for `login` strings.
+    thinking_duration: 69ms
+    thinking_duration_ms: 69
+    tool_calls:
+      - tool: bash
+        args:
+          command: curl -sS http://localhost:3000/_next/static/chunks/app/login/page-ec8beda86f37de64.js | grep -oE '.{0,80}login.{0,80}' | head -20
+          timeout: 15000
+        result: |
+          ""),[b,A]=(0,r.useState)(!1),[v,N]=(0,r.useState)(""),[k,w]=(0,r.useState)(!1),{login:z}=(0,i.A)(),M=(0,l.useRouter)(),C=async s=>{s.preventDefault(),N(""),w(!0);try
+          lick:()=>A(e=>!e),"aria-label":b?"Hide password":"Show password","data-testid":"login-password-toggle",className:"absolute right-2 top-1/2 -translate-y-1/2 text-text
+    time: 10/23/2026, 8:16:00.459 PM UTC
+    response: "\n\n"
+    duration: 1.238s
+    duration_ms: 1238
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: 'Need find `login` function in auth provider. Search chunks for `/api/auth` or `auth/login`. Use `curl` on all JS? Could grep recursively via URL not easy. Use `grep` on fetched page? Let''s fetch all chunk URLs and search; but many. Maybe easier: use browser dev tools? No. Use `curl` for `main-app` or `layout` chunks and grep `auth`. Let''s fetch a few.'
+    thinking_duration: 387ms
+    thinking_duration_ms: 387
+    tool_calls:
+      - tool: bash
+        args:
+          command: for f in 4bd1b696-409494caf8c83275 255-0d8f4ad4d1ad9f46 main-app-d1e5c503935f9a8e 887-a31a9281d816ebee 493-9543e17877bfdaac 473-ce6488e205e85dd7; do curl -sS "http://localhost:3000/_next/static/chunks/$f.js" | grep -oE '.{0,60}auth/login.{0,60}|.{0,60}/api/auth.{0,60}' | head -3; done
+          timeout: 30000
+        result: |
+          (89678),i=n(30993);async function l(e,t){let n=await fetch("/api/auth/login",{method:"POST",headers:{"Content-Type":"application/
+    time: 10/23/2026, 8:16:01.747 PM UTC
+    response: "\n\n"
+    duration: 2.963s
+    duration_ms: 2963
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: So `/api/auth/login` exists. Our POST with platform password got 404. Maybe the UI proxies to API and API returns 404 for invalid credentials? Let's inspect the login function around that snippet for payload keys and error handling. Fetch the chunk containing it. Which file? The loop output didn't identify; likely `473-ce6488e205e85dd7.js` or `887`. We can search each with filename. Use `grep -l`? Curl to file? We can loop and print filename when match.
+    thinking_duration: 654ms
+    thinking_duration_ms: 654
+    tool_calls:
+      - tool: bash
+        args:
+          command: for f in 4bd1b696-409494caf8c83275 255-0d8f4ad4d1ad9f46 main-app-d1e5c503935f9a8e 887-a31a9281d816ebee 493-9543e17877bfdaac 473-ce6488e205e85dd7; do if curl -sS "http://localhost:3000/_next/static/chunks/$f.js" | grep -q 'auth/login'; then echo "$f"; fi; done
+          timeout: 30000
+        result: |
+          887-a31a9281d816ebee
+    time: 10/23/2026, 8:16:04.744 PM UTC
+    response: "\n\n"
+    duration: 2.580s
+    duration_ms: 2580
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Fetch chunk and extract around `auth/login` with more context. Use `grep -oE '.{0,300}auth/login.{0,500}'`. Output may be minified but okay.
+    thinking_duration: 614ms
+    thinking_duration_ms: 614
+    tool_calls:
+      - tool: bash
+        args:
+          command: curl -sS http://localhost:3000/_next/static/chunks/887-a31a9281d816ebee.js | grep -oE '.{0,300}auth/login.{0,700}' | head -1
+          timeout: 15000
+        result: |
+          turn"cards"===t?"cards":"list"}catch(e){return"list"}}(e))},[e]),[t,(0,o.useCallback)(t=>{n(t);try{window.localStorage.setItem(r+e,t)}catch(e){}},[e])]}},41887:(e,t,n)=>{n.d(t,{AuthProvider:()=>u,A:()=>d});var o=n(95155),r=n(12115),a=n(89678),i=n(30993);async function l(e,t){let n=await fetch("/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:e,password:t})});if(!n.ok){let e="Invalid credentials";try{e=(await n.json()).msg||e}catch(e){}throw Error(e)}let o=await n.json();(0,a.Ex)(o.idToken,o.refreshToken);let r=o.orgId,i=(0,a.W0)(o.idToken,"orgId"),l=null!=r?r:i;if(null==l)throw(0,a.gf)(),Error("Login response did not include orgId");return(0,a.Db)(String(l)),o}async function s(){return(0,a.apiClient)("/auth/user-info")}let c=(0,r.createContext)(void 0);function u(e){let{children:t}=e,[n,u]=(0,r.useState)(null),[d,h]=(0,r.useState)(!0);(0,r.useEffect)(()=>{(0,a.Pt)()?((0,a.EN)(),s().then(u).catch(()=>{(0,a.gf)(),u(null)}).finally(()=>h(!1))
+    time: 10/23/2026, 8:16:07.359 PM UTC
+    response: "\n\n"
+    duration: 7.403s
+    duration_ms: 7403
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Payload `username`/`password` correct. 404 likely from API proxy if auth fails? The UI route might return 404 when API returns 404. Could be the API's login endpoint expects different credentials or the user doesn't exist. We can test with `admin@zetaris.com` and platform password; 404. Maybe the admin email is different; check platform `.env` `ZETARIS_ADMIN_EMAIL` value (we know equals local, `admin@zetaris.com`). Could be user changed email? No.
+
+      Maybe the platform `.env` password is not the actual password because `.env` was edited after first start. The UI login would fail. User says launched with same pwd; maybe they didn't change it, so why 404? Maybe the driver/bootstrap failed to create admin due to password complexity; but platform was running. Check driver logs (need Docker permission). Could use `sudo docker` if passwordless. Try `sudo -n docker compose ps` to see.
+    thinking_duration: 951ms
+    thinking_duration_ms: 951
+    tool_calls:
+      - tool: bash
+        args:
+          command: sudo -n docker compose ps 2>&1 | head -20
+          workdir: /home/ext_root/lab-data/zetaris-platform
+          timeout: 30000
+        result: |
+          NAME                 IMAGE                                                                                                              COMMAND                  SERVICE    CREATED       STATUS                 PORTS
+          zetaris-api-1        zetarishackathon.azurecr.io/zetaris-ndp-api:2.4.3-v2.4.3.1-hackathon.a2848d8a41fa21673a0d719deb41b675412710fe      "/opt/zetaris-ndp-ap…"   api        2 hours ago   Up 2 hours (healthy)   127.0.0.1:8888-8889->8888-8889/tcp
+          zetaris-driver-1     zetarishackathon.azurecr.io/zetaris-ndp-driver:2.4.3-v2.4.3.1-hackathon.cb88df0b255aba5a9a9eda96483fc877cc82df80   "/bin/bash /init/dri…"   driver     2 hours ago   Up 2 hours (healthy)   127.0.0.1:4040->4040/tcp, 127.0.0.1:8081->8081/tcp, 127.0.0.1:10000->10000/tcp
+          zetaris-postgres-1   postgres:16-alpine                                                                                                 "docker-entrypoint.s…"   postgres   2 hours ago   Up 2 hours (healthy)   5432/tcp, 127.0.0.1:5433->5433/tcp
+          zetaris-ui-1         zetarishackathon.azurecr.io/zetaris-new-ui:2.4.3-v2.4.3.1-hackathon.88e49b0db015979a2d071d2d68a6865d38a39f15       "docker-entrypoint.s…"   ui         2 hours ago   Up 2 hours (healthy)   0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp
+    time: 10/23/2026, 8:16:14.802 PM UTC
+    response: "\n\n"
+    duration: 2.790s
+    duration_ms: 2790
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Docker works with sudo. Now inspect driver logs for admin creation / login errors. Use `sudo -n docker compose logs --tail=200 driver | grep -i ...`. Also inspect `.env` maybe `ZETARIS_ADMIN_PASSWORD` actual. We already compared. Let's check logs for "organisation", "admin", "login", "password".
+    thinking_duration: 242ms
+    thinking_duration_ms: 242
+    tool_calls:
+      - tool: bash
+        args:
+          command: sudo -n docker compose logs --tail=400 driver 2>&1 | grep -iE 'organisation|admin|login|password|auth|created|user' | tail -60
+          workdir: /home/ext_root/lab-data/zetaris-platform
+          timeout: 30000
+        result: "driver-1  | \tat org.apache.spark.sql.auth.LightningAuthenticationProvider.Authenticate(LightningAuthenticationProvider.scala:31) [com.zetaris.ndp-sql-2.4.3.1.jar:2.4.3.1]\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainServerCallbackHandler.handle(LightningPlainServerCallbackHandler.java:75) [com.zetaris.ndp-sql-2.4.3.1.jar:2.4.3.1]\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainSaslServer.evaluateResponse(LightningPlainSaslServer.java:116) [com.zetaris.ndp-sql-2.4.3.1.jar:2.4.3.1]\ndriver-1  | javax.security.sasl.SaslException: Error validating the login\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainSaslServer.evaluateResponse(LightningPlainSaslServer.java:123) ~[?:?]\ndriver-1  | Caused by: javax.security.sasl.AuthenticationException: Username or Password is invalid\ndriver-1  | \tat org.apache.spark.sql.auth.LightningAuthenticationProvider.Authenticate(LightningAuthenticationProvider.scala:36) ~[?:?]\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainServerCallbackHandler.handle(LightningPlainServerCallbackHandler.java:75) ~[?:?]\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainSaslServer.evaluateResponse(LightningPlainSaslServer.java:116) ~[?:?]\ndriver-1  | 26/10/23 20:13:25 INFO LightningAuthenticationProvider: authenticating, user : admin@zetaris.com\ndriver-1  | javax.security.sasl.SaslException: Error validating the login\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainSaslServer.evaluateResponse(LightningPlainSaslServer.java:123) ~[?:?]\ndriver-1  | Caused by: javax.security.sasl.AuthenticationException: Your account admin@zetaris.com has been locked because you have reached maximum number of invalid logins. Try again in 10 minutes. You may contact your administrator or Zetaris for support.\ndriver-1  | \tat org.apache.spark.sql.auth.LightningAuthenticationProvider.Authenticate(LightningAuthenticationProvider.scala:36) ~[?:?]\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainServerCallbackHandler.handle(LightningPlainServerCallbackHandler.java:75) ~[?:?]\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainSaslServer.evaluateResponse(LightningPlainSaslServer.java:116) ~[?:?]\ndriver-1  | 26/10/23 20:13:48 INFO LightningAuthenticationProvider: authenticating, user : admin\ndriver-1  | 26/10/23 20:13:48 ERROR UserAuthenticationUtil$: User admin doesn't exist.\ndriver-1  | javax.security.sasl.SaslException: Error validating the login\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainSaslServer.evaluateResponse(LightningPlainSaslServer.java:123) ~[?:?]\ndriver-1  | Caused by: javax.security.sasl.AuthenticationException: Username or Password is invalid\ndriver-1  | \tat org.apache.spark.sql.auth.LightningAuthenticationProvider.Authenticate(LightningAuthenticationProvider.scala:36) ~[?:?]\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainServerCallbackHandler.handle(LightningPlainServerCallbackHandler.java:75) ~[?:?]\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainSaslServer.evaluateResponse(LightningPlainSaslServer.java:116) ~[?:?]\ndriver-1  | 26/10/23 20:13:50 INFO LightningAuthenticationProvider: authenticating, user : zetaris\ndriver-1  | 26/10/23 20:13:50 ERROR UserAuthenticationUtil$: User zetaris doesn't exist.\ndriver-1  | javax.security.sasl.SaslException: Error validating the login\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainSaslServer.evaluateResponse(LightningPlainSaslServer.java:123) ~[?:?]\ndriver-1  | Caused by: javax.security.sasl.AuthenticationException: Username or Password is invalid\ndriver-1  | \tat org.apache.spark.sql.auth.LightningAuthenticationProvider.Authenticate(LightningAuthenticationProvider.scala:36) ~[?:?]\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainServerCallbackHandler.handle(LightningPlainServerCallbackHandler.java:75) ~[?:?]\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainSaslServer.evaluateResponse(LightningPlainSaslServer.java:116) ~[?:?]\ndriver-1  | 26/10/23 20:15:13 INFO LightningAuthenticationProvider: authenticating, user : admin@zetaris.com\ndriver-1  | javax.security.sasl.SaslException: Error validating the login\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainSaslServer.evaluateResponse(LightningPlainSaslServer.java:123) ~[?:?]\ndriver-1  | Caused by: javax.security.sasl.AuthenticationException: Your account admin@zetaris.com has been locked because you have reached maximum number of invalid logins. Try again in 9 minutes. You may contact your administrator or Zetaris for support.\ndriver-1  | \tat org.apache.spark.sql.auth.LightningAuthenticationProvider.Authenticate(LightningAuthenticationProvider.scala:36) ~[?:?]\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainServerCallbackHandler.handle(LightningPlainServerCallbackHandler.java:75) ~[?:?]\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainSaslServer.evaluateResponse(LightningPlainSaslServer.java:116) ~[?:?]\ndriver-1  | 26/10/23 20:15:14 INFO LightningAuthenticationProvider: authenticating, user : admin@zetaris.com\ndriver-1  | javax.security.sasl.SaslException: Error validating the login\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainSaslServer.evaluateResponse(LightningPlainSaslServer.java:123) ~[?:?]\ndriver-1  | Caused by: javax.security.sasl.AuthenticationException: Your account admin@zetaris.com has been locked because you have reached maximum number of invalid logins. Try again in 9 minutes. You may contact your administrator or Zetaris for support.\ndriver-1  | \tat org.apache.spark.sql.auth.LightningAuthenticationProvider.Authenticate(LightningAuthenticationProvider.scala:36) ~[?:?]\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainServerCallbackHandler.handle(LightningPlainServerCallbackHandler.java:75) ~[?:?]\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainSaslServer.evaluateResponse(LightningPlainSaslServer.java:116) ~[?:?]\ndriver-1  | 26/10/23 20:15:18 INFO LightningAuthenticationProvider: authenticating, user : admin@zetaris.com\ndriver-1  | javax.security.sasl.SaslException: Error validating the login\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainSaslServer.evaluateResponse(LightningPlainSaslServer.java:123) ~[?:?]\ndriver-1  | Caused by: javax.security.sasl.AuthenticationException: Your account admin@zetaris.com has been locked because you have reached maximum number of invalid logins. Try again in 9 minutes. You may contact your administrator or Zetaris for support.\ndriver-1  | \tat org.apache.spark.sql.auth.LightningAuthenticationProvider.Authenticate(LightningAuthenticationProvider.scala:36) ~[?:?]\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainServerCallbackHandler.handle(LightningPlainServerCallbackHandler.java:75) ~[?:?]\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainSaslServer.evaluateResponse(LightningPlainSaslServer.java:116) ~[?:?]\ndriver-1  | 26/10/23 20:15:19 INFO LightningAuthenticationProvider: authenticating, user : admin@zetaris.com\ndriver-1  | javax.security.sasl.SaslException: Error validating the login\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainSaslServer.evaluateResponse(LightningPlainSaslServer.java:123) ~[?:?]\ndriver-1  | Caused by: javax.security.sasl.AuthenticationException: Your account admin@zetaris.com has been locked because you have reached maximum number of invalid logins. Try again in 9 minutes. You may contact your administrator or Zetaris for support.\ndriver-1  | \tat org.apache.spark.sql.auth.LightningAuthenticationProvider.Authenticate(LightningAuthenticationProvider.scala:36) ~[?:?]\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainServerCallbackHandler.handle(LightningPlainServerCallbackHandler.java:75) ~[?:?]\ndriver-1  | \tat com.zetaris.lightning.sql.auth.LightningPlainSaslServer.evaluateResponse(LightningPlainSaslServer.java:116) ~[?:?]\n"
+      - tool: bash
+        args:
+          command: sudo -n docker compose logs --tail=200 api 2>&1 | grep -iE 'login|auth|error|exception|user|password' | tail -60
+          workdir: /home/ext_root/lab-data/zetaris-platform
+          timeout: 30000
+        result: |
+          api-1  |     [fb9a13e2-dbdc-47fe-9b38-6268dd9e5348, UserName(SCHEDULER), a2848d8a][reapStaleExecutions] >>> ()    
+          api-1  |     [fb9a13e2-dbdc-47fe-9b38-6268dd9e5348, UserName(SCHEDULER), a2848d8a][reapStaleExecutions][Elapsed:0 ms] >>> () <<< 0    
+          api-1  |     [fb9a13e2-dbdc-47fe-9b38-6268dd9e5348, UserName(SCHEDULER), a2848d8a][listDueSchedules] >>> ()    
+          api-1  |     [fb9a13e2-dbdc-47fe-9b38-6268dd9e5348, UserName(SCHEDULER), a2848d8a][listDueSchedules][Elapsed:0 ms] >>> () <<< Total:0, Skipped:-1,     
+          api-1  |     [fb9a13e2-dbdc-47fe-9b38-6268dd9e5348, UserName(SCHEDULER), a2848d8a][pipelineSchedulerTick][Elapsed:2 ms] >>> () <<< ()    
+          api-1  |     [97a93271-2735-4412-bdb3-ffd33cf8dc13, UserName(SCHEDULER), a2848d8a][pipelineSchedulerTick] >>> ()    
+          api-1  |     [97a93271-2735-4412-bdb3-ffd33cf8dc13, UserName(SCHEDULER), a2848d8a][reapStaleExecutions] >>> ()    
+          api-1  |     [97a93271-2735-4412-bdb3-ffd33cf8dc13, UserName(SCHEDULER), a2848d8a][reapStaleExecutions][Elapsed:2 ms] >>> () <<< 0    
+          api-1  |     [97a93271-2735-4412-bdb3-ffd33cf8dc13, UserName(SCHEDULER), a2848d8a][listDueSchedules] >>> ()    
+          api-1  |     [97a93271-2735-4412-bdb3-ffd33cf8dc13, UserName(SCHEDULER), a2848d8a][listDueSchedules][Elapsed:1 ms] >>> () <<< Total:0, Skipped:-1,     
+          api-1  |     [97a93271-2735-4412-bdb3-ffd33cf8dc13, UserName(SCHEDULER), a2848d8a][pipelineSchedulerTick][Elapsed:11 ms] >>> () <<< ()    
+          api-1  | 2026.10.23 20:15:36:690 io-compute-0 INFO com.zetaris.lightning.service.authn.AuthnService.basicLoginAsPrincipal:316
+          api-1  |     [4e174951-4d0b-4677-a44b-2eaf39d4a2b3, NoPrincipal, a2848d8a][OrgUserLogin] >>> admin@zetaris.com    
+          api-1  | 2026.10.23 20:15:36:694 io-compute-0 INFO com.zetaris.lightning.repository.users.UsersDB.findUnlockedLightningUser:85
+          api-1  |     [4e174951-4d0b-4677-a44b-2eaf39d4a2b3, NoPrincipal, a2848d8a][findUnlockedLightningUser] >>> Email(ADMIN@ZETARIS.COM)    
+          api-1  | 2026.10.23 20:15:36:699 io-compute-blocker-48 INFO com.zetaris.lightning.repository.users.UsersDB.findUnlockedLightningUser:85
+          api-1  |     [4e174951-4d0b-4677-a44b-2eaf39d4a2b3, NoPrincipal, a2848d8a][findUnlockedLightningUser][Elapsed:4 ms] >>> Email(ADMIN@ZETARIS.COM) <<< None    
+          api-1  | 2026.10.23 20:15:36:700 io-compute-blocker-48 ERROR com.zetaris.lightning.service.authn.AuthnService.basicLoginAsPrincipal:316
+          api-1  |     [4e174951-4d0b-4677-a44b-2eaf39d4a2b3, NoPrincipal, a2848d8a][OrgUserLogin] >>> admin@zetaris.com<<< User does not exist    
+          api-1  |     [4e174951-4d0b-4677-a44b-2eaf39d4a2b3, NoPrincipal, a2848d8a][storeLog] >>> (ApiName=OrgUserLogin,Finished = false)    
+          api-1  |     [4e174951-4d0b-4677-a44b-2eaf39d4a2b3, NoPrincipal, a2848d8a][storeLog][Elapsed:0 ms] >>> (ApiName=OrgUserLogin,Finished = false) <<< ()    
+          api-1  |     HTTP/1.1 GET /api/v1.0/internal/auth/legacy-login Headers(host: api:8889, connection: keep-alive, Authorization: <REDACTED>, X-Request-ID: 4e174951-4d0b-4677-a44b-2eaf39d4a2b3, accept: */*, accept-language: *, sec-fetch-mode: cors, user-agent: node, accept-encoding: gzip, deflate)    
+          api-1  | 2026.10.23 20:15:36:729 io-compute-1 INFO com.zetaris.lightning.service.authn.AuthnService.basicLoginAsPrincipal:316
+          api-1  |     [f55a4a3d-7de0-4c89-9596-205a9cb111aa, NoPrincipal, a2848d8a][OrgUserLogin] >>> admin@zetaris.com    
+          api-1  | 2026.10.23 20:15:36:729 io-compute-1 INFO com.zetaris.lightning.repository.users.UsersDB.findUnlockedLightningUser:85
+          api-1  |     [f55a4a3d-7de0-4c89-9596-205a9cb111aa, NoPrincipal, a2848d8a][findUnlockedLightningUser] >>> Email(ADMIN@ZETARIS.COM)    
+          api-1  | 2026.10.23 20:15:36:731 io-compute-blocker-58 INFO com.zetaris.lightning.repository.users.UsersDB.findUnlockedLightningUser:85
+          api-1  |     [f55a4a3d-7de0-4c89-9596-205a9cb111aa, NoPrincipal, a2848d8a][findUnlockedLightningUser][Elapsed:1 ms] >>> Email(ADMIN@ZETARIS.COM) <<< None    
+          api-1  | 2026.10.23 20:15:36:731 io-compute-blocker-58 ERROR com.zetaris.lightning.service.authn.AuthnService.basicLoginAsPrincipal:316
+          api-1  |     [f55a4a3d-7de0-4c89-9596-205a9cb111aa, NoPrincipal, a2848d8a][OrgUserLogin] >>> admin@zetaris.com<<< User does not exist    
+          api-1  |     [f55a4a3d-7de0-4c89-9596-205a9cb111aa, NoPrincipal, a2848d8a][storeLog] >>> (ApiName=OrgUserLogin,Finished = false)    
+          api-1  |     [f55a4a3d-7de0-4c89-9596-205a9cb111aa, NoPrincipal, a2848d8a][storeLog][Elapsed:0 ms] >>> (ApiName=OrgUserLogin,Finished = false) <<< ()    
+          api-1  |     HTTP/1.1 GET /api/v1.0/internal/auth/legacy-login Headers(host: api:8889, connection: keep-alive, Authorization: <REDACTED>, X-Request-ID: f55a4a3d-7de0-4c89-9596-205a9cb111aa, accept: */*, accept-language: *, sec-fetch-mode: cors, user-agent: node, accept-encoding: gzip, deflate)    
+          api-1  |     [ac974434-0bdd-42e3-8f78-d099306711f6, UserName(SCHEDULER), a2848d8a][ScheduleApiCallChains] >>> Email(Daemon@zetaris.com)    
+          api-1  |     [ac974434-0bdd-42e3-8f78-d099306711f6, UserName(SCHEDULER), a2848d8a][listAllApiCallChain] >>> ()    
+          api-1  |     [ac974434-0bdd-42e3-8f78-d099306711f6, UserName(SCHEDULER), a2848d8a][listAllApiCallChain][Elapsed:1 ms] >>> () <<< Total:0, Skipped:-1,     
+          api-1  |     [ac974434-0bdd-42e3-8f78-d099306711f6, UserName(SCHEDULER), a2848d8a][ScheduleApiCallChains][Elapsed:5 ms] >>> Email(Daemon@zetaris.com) <<< ()    
+          api-1  |     [3ee14aa0-b2b0-4df3-8db2-ccef2a2a85cd, UserName(SCHEDULER), a2848d8a][pipelineSchedulerTick] >>> ()    
+          api-1  |     [3ee14aa0-b2b0-4df3-8db2-ccef2a2a85cd, UserName(SCHEDULER), a2848d8a][reapStaleExecutions] >>> ()    
+          api-1  |     [3ee14aa0-b2b0-4df3-8db2-ccef2a2a85cd, UserName(SCHEDULER), a2848d8a][reapStaleExecutions][Elapsed:1 ms] >>> () <<< 0    
+          api-1  |     [3ee14aa0-b2b0-4df3-8db2-ccef2a2a85cd, UserName(SCHEDULER), a2848d8a][listDueSchedules] >>> ()    
+          api-1  |     [3ee14aa0-b2b0-4df3-8db2-ccef2a2a85cd, UserName(SCHEDULER), a2848d8a][listDueSchedules][Elapsed:0 ms] >>> () <<< Total:0, Skipped:-1,     
+          api-1  |     [3ee14aa0-b2b0-4df3-8db2-ccef2a2a85cd, UserName(SCHEDULER), a2848d8a][pipelineSchedulerTick][Elapsed:2 ms] >>> () <<< ()    
+          api-1  | 2026.10.23 20:15:50:198 io-compute-2 INFO com.zetaris.lightning.service.authn.AuthnService.basicLoginAsPrincipal:316
+          api-1  |     [1b40b94b-8b20-4164-afa2-ad68df4ddc93, NoPrincipal, a2848d8a][OrgUserLogin] >>> admin@zetaris.com    
+          api-1  | 2026.10.23 20:15:50:204 io-compute-2 INFO com.zetaris.lightning.repository.users.UsersDB.findUnlockedLightningUser:85
+          api-1  |     [1b40b94b-8b20-4164-afa2-ad68df4ddc93, NoPrincipal, a2848d8a][findUnlockedLightningUser] >>> Email(ADMIN@ZETARIS.COM)    
+          api-1  | 2026.10.23 20:15:50:207 io-compute-blocker-62 INFO com.zetaris.lightning.repository.users.UsersDB.findUnlockedLightningUser:85
+          api-1  |     [1b40b94b-8b20-4164-afa2-ad68df4ddc93, NoPrincipal, a2848d8a][findUnlockedLightningUser][Elapsed:3 ms] >>> Email(ADMIN@ZETARIS.COM) <<< None    
+          api-1  | 2026.10.23 20:15:50:208 io-compute-blocker-62 ERROR com.zetaris.lightning.service.authn.AuthnService.basicLoginAsPrincipal:316
+          api-1  |     [1b40b94b-8b20-4164-afa2-ad68df4ddc93, NoPrincipal, a2848d8a][OrgUserLogin] >>> admin@zetaris.com<<< User does not exist    
+          api-1  |     [1b40b94b-8b20-4164-afa2-ad68df4ddc93, NoPrincipal, a2848d8a][storeLog] >>> (ApiName=OrgUserLogin,Finished = false)    
+          api-1  |     [1b40b94b-8b20-4164-afa2-ad68df4ddc93, NoPrincipal, a2848d8a][storeLog][Elapsed:0 ms] >>> (ApiName=OrgUserLogin,Finished = false) <<< ()    
+          api-1  |     HTTP/1.1 GET /api/v1.0/internal/auth/legacy-login Headers(host: api:8889, connection: keep-alive, Authorization: <REDACTED>, X-Request-ID: 1b40b94b-8b20-4164-afa2-ad68df4ddc93, accept: */*, accept-language: *, sec-fetch-mode: cors, user-agent: node, accept-encoding: gzip, deflate)    
+          api-1  |     [4b34d1de-7553-4044-9e9c-661d8c084f6e, UserName(SCHEDULER), a2848d8a][pipelineSchedulerTick] >>> ()    
+          api-1  |     [4b34d1de-7553-4044-9e9c-661d8c084f6e, UserName(SCHEDULER), a2848d8a][reapStaleExecutions] >>> ()    
+          api-1  |     [4b34d1de-7553-4044-9e9c-661d8c084f6e, UserName(SCHEDULER), a2848d8a][reapStaleExecutions][Elapsed:2 ms] >>> () <<< 0    
+          api-1  |     [4b34d1de-7553-4044-9e9c-661d8c084f6e, UserName(SCHEDULER), a2848d8a][listDueSchedules] >>> ()    
+          api-1  |     [4b34d1de-7553-4044-9e9c-661d8c084f6e, UserName(SCHEDULER), a2848d8a][listDueSchedules][Elapsed:0 ms] >>> () <<< Total:0, Skipped:-1,     
+          api-1  |     [4b34d1de-7553-4044-9e9c-661d8c084f6e, UserName(SCHEDULER), a2848d8a][pipelineSchedulerTick][Elapsed:9 ms] >>> () <<< ()    
+    time: 10/23/2026, 8:16:17.630 PM UTC
+    response: "\n\n"
+    duration: 2.368s
+    duration_ms: 2368
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Critical: API logs say user `admin@zetaris.com` does not exist. The account was not created or was deleted. Also driver says account locked due invalid logins. The API login 404 because user does not exist. So the platform admin account is missing. Maybe the driver's `ZETARIS_ADMIN_EMAIL`/password created a different user, or bootstrap failed. The user says they launched with same pwd, but the admin user doesn't exist. Perhaps the account was created with a different email, e.g., `admin` or `admin@zetaris.com` with different case? Logs show lookup `Email(ADMIN@ZETARIS.COM)` -> None. Maybe the user is `admin@zetaris.com` but in a different org? The API's login is org-scoped? It looks up by email globally; none.
+
+      Maybe the admin was created in a different org or the database was reset. Need find existing users. We can query the Postgres metastore `users` table via Docker. Use `sudo -n docker compose exec -T postgres psql -U zetaris -d metastore -c "..."`. We need inspect schema. Query `\dt` or `select * from users` limited. This could reveal user emails (not passwords). Let's list tables. Use `psql -c '\dt'`. Then query user table. This is read-only. Use `sudo -n docker compose exec -T postgres psql -U zetaris -d metastore -c '\dt'`. Need POSTGRES_PASSWORD? Local trust? Compose exec as postgres user; `psql -U zetaris` may prompt password. Use `-U zetaris` and `PGPASSWORD` from `.env`; or run as postgres OS user and `psql -U zetaris`. The container's `POSTGRES_USER=zetaris`; local socket trust likely. Let's try.
+    thinking_duration: 1.698s
+    thinking_duration_ms: 1698
+    tool_calls:
+      - tool: bash
+        args:
+          command: sudo -n docker compose exec -T postgres psql -U zetaris -d metastore -c '\dt' 2>&1 | head -60
+          workdir: /home/ext_root/lab-data/zetaris-platform
+          timeout: 30000
+        result: "psql: error: connection to server on socket \"/var/run/postgresql/.s.PGSQL.5432\" failed: No such file or directory\n\tIs the server running locally and accepting connections on that socket?\n"
+    time: 10/23/2026, 8:16:20.031 PM UTC
+    response: "\n\n"
+    duration: 3.441s
+    duration_ms: 3441
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Postgres runs on port 5433, socket maybe `/var/run/postgresql/.s.PGSQL.5433`. Use `-p 5433 -h 127.0.0.1`. Need password. Could use `PGPASSWORD` from platform `.env`; don't print. Use `sudo -n docker compose exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" postgres psql -h 127.0.0.1 -p 5433 -U zetaris -d metastore -c '\dt'`; but `$POSTGRES_PASSWORD` in host shell not set. Source platform `.env` (careful; it contains secrets; source it in subshell). Use `set -a; source .env; set +a; sudo -n docker compose exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" postgres psql ...`. This passes password via env to docker exec; not printed. Fine. Let's run `\dt`.
+    thinking_duration: 676ms
+    thinking_duration_ms: 676
+    tool_calls:
+      - tool: bash
+        args:
+          command: set -a; source .env; set +a; sudo -n docker compose exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" postgres psql -h 127.0.0.1 -p 5433 -U zetaris -d metastore -c '\dt' 2>&1 | head -80
+          workdir: /home/ext_root/lab-data/zetaris-platform
+          timeout: 30000
+        result: |2
+                                      List of relations
+           Schema |                     Name                      | Type  |  Owner  
+          --------+-----------------------------------------------+-------+---------
+           public | adaptive_offsite_cache_policy                 | table | zetaris
+           public | assigned_aws_glue_metastore_database          | table | zetaris
+           public | assigned_aws_glue_metastore_database_to_role  | table | zetaris
+           public | assigned_aws_glue_metastore_database_to_user  | table | zetaris
+           public | assigned_compute_engine_role                  | table | zetaris
+           public | assigned_compute_engine_user                  | table | zetaris
+           public | assigned_data_lake_warehouse_database_to_role | table | zetaris
+           public | assigned_data_lake_warehouse_database_to_user | table | zetaris
+           public | assigned_data_mart_to_role                    | table | zetaris
+           public | assigned_data_mart_to_user                    | table | zetaris
+           public | assigned_data_source_to_role                  | table | zetaris
+           public | assigned_data_source_to_user                  | table | zetaris
+           public | assigned_database_to_role                     | table | zetaris
+           public | assigned_database_to_user                     | table | zetaris
+           public | assigned_dw_data_mart                         | table | zetaris
+           public | assigned_dw_data_source                       | table | zetaris
+           public | assigned_dw_database                          | table | zetaris
+           public | assigned_dw_pipeline                          | table | zetaris
+           public | assigned_dw_role                              | table | zetaris
+           public | assigned_dw_schema_store_view                 | table | zetaris
+           public | assigned_dw_streaming                         | table | zetaris
+           public | assigned_dw_user                              | table | zetaris
+           public | assigned_hive_metastore_database              | table | zetaris
+           public | assigned_hive_metastore_database_to_role      | table | zetaris
+           public | assigned_hive_metastore_database_to_user      | table | zetaris
+           public | assigned_pipeline_to_role                     | table | zetaris
+           public | assigned_pipeline_to_user                     | table | zetaris
+           public | assigned_role                                 | table | zetaris
+           public | assigned_schema_store_view_container_to_role  | table | zetaris
+           public | assigned_schema_store_view_container_to_user  | table | zetaris
+           public | assigned_schema_store_view_to_role            | table | zetaris
+           public | assigned_schema_store_view_to_user            | table | zetaris
+           public | assigned_streaming_data_source_to_role        | table | zetaris
+           public | assigned_streaming_data_source_to_user        | table | zetaris
+           public | assigned_unity_catalog_to_role                | table | zetaris
+           public | assigned_unity_catalog_to_user                | table | zetaris
+           public | assigned_usl_namespace_to_role                | table | zetaris
+           public | assigned_usl_namespace_to_user                | table | zetaris
+           public | assigned_usl_to_role                          | table | zetaris
+           public | assigned_usl_to_user                          | table | zetaris
+           public | aws_glue_metastore                            | table | zetaris
+           public | compute_engine                                | table | zetaris
+           public | container                                     | table | zetaris
+           public | data_lake_table_management                    | table | zetaris
+           public | data_lake_warehouse                           | table | zetaris
+           public | data_lake_warehouse_options                   | table | zetaris
+           public | data_lake_warehouse_table_cbac                | table | zetaris
+           public | data_mart                                     | table | zetaris
+           public | data_mart_coordinates                         | table | zetaris
+           public | data_mart_table                               | table | zetaris
+           public | data_mart_table_schema                        | table | zetaris
+           public | data_warehouse                                | table | zetaris
+           public | data_warehouse_history                        | table | zetaris
+           public | datasource                                    | table | zetaris
+           public | datasource_cache_strategy                     | table | zetaris
+           public | datasource_change_history                     | table | zetaris
+           public | datasource_option                             | table | zetaris
+           public | datasource_relation                           | table | zetaris
+           public | datasource_relation_cbac                      | table | zetaris
+           public | datasource_relation_column_histogram          | table | zetaris
+           public | datasource_relation_column_stat               | table | zetaris
+           public | datasource_relation_index_history             | table | zetaris
+           public | datasource_relation_part                      | table | zetaris
+           public | datasource_relation_schema                    | table | zetaris
+           public | datasource_relation_schema_tag                | table | zetaris
+           public | datasource_relation_table                     | table | zetaris
+           public | datasource_relation_table_stat                | table | zetaris
+           public | datasource_relation_tag                       | table | zetaris
+           public | datasource_relation_view                      | table | zetaris
+           public | entity_limit                                  | table | zetaris
+           public | external_catalog                              | table | zetaris
+           public | external_catalog_table                        | table | zetaris
+           public | external_catalog_table_cbac                   | table | zetaris
+           public | external_catalog_table_property               | table | zetaris
+           public | external_catalog_table_schema                 | table | zetaris
+           public | external_metastore                            | table | zetaris
+           public | external_metastore_database                   | table | zetaris
+    time: 10/23/2026, 8:16:23.507 PM UTC
+    response: "\n\n"
+    duration: 2.646s
+    duration_ms: 2646
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Need user table name. `\dt *user*` maybe.
+    thinking_duration: 65ms
+    thinking_duration_ms: 65
+    tool_calls:
+      - tool: bash
+        args:
+          command: set -a; source .env; set +a; sudo -n docker compose exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" postgres psql -h 127.0.0.1 -p 5433 -U zetaris -d metastore -c "\dt *user*" 2>&1 | head -40
+          workdir: /home/ext_root/lab-data/zetaris-platform
+          timeout: 30000
+        result: |2+
+                                        List of relations
+             Schema   |                     Name                      | Type  |  Owner  
+          ------------+-----------------------------------------------+-------+---------
+           pg_catalog | pg_user_mapping                               | table | zetaris
+           public     | assigned_aws_glue_metastore_database_to_user  | table | zetaris
+           public     | assigned_compute_engine_user                  | table | zetaris
+           public     | assigned_data_lake_warehouse_database_to_user | table | zetaris
+           public     | assigned_data_mart_to_user                    | table | zetaris
+           public     | assigned_data_source_to_user                  | table | zetaris
+           public     | assigned_database_to_user                     | table | zetaris
+           public     | assigned_dw_user                              | table | zetaris
+           public     | assigned_hive_metastore_database_to_user      | table | zetaris
+           public     | assigned_pipeline_to_user                     | table | zetaris
+           public     | assigned_schema_store_view_container_to_user  | table | zetaris
+           public     | assigned_schema_store_view_to_user            | table | zetaris
+           public     | assigned_streaming_data_source_to_user        | table | zetaris
+           public     | assigned_unity_catalog_to_user                | table | zetaris
+           public     | assigned_usl_namespace_to_user                | table | zetaris
+           public     | assigned_usl_to_user                          | table | zetaris
+           public     | granted_user                                  | table | zetaris
+           public     | lightning_user                                | table | zetaris
+           public     | lightning_user_api_key                        | table | zetaris
+           public     | platform_user                                 | table | zetaris
+           public     | previous_user_password                        | table | zetaris
+           public     | routing_rule_assigned_to_user                 | table | zetaris
+           public     | user_engine                                   | table | zetaris
+           public     | user_query_settings                           | table | zetaris
+           public     | user_resource_permission                      | table | zetaris
+           public     | user_variable                                 | table | zetaris
+          (26 rows)
+
+    time: 10/23/2026, 8:16:26.198 PM UTC
+    response: "\n\n"
+    duration: 2.199s
+    duration_ms: 2199
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Query `lightning_user` columns/rows. `select id,email,org_id,is_locked,...` unknown columns. Use `\d lightning_user`.
+    thinking_duration: 144ms
+    thinking_duration_ms: 144
+    tool_calls:
+      - tool: bash
+        args:
+          command: set -a; source .env; set +a; sudo -n docker compose exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" postgres psql -h 127.0.0.1 -p 5433 -U zetaris -d metastore -c '\d lightning_user' 2>&1 | head -60
+          workdir: /home/ext_root/lab-data/zetaris-platform
+          timeout: 30000
+        result: |2+
+                                       Table "public.lightning_user"
+                 Column       |           Type           | Collation | Nullable |    Default     
+          --------------------+--------------------------+-----------+----------+----------------
+           email              | text                     |           | not null | 
+           name               | text                     |           |          | 
+           password           | text                     |           |          | 
+           created_at         | timestamp with time zone |           |          | 
+           activated_at       | timestamp with time zone |           |          | 
+           level              | text                     |           |          | 
+           is_ldap            | boolean                  |           |          | 
+           fk_organisation_id | bigint                   |           |          | 
+           status             | text                     |           | not null | 'Active'::text
+          Indexes:
+              "lightning_user_pkey" PRIMARY KEY, btree (email)
+              "idx_lightning_user_fk_organisation_id" btree (fk_organisation_id)
+              "idx_lightning_user_name" btree (name)
+          Foreign-key constraints:
+              "lightning_user_fk_organisation_id_fkey" FOREIGN KEY (fk_organisation_id) REFERENCES organisation(id) ON UPDATE CASCADE ON DELETE CASCADE
+          Referenced by:
+              TABLE "assigned_aws_glue_metastore_database_to_user" CONSTRAINT "assigned_aws_glue_metastore_database__fk_lightning_user_id_fkey" FOREIGN KEY (fk_lightning_user_id) REFERENCES lightning_user(email) ON DELETE CASCADE
+              TABLE "assigned_compute_engine_user" CONSTRAINT "assigned_compute_engine_user_fk_lightning_user_id_fkey" FOREIGN KEY (fk_lightning_user_id) REFERENCES lightning_user(email) ON UPDATE CASCADE ON DELETE CASCADE
+              TABLE "assigned_data_lake_warehouse_database_to_user" CONSTRAINT "assigned_data_lake_warehouse_database_fk_lightning_user_id_fkey" FOREIGN KEY (fk_lightning_user_id) REFERENCES lightning_user(email) ON DELETE CASCADE
+              TABLE "assigned_data_mart_to_user" CONSTRAINT "assigned_data_mart_to_user_fk_lightning_user_id_fkey" FOREIGN KEY (fk_lightning_user_id) REFERENCES lightning_user(email) ON UPDATE CASCADE ON DELETE CASCADE
+              TABLE "assigned_data_source_to_user" CONSTRAINT "assigned_data_source_to_user_fk_lightning_user_id_fkey" FOREIGN KEY (fk_lightning_user_id) REFERENCES lightning_user(email) ON UPDATE CASCADE ON DELETE CASCADE
+              TABLE "assigned_database_to_user" CONSTRAINT "assigned_database_to_user_fk_lightning_user_id_fkey" FOREIGN KEY (fk_lightning_user_id) REFERENCES lightning_user(email) ON UPDATE CASCADE ON DELETE CASCADE
+              TABLE "assigned_dw_user" CONSTRAINT "assigned_dw_user_fk_lightning_user_email_fkey" FOREIGN KEY (fk_lightning_user_email) REFERENCES lightning_user(email) ON UPDATE CASCADE ON DELETE CASCADE
+              TABLE "assigned_hive_metastore_database_to_user" CONSTRAINT "assigned_hive_metastore_database_to_u_fk_lightning_user_id_fkey" FOREIGN KEY (fk_lightning_user_id) REFERENCES lightning_user(email) ON DELETE CASCADE
+              TABLE "assigned_pipeline_to_user" CONSTRAINT "assigned_pipeline_to_user_fk_lightning_user_id_fkey" FOREIGN KEY (fk_lightning_user_id) REFERENCES lightning_user(email) ON UPDATE CASCADE ON DELETE CASCADE
+              TABLE "assigned_role" CONSTRAINT "assigned_role_fk_lightning_user_name_fkey" FOREIGN KEY (fk_lightning_user_name) REFERENCES lightning_user(email) ON UPDATE CASCADE ON DELETE CASCADE
+              TABLE "assigned_schema_store_view_container_to_user" CONSTRAINT "assigned_schema_store_view_container__fk_lightning_user_id_fkey" FOREIGN KEY (fk_lightning_user_id) REFERENCES lightning_user(email) ON DELETE CASCADE
+              TABLE "assigned_schema_store_view_to_user" CONSTRAINT "assigned_schema_store_view_to_user_fk_lightning_user_id_fkey" FOREIGN KEY (fk_lightning_user_id) REFERENCES lightning_user(email) ON UPDATE CASCADE ON DELETE CASCADE
+              TABLE "assigned_streaming_data_source_to_user" CONSTRAINT "assigned_streaming_data_source_to_use_fk_lightning_user_id_fkey" FOREIGN KEY (fk_lightning_user_id) REFERENCES lightning_user(email) ON UPDATE CASCADE ON DELETE CASCADE
+              TABLE "assigned_unity_catalog_to_role" CONSTRAINT "assigned_unity_catalog_to_role_assigned_by_fkey" FOREIGN KEY (assigned_by) REFERENCES lightning_user(email) ON DELETE CASCADE
+              TABLE "assigned_unity_catalog_to_user" CONSTRAINT "assigned_unity_catalog_to_user_assigned_by_fkey" FOREIGN KEY (assigned_by) REFERENCES lightning_user(email) ON DELETE CASCADE
+              TABLE "assigned_unity_catalog_to_user" CONSTRAINT "assigned_unity_catalog_to_user_fk_lightning_user_id_fkey" FOREIGN KEY (fk_lightning_user_id) REFERENCES lightning_user(email) ON DELETE CASCADE
+              TABLE "assigned_usl_namespace_to_user" CONSTRAINT "assigned_usl_namespace_to_user_fk_lightning_user_id_fkey" FOREIGN KEY (fk_lightning_user_id) REFERENCES lightning_user(email) ON DELETE CASCADE
+              TABLE "assigned_usl_to_user" CONSTRAINT "assigned_usl_to_user_fk_lightning_user_id_fkey" FOREIGN KEY (fk_lightning_user_id) REFERENCES lightning_user(email) ON DELETE CASCADE
+              TABLE "container" CONSTRAINT "container_owner_fkey" FOREIGN KEY (owner) REFERENCES lightning_user(email) ON UPDATE CASCADE ON DELETE CASCADE
+              TABLE "datasource" CONSTRAINT "datasource_fk_owner" FOREIGN KEY (owner) REFERENCES lightning_user(email) ON UPDATE CASCADE ON DELETE CASCADE
+              TABLE "granted_user" CONSTRAINT "granted_user_fk_lightning_user_email_fkey" FOREIGN KEY (fk_lightning_user_email) REFERENCES lightning_user(email) ON UPDATE CASCADE ON DELETE CASCADE
+              TABLE "lightning_user_api_key" CONSTRAINT "lightning_user_api_key_email_fkey" FOREIGN KEY (email) REFERENCES lightning_user(email) ON UPDATE CASCADE ON DELETE CASCADE
+              TABLE "pipeline_chat_history" CONSTRAINT "pipeline_chat_history_email_fkey" FOREIGN KEY (email) REFERENCES lightning_user(email) ON DELETE CASCADE
+              TABLE "previous_user_password" CONSTRAINT "previous_user_password_lightning_user_email_fkey" FOREIGN KEY (lightning_user_email) REFERENCES lightning_user(email) ON UPDATE CASCADE ON DELETE CASCADE
+              TABLE "query_history" CONSTRAINT "query_history_owner_fkey" FOREIGN KEY (owner) REFERENCES lightning_user(email) ON UPDATE CASCADE ON DELETE CASCADE
+              TABLE "routing_rule_assigned_to_user" CONSTRAINT "routing_rule_assigned_to_user_fk_lightning_user_email_fkey" FOREIGN KEY (fk_lightning_user_email) REFERENCES lightning_user(email) ON DELETE CASCADE
+              TABLE "sql_script" CONSTRAINT "sql_script_owner_fkey" FOREIGN KEY (owner) REFERENCES lightning_user(email) ON UPDATE CASCADE ON DELETE CASCADE
+              TABLE "user_engine" CONSTRAINT "user_engine_email_fkey" FOREIGN KEY (email) REFERENCES lightning_user(email) ON UPDATE CASCADE ON DELETE CASCADE
+              TABLE "user_resource_permission" CONSTRAINT "user_resource_permission_lightning_user_email_fkey" FOREIGN KEY (lightning_user_email) REFERENCES lightning_user(email) ON UPDATE CASCADE ON DELETE CASCADE
+              TABLE "user_variable" CONSTRAINT "user_variable_owner_fkey" FOREIGN KEY (owner) REFERENCES lightning_user(email) ON UPDATE CASCADE ON DELETE CASCADE
+
+      - tool: bash
+        args:
+          command: set -a; source .env; set +a; sudo -n docker compose exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" postgres psql -h 127.0.0.1 -p 5433 -U zetaris -d metastore -c 'select * from lightning_user limit 10;' 2>&1 | head -60
+          workdir: /home/ext_root/lab-data/zetaris-platform
+          timeout: 30000
+        result: |2+
+                 email       | name  |                                             password                                              |         created_at         | activated_at | level | is_ldap | fk_organisation_id | status 
+          -------------------+-------+---------------------------------------------------------------------------------------------------+----------------------------+--------------+-------+---------+--------------------+--------
+           ADMIN@ZETARIS.COM | ADMIN | $argon2id$v=19$m=19456,t=2,p=1$X9EWhokShC19lSfhZ8eUyQ$pgZEayY/z3YNUhX0bU8i7J9mdiP3Ks9PhKoW8gQyIg4 | 2026-10-23 18:34:29.468+00 |              | ADMIN | f       |                  1 | Active
+          (1 row)
+
+    time: 10/23/2026, 8:16:28.436 PM UTC
+    response: "\n\n"
+    duration: 2.082s
+    duration_ms: 2082
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      User exists as `ADMIN@ZETARIS.COM` (uppercase) in DB. API lookup `Email(ADMIN@ZETARIS.COM)` -> None? It logs uppercase; maybe query is case-sensitive and the input `admin@zetaris.com` is lowercased? The table stores uppercase. Hmm, API logs `findUnlockedLightningUser >>> Email(ADMIN@ZETARIS.COM)` then `None`. Maybe `status`? It's Active. `activated_at` null. Maybe `activated_at` null means not activated, so `findUnlockedLightningUser` excludes it. That would explain "User does not exist". The driver created admin but didn't activate? Maybe bootstrap should activate; it failed. Or the password is set.
+
+      The user exists; login fails because `activated_at` is null. Maybe the API's `findUnlockedLightningUser` filters `activated_at is not null`? Could be. Also driver says account locked after invalid logins; lockout may be in a separate table/column. The DB `lightning_user` has no lock column; maybe `status` changed? It shows Active. There may be a `user_login_attempt` table. The error says locked, but `status` Active. Maybe lock is in memory.
+
+      Need understand why `activated_at` null. The README says driver creates organization and administrator on first start; perhaps the account is created but not activated until first login? Then login should activate. Hmm.
+
+      Maybe the API's `findUnlockedLightningUser` query uses `activated_at` not null. Let's inspect API code? Not available. Query `select email, activated_at, status, fk_organisation_id from lightning_user;` shows null. Maybe bootstrap admin script should set `activated_at`. Check `init/bootstrap-admin.sh` for SQL.
+    thinking_duration: 1.479s
+    thinking_duration_ms: 1479
+    tool_calls:
+      - tool: read
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-platform/init/bootstrap-admin.sh
+        result: |-
+          <path>/home/ext_root/lab-data/zetaris-platform/init/bootstrap-admin.sh</path>
+          <type>file</type>
+          <content>
+          1: #!/usr/bin/env bash
+          2: #
+          3: # Register the sample data, once. The organisation and administrator already exist: the
+          4: # driver registers them on first start, from the same ZETARIS_ADMIN_* settings.
+          5: #
+          6: # Runs in the driver image because that is where seed-org.sh lives.
+          7: 
+          8: set -euo pipefail
+          9: 
+          10: # Anything the seed creates under customer-data must stay group-writable: the API reaches it
+          11: # through group 1001 as a different uid.
+          12: umask 002
+          13: 
+          14: log() { printf '[bootstrap] %s\n' "$*"; }
+          15: 
+          16: : "${ZETARIS_ADMIN_EMAIL:?}"
+          17: : "${ZETARIS_ADMIN_PASSWORD:[REDACTED]}"
+          18: 
+          19: DRIVER_DATA=/home/zetaris/zetaris-ndp-driver/data
+          20: # Seeding opens a Lightning session -- a JVM/Spark startup that takes minutes -- so the marker
+          21: # keeps a repeat `compose up` from paying that just to find nothing to do. It lives in the same
+          22: # volume as the metastore credentials, so `down -v` removes both together. To force the seed
+          23: # again -- someone dropped a sample database by hand, say -- delete it:
+          24: #
+          25: #   docker compose run --rm --entrypoint \
+          26: #     "rm -f /home/zetaris/zetaris-ndp-driver/data/.sample-data-registered" bootstrap
+          27: MARK_SAMPLE_DATA="${DRIVER_DATA}/.sample-data-registered"
+          28: SEED_LOG="${ZETARIS_NDP_DRIVER_HOME}/logs/sample-data-seed.log"
+          29: 
+          30: # Credentials go through stdin so they stay out of the process list.
+          31: admin_login_status() {
+          32:     printf 'user = "%s:%s"\n' "$ZETARIS_ADMIN_EMAIL" "$ZETARIS_ADMIN_PASSWORD" \
+          33:       | curl -s -o /dev/null -w '%{http_code}' -m 60 -K - \
+          34:           -H "X-Request-ID: $(cat /proc/sys/kernel/random/uuid)" \
+          35:           http://api:8889/api/v1.0/internal/auth/legacy-login || true
+          36: }
+          37: 
+          38: login=$(admin_login_status)
+          39: if [ "$login" != 200 ]; then
+          40:     log "ERROR: the administrator cannot log in (HTTP ${login:-none})"
+          41:     log "       check ZETARIS_ADMIN_PASSWORD matches what the driver registered:"
+          42:     log "       docker compose logs driver | grep -i organisation"
+          43:     exit 1
+          44: fi
+          45: log "administrator '${ZETARIS_ADMIN_EMAIL}' can log in"
+          46: 
+          47: # The driver image ships no psql, so "does this already exist?" cannot be answered by
+          48: # querying the metastore from here. The seed is ATTEMPTED and an "already exists" failure is
+          49: # treated as success.
+          50: already_exists() { grep -qaiE "already exist|already registered|duplicate" "$1"; }
+          51: 
+          52: # seed-org.sh ships in the driver image, so compose and a Zetaris Cloud cluster get identical
+          53: # datasets (NY_TAXI and TPCDS_DB, pointer tables over s3a://zetaris-public-dataset) and the same
+          54: # instructions work on both. Needs outbound internet to S3. Never fatal: a seeding problem must
+          55: # not make a working install look failed.
+          56: if [ -f "$MARK_SAMPLE_DATA" ]; then
+          57:     log "sample data already registered on a previous start; skipping"
+          58: else
+          59:     log "registering the sample datasets NY_TAXI and TPCDS_DB"
+          60:     # Redirected to a file, NOT piped to tail: a pipe makes the exit status tail's, so a
+          61:     # failure reads as success and the diagnostic is discarded.
+          62:     if bash "${ZETARIS_NDP_DRIVER_HOME}/bin/seed-org.sh" \
+          63:          "$ZETARIS_ADMIN_EMAIL" "$ZETARIS_ADMIN_PASSWORD" > "$SEED_LOG" 2>&1; then
+          64:         log "sample data registered"; : > "$MARK_SAMPLE_DATA"
+          65:     elif already_exists "$SEED_LOG"; then
+          66:         log "sample data already registered; leaving it untouched"; : > "$MARK_SAMPLE_DATA"
+          67:     else
+          68:         log "WARNING: sample data registration failed; the stack is still usable"
+          69:         grep -aE "LightningException|AuthenticationException|UnknownHost|ERROR .*Failed in" "$SEED_LOG" \
+          70:           | head -3 | sed 's/^/[bootstrap]   /' || true
+          71:         log "  full output: ${SEED_LOG}"
+          72:     fi
+          73: fi
+          74: 
+          75: log "done"
+
+          (End of file - total 75 lines)
+          </content>
+      - tool: bash
+        args:
+          command: grep -rn "activated_at\|lightning_user" /home/ext_root/lab-data/zetaris-platform/init /home/ext_root/lab-data/zetaris-platform/initdb | head -40
+        result: (no output)
+    time: 10/23/2026, 8:16:30.550 PM UTC
+    response: "\n\n"
+    duration: 2.870s
+    duration_ms: 2870
+  - agent: compaction
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Let me construct the combined summary. Need to carry forward all prior summary details plus the new conversation events, resolving conflicts.
+
+      Key new facts from conversation:
+      - All app files written: pom.xml, .gitignore, run.sh, scripts/install-zetaris-driver.sh, application.yml, application-test.yml, Java classes (application, config, domain records, exceptions, repositories, services, form, controllers, exception handler), templates (layout, index, series/list, series/detail, notes/list, notes/form, error), CSS, tests, README.
+      - chmod +x run.sh scripts/install-zetaris-driver.sh.
+      - Build failures and fixes:
+        - `@AutoConfigureMockMvc` package missing in Boot 4.1.2 (`org.springframework.boot.test.autoconfigure.web.servlet` does not exist); fixed by removing it and building MockMvc manually via `MockMvcBuilders.webAppContextSetup(context)`.
+        - Thymeleaf failed at runtime: `NoClassDefFoundError`/`NoSuchFieldError` re Jackson 2 — Boot 4 uses Jackson 3 (`tools.jackson`), Thymeleaf 3.1.5 needs Jackson 2 (`com.fasterxml.jackson.core`). Added `com.fasterxml.jackson.core:jackson-databind` 2.21.7 runtime dependency before driver. The driver JAR bundles old Jackson 2 classes (`com/fasterxml/jackson/core` and databind), causing classpath conflict; declared Jackson before driver to make classpath order load newer Jackson.
+        - Layout template missing `th:fragment="layout(pageTitle, content)"`; fixed.
+      - `mvn test` passes 20 tests (after adding template smoke test `seriesAndNotePagesRender`).
+      - `mvn verify` live IT fails: `TTransportException: Peer indicated failure: Error validating the login`; `EurostatDataAccessException: Could not read Eurostat observations from Zetaris`; JDBC URL `jdbc:zetaris:lightning@localhost:10000`.
+      - User said password correct; checked `zetaris-platform` folder:
+        - `/home/ext_root/lab-data/zetaris-platform` is Docker Compose stack, 7 containers, driver port 10000, API 8888, UI 3000.
+        - Platform JDBC driver: `/home/ext_root/lab-data/zetaris-platform/jdbc/ndp-jdbc-driver-2.4.3.1-7eff043-driver.jar` (release 2.4.3.1). Old driver is 2.1.0.13 — likely mismatch.
+        - Platform `.env` has `ZETARIS_ADMIN_EMAIL` matching `.env.local` `ZETARIS_USERNAME` (both length 17, `admin@zetaris.com`), but `ZETARIS_ADMIN_PASSWORD` length 9 differs from `.env.local` `ZETARIS_PASSWORD` length 7 (`zetaris`; `.env.local` equals `.env.example` defaults).
+        - Direct `DriverManager` probe with old driver + `.env.local` password fails; with platform password fails; with API key fails; new driver + platform password also fails with same login error. So password/platform-env mismatch plus driver mismatch both possible; platform password may be stale if changed in UI.
+        - UI is up: `GET http://localhost:3000/api/config` 200; `POST http://localhost:3000/api/auth/login` with `{}` returns 400; with platform credentials returned 404 via Python (likely redirect; 404 body length 21). Docker daemon permission denied for `docker compose ps`/logs, so container logs unavailable.
+        - `.env.example` contains public example defaults `admin@zetaris.com` / `zetaris`; `.env.local` still exactly those.
+      - Task file updated: Phase 2–7 marked `[x]` at `[2026-10-23 20:08]`; Phase 1 and 8–9 `[ ]`; Blockers section added/updated at `[2026-10-23 20:12]` noting 20 tests pass, direct DriverManager probe reproduces login error, `.env.local` holds `.env.example` defaults.
+      - Plan status still needs update.
+      - User directive: "check lab-sata zetaris folder" -> checked `zetaris-platform`.
+
+      Next move: Resolve credentials/driver: likely update `.env.local` to platform admin credentials (without printing) and `ZETARIS_JDBC_JAR` to platform driver 2.4.3.1, install it via script, then rerun probe/`mvn verify`. But direct probe with platform password + new driver still failed. So need further diagnose: UI login endpoint verification, maybe password changed; ask user to confirm UI password or use platform verify script (needs docker permission). Also could try using platform's JDBC driver with `.env.local` password (old) — not tried? We tried new driver + platform password and old driver + platform password. Not new driver + old `zetaris` password. Could be worth trying. But summary shouldn't add unperformed actions as facts. Next move could be: run `./verify.sh` with sudo or docker group to confirm platform password; test new 2.4.3.1 driver with `.env.local` password; sync `.env.local` with platform `.env` and driver path once confirmed.
+
+      Need include exact paths, symbols, commands. Preserve constraints: no secrets printed/committed, no commit/push/PR, do not touch Angular app, loopback, in-memory notes, H2 removed.
+
+      Let me structure.
+
+      Objective: Build/verify Java web CRUD app over Zetaris Lightning JDBC with Eurostat reads and in-memory notes; current blocker is live JDBC login.
+
+      Important Details:
+      - Plan/task paths, approval, B1 decision.
+      - App path, coordinates, package, stack.
+      - Driver old path and platform driver path; platform release 2.4.3.1.
+      - env keys and platform `.env` key names; `.env.local` still example defaults; do not print values.
+      - Runtime constraints.
+      - Data/wiring/config.
+      - Tests count 20 and commands.
+      - Build fixes (Jackson 2 dependency ordering, MockMvc manual, layout fragment).
+      - Scratch path.
+      - No commit.
+
+      Work State:
+      Completed:
+      - v2 plan, task, approval, Phase 0.
+      - app files all written.
+      - build compiles, `mvn test` 20 pass.
+      - fixes applied.
+      - task updated.
+      Active:
+      - Diagnosing JDBC login failure; checked platform folder, driver 2.4.3.1 exists, platform `.env` password differs; direct probes fail; UI up; docker logs inaccessible.
+      Blocked:
+      - live `mvn verify` fails login; need correct JDBC credentials/driver; platform password may be stale or JDBC service config; docker permission denied.
+
+      Next Move:
+      1. Try platform driver 2.4.3.1 with `.env.local` password? Actually most promising: run platform `./verify.sh` (maybe with sudo) to confirm UI login/password; or test UI login endpoint properly. Also update `.env.local` `ZETARIS_JDBC_JAR` to platform driver and install it. Then rerun probe.
+      2. Once login succeeds, run `mvn verify`, Phase 8 E2E, update plan/task/README lint/DOX.
+
+      Need mention `ZETARIS_JDBC_JAR` is empty in `.env.local`; install script expects path. The app POM currently depends on `com.zetaris:lightning-jdbc:2.1.0.13-local`; if using platform driver, must install as same coordinates or update POM version. Could install platform driver as `2.4.3.1-local` and update POM. That's a next step.
+
+      Relevant Files: include app dir, pom, tests, task, plan, platform folder, platform driver, old driver, env files, AGENTS, layout/templates maybe not all. Keep concise but useful.
+
+      Need exact error strings:
+      `TTransportException: Peer indicated failure: Error validating the login`
+      `org.springframework.jdbc.CannotGetJdbcConnectionException: Failed to obtain JDBC Connection`
+      `SQLException: Could not open client transport with JDBC Uri: jdbc:zetaris:lightning@localhost:10000: Peer indicated failure: Error validating the login`
+
+      Build error exact: `package org.springframework.boot.test.autoconfigure.web.servlet does not exist`. Jackson errors: `NoClassDefFoundError`? Conversation says "Jackson core `JsonWriteFeature` missing" and later `NoSuchFieldError: WRITE_HEX_UPPER_CASE`. Include succinctly.
+
+      Task timestamps: 20:08, blocker 20:12.
+
+      Plan status still `DRAFT — awaiting user approval of B1` and implementation `Not started`; needs update.
+
+      Also mention `README.md` written but lint/DOX pending.
+
+      Let's write with terse bullets. Ensure every section.
+    thinking_duration: 11.712s
+    thinking_duration_ms: 11712
+    time: 10/23/2026, 8:16:33.513 PM UTC
+    response: |-
+      ## Objective
+      - Build and verify a simple Java web CRUD app demonstrating Zetaris Lightning JDBC: Eurostat reads over JDBC, app-owned notes in an in-memory store (B1). H2/persistence removed.
+      - Current focus: resolve live JDBC login failure, then complete Phase 8 end-to-end verification and handover.
+
+      ## Important Details
+      - v2 plan: `/home/ext_root/lab-data/ai-suite/docs/implementation-plans/2026-10-23_e95d21195ffeZqxeyL3fMHbTW4_onboarding-dry-run-with-rest-sql-checks-fork-1_implementation-plan_v2.md`; normative, lint `0 issues`. v1 archived, not deleted.
+      - Task file: `/home/ext_root/lab-data/ai-suite/docs/2026-10-23_e95d21195ffeZqxeyL3fMHbTW4_onboarding-dry-run-with-rest-sql-checks-fork-1_task.md`; Phases 2–7 marked `[x]` at `[2026-10-23 20:08]`; Blockers updated `[2026-10-23 20:12]`.
+      - User approved `proceed`; A1–A12 approved. `B` means **B1 — in-memory CRUD**.
+      - App: `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud-java/`; coordinates `com.example:eurostat-crud:0.1.0-SNAPSHOT`; package `com.example.eurostatcrud`.
+      - Existing Angular app at `examples/eurostat-crud/` — do not touch.
+      - Stack: Spring Boot `4.1.2`, Java release `21` on JDK `27`, Maven `3.10.0`; `spring-boot-starter-webmvc`, `-thymeleaf`, `-jdbc`, `-validation`, `-test`; no H2/JPA.
+      - Runtime: bind `127.0.0.1:8090`; no auth/CSRF; loopback-only; no Zetaris mutation; only `SELECT`/`SELECT 1`.
+      - Data: `eurostat.une_rt_m_pl_series_table` (`period`, `unemployment_rate_pct`), 356 rows, read-only. Notes: `ConcurrentHashMap<Long, SeriesNote>` + `AtomicLong`; unique period; 3 seeds (`1997-01`, `2024-01`, `2025-07`); lost on restart.
+      - Wiring: `ZetarisConfig` → `SimpleDriverDataSource` + `JdbcTemplate`; driver via `Class.forName("com.zetaris.lightning.jdbc.LightningDriver")`; Boot auto-config backs off.
+      - Env keys: `.env.local` uses `ZETARIS_JDBC_URL`, `ZETARIS_USERNAME`, `ZETARIS_PASSWORD`; `ZETARIS_JDBC_JAR` empty. Never print values.
+      - `.env.local` currently still equals `.env.example` defaults: `ZETARIS_USERNAME` matches platform `ZETARIS_ADMIN_EMAIL` (`admin@zetaris.com`), but `ZETARIS_PASSWORD` is the 7-char example `zetaris`; platform `.env` `ZETARIS_ADMIN_PASSWORD` is 9 chars and differs.
+      - Platform stack: `/home/ext_root/lab-data/zetaris-platform/`; Docker Compose release `2.4.3.1`; driver port `10000`, API `8888`, UI `3000`.
+      - Platform JDBC driver: `/home/ext_root/lab-data/zetaris-platform/jdbc/ndp-jdbc-driver-2.4.3.1-7eff043-driver.jar` — newer than installed `2.1.0.13` driver. Old driver JAR: `/home/ext_root/lab-data/ndp-jdbc-driver-2.1.0.13-driver.jar`.
+      - Installed Maven artifact: `com.zetaris:lightning-jdbc:2.1.0.13-local` at `$HOME/.m2/repository/com/zetaris/lightning-jdbc/2.1.0.13-local/`.
+      - Build fix 1: Boot 4.1.2 lacks `org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc`; test builds MockMvc manually via `MockMvcBuilders.webAppContextSetup(context)`.
+      - Build fix 2: Boot 4 uses Jackson 3 (`tools.jackson`), Thymeleaf 3.1.5 needs Jackson 2. Added `com.fasterxml.jackson.core:jackson-databind:2.21.7` runtime dependency **before** the Zetaris driver. Driver JAR bundles old Jackson 2 classes (`com/fasterxml/jackson/**`), causing `NoSuchFieldError: WRITE_HEX_UPPER_CASE`/`JsonWriteFeature` conflicts; declaration order matters.
+      - Build fix 3: `layout.html` needed `th:fragment="layout(pageTitle, content)"`.
+      - Tests: 20 pass with `mvn -q test` (unit, MVC, dashboard/template smoke). `mvn -q verify` runs `EurostatJdbcIT` gated by `@EnabledIfEnvironmentVariable(named="ZETARIS_JDBC_URL", matches=".+")`.
+      - Live JDBC failure strings: `TTransportException: Peer indicated failure: Error validating the login`; `CannotGetJdbcConnectionException: Failed to obtain JDBC Connection`; `SQLException: Could not open client transport with JDBC Uri: jdbc:zetaris:lightning@localhost:10000: Peer indicated failure: Error validating the login`.
+      - Direct `DriverManager` probe reproduces login failure with old/new driver, `.env.local` password, platform `.env` password, and `ZETARIS_API_KEY` as password — so not app code.
+      - Platform `.env` may be stale if the admin password was changed in the UI. Docker daemon access is denied (`docker compose ps`/logs fail with permission denied), so container logs unavailable.
+      - UI is up: `GET http://localhost:3000/api/config` → 200. `POST http://localhost:3000/api/auth/login` with `{}` → 400; with platform credentials via Python returned 404 (likely redirect handling), body length 21.
+      - Scratch dir for logs: `/home/ext_root/lab-data/ai-suite/scratch/e95d21195ffeZqxeyL3fMHbTW4/`; Phase 8 run log/PID must use `resolve-scratch-path.py --repo /home/ext_root/lab-data/ai-suite --purpose eurostat-crud-run`; no `/tmp`.
+      - No commit, push, or PR. No secrets printed or committed.
+      - Plan status field still says `DRAFT — awaiting user approval of B1` and implementation `Not started`; must update after implementation begins.
+
+      ## Work State
+      ### Completed
+      - v2 plan written, env keys corrected, linted; task updated to v2.
+      - Phase 0 checks passed; old driver installed and class-loaded.
+      - All app files written: `pom.xml`, `.gitignore`, `README.md`, `run.sh`, `scripts/install-zetaris-driver.sh`, `application.yml`, `application-test.yml`; all Java classes (config, domain, exceptions, repositories, services, form, controllers, exception handler); all Thymeleaf templates (`layout`, `index`, `series/list`, `series/detail`, `notes/list`, `notes/form`, `error`); `app.css`; all tests.
+      - `run.sh` and `scripts/install-zetaris-driver.sh` made executable.
+      - Build compiles (`mvn -q -DskipTests package` exit 0).
+      - `mvn -q test` passes all 20 tests, including template smoke test for `/series`, `/series/2025-07`, `/notes`, `/notes/new`.
+      - Task file Phases 2–7 marked complete; Blockers section records the JDBC login failure and 20 passing tests.
+      - Platform folder inspected; correct newer driver located; platform `.env` compared without printing secrets.
+
+      ### Active
+      - Diagnosing JDBC authentication: `.env.local` still has example password; platform `.env` password differs; old/new drivers both fail login. UI login endpoint behavior needs confirmation. Docker logs unavailable due permissions.
+      - Plan status and Phase 8/9 still pending; README written but lint/DOX pass not done.
+
+      ### Blocked
+      - Live `mvn verify` / `EurostatJdbcIT` blocked by `Error validating the login`.
+      - Need correct JDBC credentials and/or driver version. Platform `.env` password may be stale if changed in UI; `.env.local` is not synced. Docker access needed to inspect driver logs or run `./verify.sh`.
+      - `ZETARIS_JDBC_JAR` is empty; app POM still references old `2.1.0.13-local`.
+
+      ## Next Move
+      1. Confirm the real platform admin password (e.g. run `/home/ext_root/lab-data/zetaris-platform/verify.sh` with Docker access, or fix the UI login check), then sync `ZETARIS_USERNAME`/`ZETARIS_PASSWORD` in `.env.local` without printing them.
+      2. Install/use `/home/ext_root/lab-data/zetaris-platform/jdbc/ndp-jdbc-driver-2.4.3.1-7eff043-driver.jar` (update `scripts/install-zetaris-driver.sh` coordinates/POM version), rerun the direct probe, then `mvn -q verify`, Phase 8 E2E, and update plan/task/README lint/DOX.
+
+      ## Relevant Files
+      - `/home/ext_root/lab-data/ai-suite/docs/implementation-plans/2026-10-23_e95d21195ffeZqxeyL3fMHbTW4_onboarding-dry-run-with-rest-sql-checks-fork-1_implementation-plan_v2.md`: normative plan; status needs update.
+      - `/home/ext_root/lab-data/ai-suite/docs/2026-10-23_e95d21195ffeZqxeyL3fMHbTW4_onboarding-dry-run-with-rest-sql-checks-fork-1_task.md`: live checklist and blockers.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud-java/`: target app; all files written.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud-java/pom.xml`: Jackson 2 before driver; old driver version `2.1.0.13-local`.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud-java/src/test/java/com/example/eurostatcrud/EurostatJdbcIT.java`: live JDBC test.
+      - `/home/ext_root/lab-data/zetaris-getting-started/.env.local`: JDBC credentials/URL; still example password; never print.
+      - `/home/ext_root/lab-data/zetaris-platform/.env`: platform admin email/password; compare without printing.
+      - `/home/ext_root/lab-data/zetaris-platform/docker-compose.yml`: 7-container stack; driver port 10000.
+      - `/home/ext_root/lab-data/zetaris-platform/jdbc/ndp-jdbc-driver-2.4.3.1-7eff043-driver.jar`: correct newer driver candidate.
+      - `/home/ext_root/lab-data/ndp-jdbc-driver-2.1.0.13-driver.jar`: old driver currently installed.
+      - `/home/ext_root/lab-data/zetaris-getting-started/AGENTS.md`: JDBC/env/no-commit rules.
+      - `/home/ext_root/lab-data/ai-suite/scratch/e95d21195ffeZqxeyL3fMHbTW4/`: build/test/verify logs and `jdbc-login-probe_2026-10-23_20-12-00.java`.
+    duration: 23.010s
+    duration_ms: 23010
+

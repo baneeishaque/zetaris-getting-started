@@ -1,0 +1,4 @@
+user:
+  text: 'yes'
+assistant:
+  - response: "\n\n"

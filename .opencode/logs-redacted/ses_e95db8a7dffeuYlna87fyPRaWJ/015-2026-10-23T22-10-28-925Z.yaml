@@ -1,0 +1,358 @@
+---
+user:
+  text: since env.local is git ignored - we need .env.example file.
+  time: 10/23/2026, 10:10:01.815 PM UTC
+assistant:
+  - model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          oldString: |2-
+              - Document the Zetaris CORS limitation and the production
+                reverse-proxy and credential-boundary requirements.
+              - Verify 27 unit tests and the production build before commit.
+              ```
+
+            - **Hunks/Preview**:
+              - Entire directory is new; no mixed-concern hunks.
+              - Key behavior:
+          newString: |2-
+              - Document the Zetaris CORS limitation and the production
+                reverse-proxy and credential-boundary requirements.
+              - Add the Angular example to AGENTS.md and default
+                ZETARIS_ORG_ID to 1 in .env.example so the documented local
+                setup matches the app.
+              - Verify 27 unit tests and the production build before commit.
+              ```
+
+            - **Hunks/Preview**:
+
+              `~~~diff
+              diff --git a/.env.example b/.env.example
+              index 853dd37..39bcd3f 100644
+              --- a/.env.example
+              +++ b/.env.example
+              @@ -14,7 +14,7 @@ PGSSLMODE=disable
+              
+               # Zetaris HTTP API scripts (TypeScript and Python versions in scripts/).
+               ZETARIS_BASE_URL=http://localhost:3000
+              -ZETARIS_ORG_ID=
+              +ZETARIS_ORG_ID=1
+               # Set either an API key or a username and password for POST /api/auth/login.
+               # Create the key in the Zetaris GUI (never ask an agent to create it). Coding
+               # harness sessions (docs/connections/) read ZETARIS_API_KEY from .env.local.
+              
+              diff --git a/AGENTS.md b/AGENTS.md
+              index 0009ba4..6904714 100644
+              --- a/AGENTS.md
+              +++ b/AGENTS.md
+              @@ -1,6 +1,10 @@
+               # Agent instructions
+              
+              -This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`. You are acting as a data engineer against a Zetaris instance.
+              +This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages
+              +(`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, SQL references in `docs/guides/`, and
+              +runnable examples in `examples/` (`examples/eurostat-crud-java/` is a Spring Boot JDBC demo;
+              +`examples/eurostat-crud/` is an Angular browser CRUD example). You are acting as a data engineer against a
+              +Zetaris instance.
+              
+               ## Connect first
+              ~~~
+
+              - Entire app directory is new; no mixed-concern hunks.
+              - Key behavior:
+        result: Edit applied successfully.
+    time: 10/23/2026, 10:10:01.830 PM UTC
+    response: "\n\n"
+    duration: 5.200s
+    duration_ms: 5200
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      We need interpret: user says since .env.local gitignored, need .env.example file. We already include .env.example in commit 2. Maybe they want `.env.example` to include Angular app variables? It already has ZETARIS_REST_URL etc. But the app requires `.env.local` with ZETARIS_REST_URL; `.env.example` includes it. The user may be saying we need to ensure `.env.example` is committed because .env.local is ignored. We have included it. Maybe they want app README to reference `.env.example`? Let's inspect app README lines 15-22: says root needs `.env.local` with ZETARIS_REST_URL. It doesn't say copy `.env.example`. Since `.env.local` ignored, users need `.env.example` as template. We should update app README to say copy `.env.example` to `.env.local` and set `ZETARIS_REST_URL`. Also maybe `AGENTS.md` already says copy? `.env.example` header says copy. The user likely wants ensure `.env.example` is included and app docs mention it. Need act.
+
+      We need update app README:
+      "Requires Node.js 26 and npm 11. Copy the repository's `.env.example` to `.env.local` and set at least:
+      ```
+      ZETARIS_REST_URL=http://localhost:8888/api/v1.0
+      ```
+      `ZETARIS_ORG_ID` defaults to 1. ..."
+      Maybe mention `.env.local` is gitignored and `.env.example` is tracked. Good.
+
+      Also maybe root `.env.example` needs a comment for the Angular example? It already has ZETARIS_REST_URL. Could add a line in comments:
+      "# The Angular example (examples/eurostat-crud/) reads only ZETARIS_REST_URL through its dev proxy."
+      This would make `.env.example` self-documenting. But user says "we need .env.example file" perhaps they just want it committed. It is. Maybe they want `.env.example` in commit 1/2? We included in commit 2. We should confirm and maybe update docs.
+
+      Need be careful: user says "since env.local is git ignored - we need .env.example file." Maybe they are correcting our preview: `.env.example` is required, so don't exclude it. We already included. But perhaps we should respond that it's included, and also ensure README says copy it. Since they emphasize, likely they want `.env.example` committed. We can say it is in Commit 2 and update app README to instruct copying. That is useful.
+
+      Need update preview artifact and app README. Let's do:
+      - App README lines 15-22: add "Copy the repository's `.env.example` to `.env.local` (it is gitignored) and set at least..." Use line wrap.
+      - `.env.example` comment maybe add line "The Angular example (examples/eurostat-crud/) reads only ZETARIS_REST_URL through its dev proxy." But `.env.example` already says "run_sql.py and preflight.py" for REST URL; adding app note is good. However modifying `.env.example` again changes diff. It would be in commit 2. Is that necessary? The user specifically says need `.env.example` file, not necessarily comment. We can keep change minimal: app README instructs copy. `.env.example` already has required variables. Good.
+
+      Need update app README. Use edit. Then update preview artifact's Commit 2 file summary? README already listed; message maybe add "document copying .env.example". The app README change is within app. Need update verification? No tests impacted; lint. We should run markdownlint on app README and maybe dossier? Just app README. Then update preview artifact maybe mention `.env.example` is tracked template. The preview already includes `.env.example` and message says default ORG_ID. Add a bullet in message:
+      "- Document copying the tracked .env.example to the gitignored .env.local in the example README."
+      But message already has 6 bullets; add one. Or fold into existing env bullet:
+      "Add the Angular example to AGENTS.md, default ZETARIS_ORG_ID to 1 in .env.example, and document copying that template to .env.local."
+      Good.
+
+      Need maybe update `.env.example` header to explicitly mention Angular app? Let's consider. The header says "Copy this file to .env.local and fill in your own values". That's enough. The app README will point to it. Good.
+
+      Let's edit README.
+    thinking_duration: 5.757s
+    thinking_duration_ms: 5757
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud/README.md
+          oldString: |-
+            Requires Node.js 26 and npm 11. The repository root needs a `.env.local` with at least:
+
+            ```text
+            ZETARIS_REST_URL=http://localhost:8888/api/v1.0
+            ```
+
+            `ZETARIS_ORG_ID` defaults to `1`. The app does not read `.env.local` itself; the Angular dev proxy
+            reads only `ZETARIS_REST_URL`.
+          newString: |-
+            Requires Node.js 26 and npm 11. Copy the tracked `.env.example` to `.env.local` (gitignored) and set
+            at least:
+
+            ```text
+            ZETARIS_REST_URL=http://localhost:8888/api/v1.0
+            ```
+
+            `ZETARIS_ORG_ID` defaults to `1`. The app does not read `.env.local` itself; the Angular dev proxy
+            reads only `ZETARIS_REST_URL`.
+        result: Edit applied successfully.
+    time: 10/23/2026, 10:10:07.104 PM UTC
+    response: "\n\n"
+    duration: 8.344s
+    duration_ms: 8344
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: Need update preview message bullet and maybe file summary. Let's edit.
+    thinking_duration: 101ms
+    thinking_duration_ms: 101
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          oldString: |2-
+              - Add the Angular example to AGENTS.md and default
+                ZETARIS_ORG_ID to 1 in .env.example so the documented local
+                setup matches the app.
+          newString: |2-
+              - Add the Angular example to AGENTS.md, default ZETARIS_ORG_ID
+                to 1 in .env.example, and document copying that tracked
+                template to the gitignored .env.local.
+        result: Edit applied successfully.
+    time: 10/23/2026, 10:10:15.516 PM UTC
+    response: "\n\n"
+    duration: 2.362s
+    duration_ms: 2362
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Need maybe update app README line counts in preview? It says README listed but no line count. Fine. Need maybe add `.env.example` explanation in preview scope. Already.
+
+      Need run markdownlint on app README and AGENTS? AGENTS has many long lines; markdownlint would report pre-existing. We can run on app README only. Also maybe check `.env.example` no trailing spaces. `git diff --check`. Let's run.
+    thinking_duration: 934ms
+    thinking_duration_ms: 934
+    tool_calls:
+      - tool: bash
+        args:
+          command: PAGER=cat git -C /home/ext_root/lab-data/zetaris-getting-started diff --check
+          workdir: /home/ext_root/lab-data/ai-suite
+          timeout: 30000
+        result: (no output)
+      - tool: bash
+        args:
+          command: PAGER=cat git -C /home/ext_root/lab-data/zetaris-getting-started diff -- AGENTS.md .env.example
+          workdir: /home/ext_root/lab-data/ai-suite
+          timeout: 30000
+        result: |
+          diff --git a/.env.example b/.env.example
+          index 853dd37..39bcd3f 100644
+          --- a/.env.example
+          +++ b/.env.example
+          @@ -14,7 +14,7 @@ PGSSLMODE=disable
+           
+           # Zetaris HTTP API scripts (TypeScript and Python versions in scripts/).
+           ZETARIS_BASE_URL=http://localhost:3000
+          -ZETARIS_ORG_ID=
+          +ZETARIS_ORG_ID=1
+           # Set either an API key or a username and password for POST /api/auth/login.
+           # Create the key in the Zetaris GUI (never ask an agent to create it). Coding
+           # harness sessions (docs/connections/) read ZETARIS_API_KEY from .env.local.
+          diff --git a/AGENTS.md b/AGENTS.md
+          index 0009ba4..6904714 100644
+          --- a/AGENTS.md
+          +++ b/AGENTS.md
+          @@ -1,6 +1,10 @@
+           # Agent instructions
+           
+          -This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages (`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, and SQL references in `docs/guides/`. You are acting as a data engineer against a Zetaris instance.
+          +This repo is a set of tested onboarding material for Zetaris: install guide, `open_data/` source packages
+          +(`*_create.sql` / `*_select.sql` pairs), helper scripts in `scripts/`, SQL references in `docs/guides/`, and
+          +runnable examples in `examples/` (`examples/eurostat-crud-java/` is a Spring Boot JDBC demo;
+          +`examples/eurostat-crud/` is an Angular browser CRUD example). You are acting as a data engineer against a
+          +Zetaris instance.
+           
+           ## Connect first
+           
+      - tool: bash
+        args:
+          command: markdownlint-cli2 examples/eurostat-crud/README.md
+          workdir: /home/ext_root/lab-data/zetaris-getting-started
+          timeout: 120000
+        result: |
+          markdownlint-cli2 v0.23.3 (markdownlint v0.41.1)
+          Finding: examples/eurostat-crud/README.md
+          Linting: 1 file
+          Summary: 0 issues in 0 files
+    time: 10/23/2026, 10:10:17.961 PM UTC
+    response: "\n\n"
+    duration: 3.829s
+    duration_ms: 3829
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: 'Need final response. User statement maybe just clarifying, we should confirm `.env.example` now included and README instructs copy. Mention no commit yet. Keep concise. But we also need maybe update Execution Plan Gate 1: it currently says confirm no `.env.example`, `AGENTS.md` staged. We need fix! Let''s inspect lines 228 onwards. It says "Confirm no `.env.example`, plans, scratch, Java example, `.env.example`, or `AGENTS.md` is staged." Wait earlier preview text: "Confirm no `.env.local`, plans, scratch, Java example, `.env.example`, or `AGENTS.md` is staged." Need change to "Confirm no `.env.local`, plans, scratch, or Java example is staged; `.env.example` and `AGENTS.md` are expected in Commit 2." Also Commit 2 add command needs include `AGENTS.md .env.example`. We changed files list but not execution plan. Need update. Let''s view relevant.'
+    thinking_duration: 781ms
+    thinking_duration_ms: 781
+    tool_calls:
+      - tool: read
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          offset: 260
+          limit: 60
+        result: |-
+          <path>/home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md</path>
+          <type>file</type>
+          <content>
+          260: 
+          261: ### Gate 0 — Author identity
+          262: 
+          263: - Resolved: local `user.name` and `user.email` are set from the ai-suite repo.
+          264: - Verified: `Banee Ishaque K <Baneeishaque@gmail.com>`.
+          265: - No machine fallback remains.
+          266: 
+          267: ### Gate 1 — Preflight
+          268: 
+          269: 1. `git -C /home/ext_root/lab-data/zetaris-getting-started status --short`
+          270: 2. `git -C /home/ext_root/lab-data/zetaris-getting-started fetch origin`
+          271: 3. Compare `HEAD` with `origin/main`; stop if behind.
+          272: 4. Confirm the index is empty.
+          273: 5. Confirm no `.env.local`, plans, scratch, Java example, `.env.example`, or `AGENTS.md` is staged.
+          274: 6. Confirm no pre-existing stashes; capture the safety stash.
+          275: 
+          276: ### Gate 2 — Safety stash
+          277: 
+          278: 1. `git -C /home/ext_root/lab-data/zetaris-getting-started stash push -u -m "pre-commit safety: Eurostat dossier and Angular example"`
+          279: 2. `git -C /home/ext_root/lab-data/zetaris-getting-started stash apply`
+          280: 3. Do not `pop`; retain until final verification.
+          281: 
+          282: ### Commit 1
+          283: 
+          284: 1. `git -C /home/ext_root/lab-data/zetaris-getting-started add .markdownlint-cli2.jsonc README.md open_data/rest_apis/rest-api-sources.md docs/data-sources/eurostat`
+          285: 2. `git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached --name-only`
+          286: 3. `git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached --check`
+          287: 4. `markdownlint-cli2 docs/data-sources/eurostat/*.md` from the repo root
+          288: 5. Commit with the prepared message file:
+          289:    `git -C /home/ext_root/lab-data/zetaris-getting-started commit -F <scratch>/commit-1-message.txt`
+          290: 6. Verify: `git -C /home/ext_root/lab-data/zetaris-getting-started show --stat --oneline HEAD`
+          291: 
+          292: ### Commit 2
+          293: 
+          294: 1. `git -C /home/ext_root/lab-data/zetaris-getting-started add examples/eurostat-crud`
+          295: 2. `git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached --name-only`
+          296: 3. `git -C /home/ext_root/lab-data/zetaris-getting-started diff --cached --check`
+          297: 4. Run `npm test -- --watch=false` and `npm run build` in `examples/eurostat-crud`
+          298: 5. Commit with the prepared message file:
+          299:    `git -C /home/ext_root/lab-data/zetaris-getting-started commit -F <scratch>/commit-2-message.txt`
+          300: 6. Verify: `git -C /home/ext_root/lab-data/zetaris-getting-started show --stat --oneline HEAD`
+          301: 
+          302: ### Post-Commit Verification
+          303: 
+          304: 1. `git -C /home/ext_root/lab-data/zetaris-getting-started status --short`
+          305:    - Expected: only the excluded pre-existing changes remain.
+          306: 2. `git -C /home/ext_root/lab-data/zetaris-getting-started log -2 --oneline`
+          307: 3. `git -C /home/ext_root/lab-data/zetaris-getting-started show --stat HEAD~1..HEAD`
+          308: 4. Run the commit-preview verifier against this file.
+          309: 5. Confirm the safety stash is a no-op, then drop it only after verification.
+          310: 6. Do not push unless separately requested.
+          311: 
+          312: ### Abort Rules
+          313: 
+          314: - Stop on any staged path outside the planned lists.
+          315: - Stop on any secret, `.env.local`, plan, scratch, or Java-example path.
+          316: - Stop on a pre-commit fetch that shows the branch is behind.
+          317: - Stop on a failing test, build, lint, or link check.
+          318: - Stop on an author-identity mismatch.
+          319: 
+
+          (Showing lines 260-319 of 323. Use offset=320 to continue.)
+          </content>
+    time: 10/23/2026, 10:10:21.852 PM UTC
+    response: "\n\n"
+    duration: 2.485s
+    duration_ms: 2485
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Need edit Gate 1 line, Commit 2 add, maybe post-commit expected "only excluded pre-existing changes" now Java example and plans/scratch only. Good. Also abort rules "Stop on any secret, .env.local, plan, scratch, or Java-example path" okay; `.env.example` not secret. Good.
+
+      Edit.
+    thinking_duration: 308ms
+    thinking_duration_ms: 308
+    tool_calls:
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          oldString: 5. Confirm no `.env.local`, plans, scratch, Java example, `.env.example`, or `AGENTS.md` is staged.
+          newString: 5. Confirm no `.env.local`, plans, scratch, or Java example is staged. `.env.example` and `AGENTS.md` are expected in Commit 2.
+        result: Edit applied successfully.
+      - tool: edit
+        args:
+          filePath: /home/ext_root/lab-data/zetaris-getting-started/scratch/e95db8a7dffeuYlna87fyPRaWJ/commit-preview.md
+          oldString: 1. `git -C /home/ext_root/lab-data/zetaris-getting-started add examples/eurostat-crud`
+          newString: 1. `git -C /home/ext_root/lab-data/zetaris-getting-started add examples/eurostat-crud AGENTS.md .env.example`
+        result: Edit applied successfully.
+    time: 10/23/2026, 10:10:24.413 PM UTC
+    response: "\n\n"
+    duration: 2.573s
+    duration_ms: 2573
+  - agent: build
+    model:
+      id: deepseek-ai/DeepSeek-V4.1-Flash-1017
+      provider: tokenjuice
+    thinking: |-
+      Need maybe update post-commit expected. Not necessary.
+
+      Need final concise. Mention `.env.example` included in Commit 2; app README now says copy tracked `.env.example` to gitignored `.env.local`; AGENTS updated to mention Angular. No commit yet. Ask start. Use 3-4 lines.
+    thinking_duration: 181ms
+    thinking_duration_ms: 181
+    time: 10/23/2026, 10:10:27.095 PM UTC
+    response: |-
+      Updated scope:
+
+      - `.env.example` is now included in Commit 2.
+      - `AGENTS.md` now names both examples: Spring Boot JDBC and Angular browser CRUD.
+      - `examples/eurostat-crud/README.md` now says to copy the tracked `.env.example` to the gitignored `.env.local`.
+
+      Preview artifact and Execution Plan are updated. No commits yet; say `start` to execute.
+    duration: 1.762s
+    duration_ms: 1762
+

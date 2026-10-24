@@ -1,0 +1,46 @@
+user:
+  text: |-
+    on /home/ext_root/lab-data/zetaris-getting-started: Read AGENTS.md and follow it. Run python3 scripts/prefl ight.py and show me the 
+    result. Then connect over REST to the instance confi gured in .env.local and 
+    confi rm with SELECT 1 and SHOW LIGHTNING DATABASES. 
+    Goal: onboard pokeapi
+    Dry-run before creating anything and wait for my go-ahead.
+assistant:
+  - response: 'Goal noted: `onboard pokeapi`. Re-running the read-only preflight, then planning the onboarding.'
+  - response: The dry-run printed only the file, not the statements. Let me check `onboard.py` options for a verbose statement listing.
+  - response: Onboarding plan is one source, 13 statements. `POKEAPI_REST` already exists on the instance, so let me inspect what's already there and confirm the re-run syntax.
+  - response: |-
+      **Preflight** (`scripts/preflight.py`, read-only) — READY:
+
+      ```
+      [PASS] env file, ZETARIS_API_KEY, ZETARIS_USERNAME, ZETARIS_PASSWORD
+      [PASS] ZETARIS_USER_AGENT: valid app_name user@domain.tld
+      [PASS] REST datasources: HTTP 200, 0 listed
+      [PASS] REST SELECT 1
+      [INFO] lightning databases: NY_TAXI, POKEAPI_REST, TPCDS_DB
+      [INFO] USL namespaces: none
+      ```
+
+      **REST confirmation** (direct `/api/v1.0`): `SELECT 1` → `1`; `SHOW LIGHTNING DATABASES` → `NY_TAXI`, `POKEAPI_REST`, `TPCDS_DB`; `GET /datasource/datasources` → `[]`.
+
+      **Dry-run** (`onboard.py run pokeapi --dry-run`, nothing sent) — 1 source, 0 dependencies:
+
+      ```
+      plan: pokeapi  rest  open_data/rest_apis/sql/non_rate_limited/02_pokeapi_create.sql
+      ```
+
+      Statement list from `run_sql.py --dry-run` (13 statements):
+
+      ```
+       1. CREATE LIGHTNING DATABASE POKEAPI_REST DESCRIBE BY "PokeAPI REST source"
+       2. CREATE SCHEMASTORE CONTAINER pokeapi
+       3. CREATE LIGHTNING REST TABLE pikachu_facts   (endpoint /pokemon/pikachu)
+       4-6. CREATE SCHEMASTORE VIEW pikachu_{abilities,types,stats}_table
+       7. CREATE LIGHTNING REST TABLE charizard_facts (endpoint /pokemon/charizard)
+       8-10. CREATE SCHEMASTORE VIEW charizard_{abilities,types,stats}_table
+      11-13. CREATE SCHEMASTORE VIEW all_pokemon_{types,stats,abilities}_table
+      ```
+
+      **Important:** pokeapi is already fully onboarded on this instance — `POKEAPI_REST` exists, both REST tables (`pikachu_facts`, `charizard_facts`) exist, and `SHOW VIEWS IN pokeapi` lists all 9 views. A plain re-run would stop at statement 1 with "already exists" (or skip all 13 under `--skip-exists`, changing nothing).
+
+      Awaiting your go-ahead. Recommended next step is read-only verification of the existing objects (`SELECT` counts on the views vs the PokeAPI responses). Do you want that, an idempotent `run pokeapi --skip-exists`, or a teardown/recreate (separate approval)?

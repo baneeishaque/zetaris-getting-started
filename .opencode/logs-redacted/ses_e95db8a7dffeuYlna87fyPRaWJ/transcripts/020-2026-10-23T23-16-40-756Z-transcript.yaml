@@ -1,0 +1,48 @@
+user:
+  text: 'for commit 2: /home/ext_root/lab-data/zetaris-getting-started/AGENTS.md must be hunked. we can''t correctly the line. so, use backup-edit-commit-restore machanism.'
+assistant:
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: |-
+      Prepared for the backup-edit-commit-restore flow:
+
+      - Commit 1 gets the 120-column AGENTS.md rewrap only.
+      - Commit 2 gets only the examples hunk, then restores the full file.
+      - Backup and intermediate files are in `scratch/e95db8a7dffeuYlna87fyPRaWJ/`: `AGENTS.md.commit2-full.bak` and `AGENTS.md.commit1-rewrap-only.md`.
+
+      Preview and both commit messages are updated; index remains empty. Say `start` to execute.

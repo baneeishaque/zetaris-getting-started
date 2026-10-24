@@ -1,0 +1,13 @@
+user:
+  text: |
+    .env.example change is ours
+    AGENTS.md change is also ours (partially). it only tells about java spring crud - need to tell about angualr crud too.
+assistant:
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: ''
