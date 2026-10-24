@@ -1,0 +1,178 @@
+Oct 23, 2026 8:23:19 PM org.springframework.test.context.support.AnnotationConfigContextLoaderUtils detectDefaultConfigurationClasses
+INFO: Could not detect default configuration classes for test class [com.example.eurostatcrud.EurostatCrudApplicationTests]: EurostatCrudApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+Oct 23, 2026 8:23:19 PM org.springframework.boot.test.context.SpringBootTestContextBootstrapper getOrFindConfigurationClasses
+INFO: Found @SpringBootConfiguration com.example.eurostatcrud.EurostatCrudApplication for test class com.example.eurostatcrud.EurostatCrudApplicationTests
+Oct 23, 2026 8:23:19 PM org.springframework.test.context.support.AnnotationConfigContextLoaderUtils detectDefaultConfigurationClasses
+INFO: Could not detect default configuration classes for test class [com.example.eurostatcrud.EurostatCrudApplicationTests]: EurostatCrudApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+Oct 23, 2026 8:23:19 PM org.springframework.boot.test.context.SpringBootTestContextBootstrapper getOrFindConfigurationClasses
+INFO: Found @SpringBootConfiguration com.example.eurostatcrud.EurostatCrudApplication for test class com.example.eurostatcrud.EurostatCrudApplicationTests
+SLF4J(W): Class path contains multiple SLF4J providers.
+SLF4J(W): Found provider [ch.qos.logback.classic.spi.LogbackServiceProvider@64138b0c]
+SLF4J(W): Found provider [org.slf4j.reload4j.Reload4jServiceProvider@49dbaaf3]
+SLF4J(W): See https://www.slf4j.org/codes.html#multiple_bindings for an explanation.
+SLF4J(I): Actual provider is of type [ch.qos.logback.classic.spi.LogbackServiceProvider@64138b0c]
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.2)
+
+2026-10-23T20:23:20.561Z  WARN 2536146 --- [eurostat-crud] [           main] ory$DuplicateJsonObjectContextCustomizer : 
+
+Found multiple occurrences of org.json.JSONObject on the class path:
+
+	jar:file:/home/ext_root/.m2/repository/com/zetaris/lightning-jdbc/2.4.3.1-local/lightning-jdbc-2.4.3.1-local.jar!/org/json/JSONObject.class
+	jar:file:/home/ext_root/.m2/repository/com/tdunning/json/1.8/json-1.8.jar!/org/json/JSONObject.class
+	jar:file:/home/ext_root/.m2/repository/org/json/json/20250517/json-20250517.jar!/org/json/JSONObject.class
+	jar:file:/home/ext_root/.m2/repository/com/vaadin/external/google/android-json/0.0.20131108.vaadin1/android-json-0.0.20131108.vaadin1.jar!/org/json/JSONObject.class
+
+You may wish to exclude one of them to ensure predictable runtime behavior
+
+2026-10-23T20:23:20.624Z  INFO 2536146 --- [eurostat-crud] [           main] c.e.e.EurostatCrudApplicationTests       : Starting EurostatCrudApplicationTests using Java 27 with PID 2536146 (started by ext_root in /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud-java)
+2026-10-23T20:23:20.625Z  INFO 2536146 --- [eurostat-crud] [           main] c.e.e.EurostatCrudApplicationTests       : The following 1 profile is active: "test"
+Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+WARNING: A Java agent has been loaded dynamically (/home/ext_root/.m2/repository/net/bytebuddy/byte-buddy-agent/1.18.15/byte-buddy-agent-1.18.15.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+2026-10-23T20:23:23.659Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.b.w.a.WelcomePageHandlerMapping      : Adding welcome page template: index
+2026-10-23T20:23:24.215Z  INFO 2536146 --- [eurostat-crud] [           main] c.e.e.EurostatCrudApplicationTests       : Started EurostatCrudApplicationTests in 4.193 seconds (process running for 6.47)
+2026-10-23T20:23:24.281Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-10-23T20:23:24.281Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T20:23:24.283Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2026-10-23T20:23:24.920Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-10-23T20:23:24.920Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T20:23:24.921Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2026-10-23T20:23:25.442Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-23T20:23:25.442Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T20:23:25.442Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-23T20:23:25.468Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-23T20:23:25.468Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T20:23:25.469Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-23T20:23:25.483Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-23T20:23:25.483Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T20:23:25.484Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-23T20:23:25.506Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-23T20:23:25.509Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T20:23:25.509Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-23T20:23:25.556Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-23T20:23:25.557Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T20:23:25.557Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-23T20:23:25.682Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-23T20:23:25.683Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T20:23:25.683Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-23T20:23:25.722Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-23T20:23:25.722Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T20:23:25.723Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-23T20:23:25.744Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-23T20:23:25.744Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T20:23:25.744Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-23T20:23:25.790Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-23T20:23:25.790Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T20:23:25.790Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-23T20:23:25.818Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-23T20:23:25.818Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T20:23:25.818Z  INFO 2536146 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+Oct 23, 2026 8:23:28 PM org.springframework.test.context.support.AnnotationConfigContextLoaderUtils detectDefaultConfigurationClasses
+INFO: Could not detect default configuration classes for test class [com.example.eurostatcrud.EurostatJdbcIT]: EurostatJdbcIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+Oct 23, 2026 8:23:28 PM org.springframework.boot.test.context.SpringBootTestContextBootstrapper getOrFindConfigurationClasses
+INFO: Found @SpringBootConfiguration com.example.eurostatcrud.EurostatCrudApplication for test class com.example.eurostatcrud.EurostatJdbcIT
+Oct 23, 2026 8:23:28 PM org.springframework.test.context.support.AnnotationConfigContextLoaderUtils detectDefaultConfigurationClasses
+INFO: Could not detect default configuration classes for test class [com.example.eurostatcrud.EurostatJdbcIT]: EurostatJdbcIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+Oct 23, 2026 8:23:28 PM org.springframework.boot.test.context.SpringBootTestContextBootstrapper getOrFindConfigurationClasses
+INFO: Found @SpringBootConfiguration com.example.eurostatcrud.EurostatCrudApplication for test class com.example.eurostatcrud.EurostatJdbcIT
+SLF4J(W): Class path contains multiple SLF4J providers.
+SLF4J(W): Found provider [ch.qos.logback.classic.spi.LogbackServiceProvider@5a101b1c]
+SLF4J(W): Found provider [org.slf4j.reload4j.Reload4jServiceProvider@2160e52a]
+SLF4J(W): See https://www.slf4j.org/codes.html#multiple_bindings for an explanation.
+SLF4J(I): Actual provider is of type [ch.qos.logback.classic.spi.LogbackServiceProvider@5a101b1c]
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.2)
+
+2026-10-23T20:23:29.524Z  WARN 2536357 --- [eurostat-crud] [           main] ory$DuplicateJsonObjectContextCustomizer : 
+
+Found multiple occurrences of org.json.JSONObject on the class path:
+
+	jar:file:/home/ext_root/.m2/repository/com/zetaris/lightning-jdbc/2.4.3.1-local/lightning-jdbc-2.4.3.1-local.jar!/org/json/JSONObject.class
+	jar:file:/home/ext_root/.m2/repository/com/tdunning/json/1.8/json-1.8.jar!/org/json/JSONObject.class
+	jar:file:/home/ext_root/.m2/repository/org/json/json/20250517/json-20250517.jar!/org/json/JSONObject.class
+	jar:file:/home/ext_root/.m2/repository/com/vaadin/external/google/android-json/0.0.20131108.vaadin1/android-json-0.0.20131108.vaadin1.jar!/org/json/JSONObject.class
+
+You may wish to exclude one of them to ensure predictable runtime behavior
+
+2026-10-23T20:23:29.537Z  INFO 2536357 --- [eurostat-crud] [           main] c.example.eurostatcrud.EurostatJdbcIT    : Starting EurostatJdbcIT using Java 27 with PID 2536357 (started by ext_root in /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud-java)
+2026-10-23T20:23:29.541Z  INFO 2536357 --- [eurostat-crud] [           main] c.example.eurostatcrud.EurostatJdbcIT    : No active profile set, falling back to 1 default profile: "default"
+2026-10-23T20:23:31.103Z  INFO 2536357 --- [eurostat-crud] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 0 (http)
+2026-10-23T20:23:31.119Z  INFO 2536357 --- [eurostat-crud] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-23T20:23:31.119Z  INFO 2536357 --- [eurostat-crud] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.27]
+2026-10-23T20:23:31.171Z  INFO 2536357 --- [eurostat-crud] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 1584 ms
+2026-10-23T20:23:31.479Z  INFO 2536357 --- [eurostat-crud] [           main] o.s.b.w.a.WelcomePageHandlerMapping      : Adding welcome page template: index
+2026-10-23T20:23:31.849Z  INFO 2536357 --- [eurostat-crud] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 34433 (http) with context path '/'
+2026-10-23T20:23:31.857Z  INFO 2536357 --- [eurostat-crud] [           main] c.example.eurostatcrud.EurostatJdbcIT    : Started EurostatJdbcIT in 2.801 seconds (process running for 4.481)
+Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+WARNING: A Java agent has been loaded dynamically (/home/ext_root/.m2/repository/net/bytebuddy/byte-buddy-agent/1.18.15/byte-buddy-agent-1.18.15.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+[ERROR] Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 19.54 s <<< FAILURE! -- in com.example.eurostatcrud.EurostatJdbcIT
+[ERROR] com.example.eurostatcrud.EurostatJdbcIT.readsEurostatAndReportsHealthy -- Time elapsed: 16.17 s <<< ERROR!
+com.example.eurostatcrud.exception.EurostatDataAccessException: Could not read Eurostat observations from Zetaris.
+	at com.example.eurostatcrud.repository.JdbcEurostatRepository.findAll(JdbcEurostatRepository.java:51)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:583)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:359)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:190)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:158)
+	at org.springframework.dao.support.PersistenceExceptionTranslationInterceptor.invoke(PersistenceExceptionTranslationInterceptor.java:135)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:714)
+	at com.example.eurostatcrud.repository.JdbcEurostatRepository$$SpringCGLIB$$0.findAll(<generated>)
+	at com.example.eurostatcrud.service.EurostatService.listAll(EurostatService.java:24)
+	at com.example.eurostatcrud.EurostatJdbcIT.readsEurostatAndReportsHealthy(EurostatJdbcIT.java:30)
+Caused by: org.springframework.dao.QueryTimeoutException: StatementCallback; SQL [SELECT period, unemployment_rate_pct
+FROM eurostat.une_rt_m_pl_series_table
+ORDER BY period
+]; Query timed out after 15 seconds
+	at org.springframework.jdbc.support.SQLExceptionSubclassTranslator.doTranslate(SQLExceptionSubclassTranslator.java:92)
+	at org.springframework.jdbc.support.AbstractFallbackSQLExceptionTranslator.translate(AbstractFallbackSQLExceptionTranslator.java:102)
+	at org.springframework.jdbc.core.JdbcTemplate.translateException(JdbcTemplate.java:1549)
+	at org.springframework.jdbc.core.JdbcTemplate.execute(JdbcTemplate.java:427)
+	at org.springframework.jdbc.core.JdbcTemplate.query(JdbcTemplate.java:491)
+	at org.springframework.jdbc.core.JdbcTemplate.query(JdbcTemplate.java:501)
+	at com.example.eurostatcrud.repository.JdbcEurostatRepository.findAll(JdbcEurostatRepository.java:48)
+	... 11 more
+Caused by: java.sql.SQLTimeoutException: Query timed out after 15 seconds
+	at org.zetarisapache.hive.jdbc.HiveStatement.waitForOperationToComplete(HiveStatement.java:381)
+	at org.zetarisapache.hive.jdbc.HiveStatement.execute(HiveStatement.java:254)
+	at org.zetarisapache.hive.jdbc.HiveStatement.executeQuery(HiveStatement.java:476)
+	at org.springframework.jdbc.core.JdbcTemplate$1QueryStatementCallback.doInStatement(JdbcTemplate.java:478)
+	at org.springframework.jdbc.core.JdbcTemplate.execute(JdbcTemplate.java:412)
+	... 14 more
+
+[ERROR] Errors: 
+[ERROR]   EurostatJdbcIT.readsEurostatAndReportsHealthy:30 » EurostatDataAccess Could not read Eurostat observations from Zetaris.
+[ERROR] Tests run: 1, Failures: 0, Errors: 1, Skipped: 0
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-failsafe-plugin:3.5.6:verify (default) on project eurostat-crud: 
+[ERROR] 
+[ERROR] See /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud-java/target/failsafe-reports for the individual test results.
+[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

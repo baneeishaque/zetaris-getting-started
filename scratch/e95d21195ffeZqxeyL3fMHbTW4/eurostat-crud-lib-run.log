@@ -1,0 +1,24 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.2)
+
+2026-10-23T22:15:21.309Z  INFO 2674177 --- [eurostat-crud] [           main] c.e.e.EurostatCrudApplication            : Starting EurostatCrudApplication v0.1.0-SNAPSHOT using Java 27 with PID 2674177 (/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud-java/target/eurostat-crud-0.1.0-SNAPSHOT.jar started by ext_root in /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud-java)
+2026-10-23T22:15:21.318Z  INFO 2674177 --- [eurostat-crud] [           main] c.e.e.EurostatCrudApplication            : No active profile set, falling back to 1 default profile: "default"
+2026-10-23T22:15:24.232Z  INFO 2674177 --- [eurostat-crud] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 8090 (http)
+2026-10-23T22:15:24.252Z  INFO 2674177 --- [eurostat-crud] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-23T22:15:24.253Z  INFO 2674177 --- [eurostat-crud] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.27]
+2026-10-23T22:15:24.294Z  INFO 2674177 --- [eurostat-crud] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 2774 ms
+2026-10-23T22:15:24.720Z  INFO 2674177 --- [eurostat-crud] [           main] o.s.b.w.a.WelcomePageHandlerMapping      : Adding welcome page template: index
+2026-10-23T22:15:25.431Z  INFO 2674177 --- [eurostat-crud] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 8090 (http) with context path '/'
+2026-10-23T22:15:25.473Z  INFO 2674177 --- [eurostat-crud] [           main] c.e.e.EurostatCrudApplication            : Started EurostatCrudApplication in 5.278 seconds (process running for 6.513)
+2026-10-23T22:15:26.229Z  INFO 2674177 --- [eurostat-crud] [0.1-8090-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-23T22:15:26.230Z  INFO 2674177 --- [eurostat-crud] [0.1-8090-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-23T22:15:26.231Z  INFO 2674177 --- [eurostat-crud] [0.1-8090-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-10-23T22:15:51.790Z  INFO 2674177 --- [eurostat-crud] [ionShutdownHook] o.s.boot.tomcat.GracefulShutdown         : Commencing graceful shutdown. Waiting for active requests to complete
+2026-10-23T22:15:51.795Z  INFO 2674177 --- [eurostat-crud] [tomcat-shutdown] o.s.boot.tomcat.GracefulShutdown         : Graceful shutdown complete

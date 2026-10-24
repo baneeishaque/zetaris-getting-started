@@ -1,0 +1,18 @@
+[INFO] Scanning for projects...
+[INFO] Loaded 24213 auto-discovered prefixes for remote repository central (prefixes-central.txt)
+[INFO] Loaded 74 auto-discovered prefixes for remote repository apache.snapshots (prefixes-apache.snapshots.txt)
+[INFO] 
+[INFO] ---------------------< com.example:eurostat-crud >----------------------
+[INFO] Building eurostat-crud 0.1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- install:3.1.4:install-file (default-cli) @ eurostat-crud ---
+[INFO] Installing /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud-java/target/zetaris-jdbc-boot.jar to /home/ext_root/.m2/repository/com/zetaris/lightning-jdbc/2.4.3.1-local/lightning-jdbc-2.4.3.1-local.jar
+[INFO] Installing /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud-java/target/zetaris-jdbc-boot.pom to /home/ext_root/.m2/repository/com/zetaris/lightning-jdbc/2.4.3.1-local/lightning-jdbc-2.4.3.1-local.pom
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  3.486 s
+[INFO] Finished at: 2026-10-23T20:32:31Z
+[INFO] ------------------------------------------------------------------------

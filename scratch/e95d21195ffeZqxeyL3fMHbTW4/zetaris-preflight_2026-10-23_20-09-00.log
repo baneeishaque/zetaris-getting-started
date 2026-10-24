@@ -1,0 +1,17 @@
+[PASS] env file: /home/ext_root/lab-data/zetaris-getting-started/.env.local
+[PASS] ZETARIS_API_KEY: set
+[PASS] ZETARIS_USERNAME: set
+[PASS] ZETARIS_PASSWORD: set
+[PASS] ZETARIS_USER_AGENT: set, in the form app_name user@domain.tld
+[PASS] REST datasources: HTTP 200, 0 listed: 
+[PASS] REST SELECT 1
+[INFO] datasources: none
+[INFO] lightning databases: EUROSTAT_REST, NY_TAXI, POKEAPI_REST, TPCDS_DB
+[INFO] USL namespaces: none
+[PASS] JDBC port 10000: open
+[PASS] Java (JDK 11+): /home/ext_root/.local/share/mise/installs/java/27.0.0
+[FAIL] .venv: missing; run `python3 -m venv .venv && .venv/bin/pip install -r scripts/requirements.txt`
+[FAIL] jaydebeapi: not installed in this Python (create .venv and install scripts/requirements.txt)
+[PASS] driver JAR: /home/ext_root/lab-data/ndp-jdbc-driver-2.1.0.13-driver.jar
+
+NOT READY: 2 check(s) failed

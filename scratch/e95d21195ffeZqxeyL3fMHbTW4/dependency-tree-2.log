@@ -1,0 +1,44 @@
+[INFO] Scanning for projects...
+[INFO] Loaded 24213 auto-discovered prefixes for remote repository central (prefixes-central.txt)
+[INFO] 
+[INFO] ---------------------< com.example:eurostat-crud >----------------------
+[INFO] Building eurostat-crud 0.1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] Loaded 881 auto-discovered prefixes for remote repository apache release (prefixes-apache release.txt)
+[INFO] Loaded 74 auto-discovered prefixes for remote repository apache.snapshots (prefixes-apache.snapshots.txt)
+[WARNING] Ignoring checksum policy 'ignore' contributed by repository apache-snapshots (http://people.apache.org/repo/m2-snapshot-repository) declared by a remote artifact descriptor: it would downgrade the checksum policy 'warn' of the mirror serving it; set aether.remoteRepositoryManager.rawRepositoryChecksumPolicyDowngrade=true to restore the legacy weakest-wins merge
+[WARNING] Ignoring checksum policy 'ignore' contributed by repository codehaus-snapshots (http://snapshots.repository.codehaus.org) declared by a remote artifact descriptor: it would downgrade the checksum policy 'warn' of the mirror serving it; set aether.remoteRepositoryManager.rawRepositoryChecksumPolicyDowngrade=true to restore the legacy weakest-wins merge
+[WARNING] Ignoring checksum policy 'ignore' contributed by repository codehaus.snapshots (http://snapshots.repository.codehaus.org) declared by a remote artifact descriptor: it would downgrade the checksum policy 'warn' of the mirror serving it; set aether.remoteRepositoryManager.rawRepositoryChecksumPolicyDowngrade=true to restore the legacy weakest-wins merge
+[WARNING] 1 problem was encountered while building the effective model for org.apache.hbase:hbase-annotations:jar:1.1.1 during dependency collection step for project (use -X to see details)
+[WARNING] Could not transfer metadata /.meta/prefixes.txt from/to continuuity-public (https://repository.continuuity.com/content/groups/public): repository.continuuity.com: Name or service not known
+[INFO] Loaded 881 auto-discovered prefixes for remote repository ASF Staging (prefixes-ASF Staging.txt)
+[INFO] Loaded 74 auto-discovered prefixes for remote repository ASF Snapshots (prefixes-ASF Snapshots.txt)
+[INFO] Loaded 74 auto-discovered prefixes for remote repository apache.snapshots.https (prefixes-apache.snapshots.https.txt)
+[INFO] Loaded 74 auto-discovered prefixes for remote repository apache.snapshots (prefixes-apache.snapshots.txt)
+[WARNING] 1 problem was encountered while building the effective model for org.apache.hadoop:hadoop-annotations:jar:2.5.1 during dependency collection step for project (use -X to see details)
+[WARNING] Could not transfer metadata /.meta/prefixes.txt from/to jvnet-nexus-snapshots (https://maven.java.net/content/repositories/snapshots): (certificate_expired) PKIX path validation failed: java.security.cert.CertPathValidatorException: validity check failed
+[INFO] 
+[INFO] --- dependency:3.10.0:tree (default-cli) @ eurostat-crud ---
+[INFO] com.example:eurostat-crud:jar:0.1.0-SNAPSHOT
+[INFO] +- org.springframework.boot:spring-boot-starter-webmvc:jar:4.1.2:compile
+[INFO] |  \- org.springframework.boot:spring-boot-starter-tomcat:jar:4.1.2:compile
+[INFO] |     \- org.springframework.boot:spring-boot-starter-tomcat-runtime:jar:4.1.2:compile
+[INFO] |        +- org.apache.tomcat.embed:tomcat-embed-core:jar:11.0.27:compile
+[INFO] |        \- org.apache.tomcat.embed:tomcat-embed-websocket:jar:11.0.27:compile
+[INFO] +- org.springframework.boot:spring-boot-starter-validation:jar:4.1.2:compile
+[INFO] |  \- org.springframework.boot:spring-boot-validation:jar:4.1.2:compile
+[INFO] |     \- org.apache.tomcat.embed:tomcat-embed-el:jar:11.0.27:compile
+[INFO] \- com.zetaris:lightning-jdbc:jar:2.4.3.1-local:runtime
+[INFO]    \- org.apache.hive:hive-jdbc:jar:2.3.7:runtime
+[INFO]       \- org.apache.hive:hive-service:jar:2.3.7:runtime
+[INFO]          +- tomcat:jasper-compiler:jar:5.5.23:runtime
+[INFO]          |  \- javax.servlet:jsp-api:jar:2.0:runtime
+[INFO]          \- tomcat:jasper-runtime:jar:5.5.23:runtime
+[INFO]             \- javax.servlet:servlet-api:jar:2.4:runtime
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  5.316 s
+[INFO] Finished at: 2026-10-23T20:22:00Z
+[INFO] ------------------------------------------------------------------------

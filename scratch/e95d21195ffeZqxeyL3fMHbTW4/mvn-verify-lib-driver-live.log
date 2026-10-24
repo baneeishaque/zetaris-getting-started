@@ -1,0 +1,110 @@
+22:14:17.723 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.example.eurostatcrud.EurostatCrudApplicationTests]: EurostatCrudApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+22:14:17.859 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.example.eurostatcrud.EurostatCrudApplication for test class com.example.eurostatcrud.EurostatCrudApplicationTests
+22:14:17.959 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.example.eurostatcrud.EurostatCrudApplicationTests]: EurostatCrudApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+22:14:17.961 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.example.eurostatcrud.EurostatCrudApplication for test class com.example.eurostatcrud.EurostatCrudApplicationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.2)
+
+2026-10-23T22:14:18.373Z  WARN 2672158 --- [eurostat-crud] [           main] ory$DuplicateJsonObjectContextCustomizer : 
+
+Found multiple occurrences of org.json.JSONObject on the class path:
+
+	jar:file:/home/ext_root/.m2/repository/com/zetaris/lightning-jdbc/2.4.3.1/lightning-jdbc-2.4.3.1.jar!/org/json/JSONObject.class
+	jar:file:/home/ext_root/.m2/repository/com/vaadin/external/google/android-json/0.0.20131108.vaadin1/android-json-0.0.20131108.vaadin1.jar!/org/json/JSONObject.class
+
+You may wish to exclude one of them to ensure predictable runtime behavior
+
+2026-10-23T22:14:18.415Z  INFO 2672158 --- [eurostat-crud] [           main] c.e.e.EurostatCrudApplicationTests       : Starting EurostatCrudApplicationTests using Java 27 with PID 2672158 (started by ext_root in /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud-java)
+2026-10-23T22:14:18.417Z  INFO 2672158 --- [eurostat-crud] [           main] c.e.e.EurostatCrudApplicationTests       : The following 1 profile is active: "test"
+Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+WARNING: A Java agent has been loaded dynamically (/home/ext_root/.m2/repository/net/bytebuddy/byte-buddy-agent/1.18.15/byte-buddy-agent-1.18.15.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+2026-10-23T22:14:20.406Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.b.w.a.WelcomePageHandlerMapping      : Adding welcome page template: index
+2026-10-23T22:14:20.809Z  INFO 2672158 --- [eurostat-crud] [           main] c.e.e.EurostatCrudApplicationTests       : Started EurostatCrudApplicationTests in 2.795 seconds (process running for 4.637)
+2026-10-23T22:14:20.835Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-10-23T22:14:20.836Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T22:14:20.837Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2026-10-23T22:14:21.573Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-10-23T22:14:21.574Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T22:14:21.576Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2026-10-23T22:14:22.023Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-23T22:14:22.023Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T22:14:22.024Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2026-10-23T22:14:22.054Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-23T22:14:22.054Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T22:14:22.054Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-23T22:14:22.083Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-23T22:14:22.084Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T22:14:22.084Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-23T22:14:22.117Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-23T22:14:22.117Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T22:14:22.118Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2026-10-23T22:14:22.147Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-23T22:14:22.147Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T22:14:22.147Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-23T22:14:22.256Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-23T22:14:22.256Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T22:14:22.257Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2026-10-23T22:14:22.280Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-23T22:14:22.280Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T22:14:22.281Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-23T22:14:22.296Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-23T22:14:22.296Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T22:14:22.296Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-23T22:14:22.323Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-23T22:14:22.324Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T22:14:22.324Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-10-23T22:14:22.339Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.mock.web.MockServletContext          : Initializing Spring TestDispatcherServlet ''
+2026-10-23T22:14:22.339Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-23T22:14:22.340Z  INFO 2672158 --- [eurostat-crud] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+22:14:25.444 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.example.eurostatcrud.EurostatJdbcIT]: EurostatJdbcIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+22:14:25.593 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.example.eurostatcrud.EurostatCrudApplication for test class com.example.eurostatcrud.EurostatJdbcIT
+22:14:25.695 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.example.eurostatcrud.EurostatJdbcIT]: EurostatJdbcIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+22:14:25.698 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.example.eurostatcrud.EurostatCrudApplication for test class com.example.eurostatcrud.EurostatJdbcIT
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.2)
+
+2026-10-23T22:14:26.221Z  WARN 2672408 --- [eurostat-crud] [           main] ory$DuplicateJsonObjectContextCustomizer : 
+
+Found multiple occurrences of org.json.JSONObject on the class path:
+
+	jar:file:/home/ext_root/.m2/repository/com/zetaris/lightning-jdbc/2.4.3.1/lightning-jdbc-2.4.3.1.jar!/org/json/JSONObject.class
+	jar:file:/home/ext_root/.m2/repository/com/vaadin/external/google/android-json/0.0.20131108.vaadin1/android-json-0.0.20131108.vaadin1.jar!/org/json/JSONObject.class
+
+You may wish to exclude one of them to ensure predictable runtime behavior
+
+2026-10-23T22:14:26.237Z  INFO 2672408 --- [eurostat-crud] [           main] c.example.eurostatcrud.EurostatJdbcIT    : Starting EurostatJdbcIT using Java 27 with PID 2672408 (started by ext_root in /home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud-java)
+2026-10-23T22:14:26.243Z  INFO 2672408 --- [eurostat-crud] [           main] c.example.eurostatcrud.EurostatJdbcIT    : No active profile set, falling back to 1 default profile: "default"
+2026-10-23T22:14:28.006Z  INFO 2672408 --- [eurostat-crud] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 0 (http)
+2026-10-23T22:14:28.021Z  INFO 2672408 --- [eurostat-crud] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-23T22:14:28.021Z  INFO 2672408 --- [eurostat-crud] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.27]
+2026-10-23T22:14:28.068Z  INFO 2672408 --- [eurostat-crud] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 1757 ms
+2026-10-23T22:14:28.518Z  INFO 2672408 --- [eurostat-crud] [           main] o.s.b.w.a.WelcomePageHandlerMapping      : Adding welcome page template: index
+2026-10-23T22:14:28.946Z  INFO 2672408 --- [eurostat-crud] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 34047 (http) with context path '/'
+2026-10-23T22:14:28.956Z  INFO 2672408 --- [eurostat-crud] [           main] c.example.eurostatcrud.EurostatJdbcIT    : Started EurostatJdbcIT in 3.196 seconds (process running for 5.044)
+Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+WARNING: A Java agent has been loaded dynamically (/home/ext_root/.m2/repository/net/bytebuddy/byte-buddy-agent/1.18.15/byte-buddy-agent-1.18.15.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+2026-10-23T22:15:14.673Z  INFO 2672408 --- [eurostat-crud] [1-auto-1-exec-2] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-23T22:15:14.673Z  INFO 2672408 --- [eurostat-crud] [1-auto-1-exec-2] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-23T22:15:14.676Z  INFO 2672408 --- [eurostat-crud] [1-auto-1-exec-2] o.s.web.servlet.DispatcherServlet        : Completed initialization in 3 ms
