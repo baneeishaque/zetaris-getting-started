@@ -1,0 +1,26 @@
+user:
+  text: go-ahead
+assistant:
+  - response: ​Running the onboarding now (6 statements, REST channel).
+  - response: ​All 6 statements succeeded. Now verifying data per `open_data/rest_apis/HOWTO.md` §2.
+  - response: ​
+  - response: ​
+  - response: |-
+      ​Onboarding complete — 6/6 statements succeeded.
+
+      **Created**
+      - `EUROSTAT_REST` Lightning database
+      - `eurostat` SchemaStore container
+      - `EUROSTAT_REST.une_rt_m_pl` REST table (Poland, total, monthly, seasonally adjusted)
+      - Views: `une_rt_m_pl_metadata_table`, `une_rt_m_pl_snapshot_table`, `une_rt_m_pl_series_table`
+
+      **Verification** (`HOWTO.md` §2 — Zetaris vs independent source check)
+
+      | Check | Zetaris | Eurostat API |
+      |---|---|---|
+      | Row count | 356 (`series_table`) | 356 `value` keys |
+      | Dataset updated | `2026-10-21T11:00:00+0200` | `2026-10-21T11:00:00+0200` |
+
+      Counts match exactly. Note the script header cites 355 as of 2026-09-19; the source now publishes index 523 (2026-08), so 356 is expected, not truncation.
+
+      Attribution for any downstream use: "Source: Eurostat, une_rt_m (unemployment rate, monthly)."

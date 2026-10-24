@@ -1,0 +1,58 @@
+
+> eurostat-crud@0.0.0 start
+> ng serve --host 127.0.0.1 --port 4200
+
+❯ Building...
+✔ Building...
+Initial chunk files | Names         |  Raw size
+main.js             | main          | 117.25 kB | 
+styles.css          | styles        |   8.56 kB | 
+
+                    | Initial total | 125.81 kB
+
+Application bundle generation complete. [4.303 seconds] - 2026-10-23T20:32:57.051Z
+
+Watch mode enabled. Watching for file changes...
+NOTE: Raw file sizes do not reflect development server per-request transformations.
+  ➜  Local:   http://127.0.0.1:4200/
+❯ Changes detected. Rebuilding...
+✔ Changes detected. Rebuilding...
+
+No output file changes.
+
+Application bundle generation complete. [0.023 seconds] - 2026-10-23T20:34:23.036Z
+
+Page reload sent to client(s).
+❯ Changes detected. Rebuilding...
+✔ Changes detected. Rebuilding...
+
+No output file changes.
+
+Application bundle generation complete. [0.024 seconds] - 2026-10-23T20:34:26.117Z
+
+Page reload sent to client(s).
+fatal error: all goroutines are asleep - deadlock!
+
+goroutine 1 [chan receive]:
+github.com/evanw/esbuild/internal/helpers.(*ThreadSafeWaitGroup).Wait(...)
+	github.com/evanw/esbuild/internal/helpers/waitgroup.go:36
+main.runService.func2()
+	github.com/evanw/esbuild/cmd/esbuild/service.go:114 +0x53
+main.runService(0x1)
+	github.com/evanw/esbuild/cmd/esbuild/service.go:160 +0x637
+main.main()
+	github.com/evanw/esbuild/cmd/esbuild/main.go:252 +0xb16
+
+goroutine 7 [chan receive]:
+main.runService.func1()
+	github.com/evanw/esbuild/cmd/esbuild/service.go:98 +0x45
+created by main.runService in goroutine 1
+	github.com/evanw/esbuild/cmd/esbuild/service.go:97 +0x1ce
+
+goroutine 8 [chan receive]:
+main.(*serviceType).sendRequest(0x72abe0f7020, {0xa13ca0, 0x72abe1b6bd0})
+	github.com/evanw/esbuild/cmd/esbuild/service.go:192 +0x12b
+main.runService.func3()
+	github.com/evanw/esbuild/cmd/esbuild/service.go:125 +0x3e
+created by main.runService in goroutine 1
+	github.com/evanw/esbuild/cmd/esbuild/service.go:122 +0x2c7

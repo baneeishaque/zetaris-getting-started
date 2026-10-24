@@ -1,0 +1,116 @@
+user:
+  text: why we need another db (h2)? also give me the high level workflow diagrams?
+assistant:
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: |-
+      **Short answer:** Eurostat inside Zetaris is a **read-only view**. CRUD needs a writable target. H2 is that target for **app-owned annotations**, not a copy of Eurostat.
+
+      **What lives where**
+
+      | Store | Data | Permission |
+      | :--- | :--- | :--- |
+      | Zetaris `EUROSTAT_REST` | Eurostat observations and metadata | `SELECT` only |
+      | H2 `series_notes` | Note text, tag, rating, pinned flag, timestamps, `period` | Full CRUD |
+
+      The app validates that `period` exists in Eurostat before inserting a note. There is no cross-system foreign key; the join is logical.
+
+      **Why H2 specifically**
+
+      - Embedded in the JVM: no separate service, Docker, or credentials.
+      - Transactional with unique constraints and generated keys.
+      - One local file, trivial to reset.
+      - Swappable: replacing H2 with Postgres changes the `DataSource` and schema, not the service/repository design.
+
+      **Alternatives**
+
+      - External Postgres/MySQL: more realistic, but requires a running service and operations.
+      - A writable source registered in Zetaris: then the app could use only Zetaris JDBC, but it requires administrator provisioning and changes the scope.
+
+      ### Two-store ownership
+
+      ```mermaid
+      flowchart LR
+          subgraph Z["Zetaris - read model"]
+              E["Eurostat observations<br/>period, unemployment_rate_pct"]
+          end
+          subgraph A["Application - write model"]
+              N["series_notes<br/>period, note_text, tag, rating, pinned"]
+          end
+          E -. logical join on period .-> N
+      ```
+
+      ### Read workflow
+
+      ```mermaid
+      sequenceDiagram
+          autonumber
+          participant B as Browser
+          participant C as Controller
+          participant R as EurostatRepository
+          participant Z as Zetaris JDBC
+          participant E as Eurostat view
+          B->>C: GET /series
+          C->>R: findAll()
+          R->>Z: SELECT period, unemployment_rate_pct
+          Z->>E: read-only scan
+          E-->>Z: rows
+          Z-->>R: ResultSet
+          R-->>C: observations
+          C-->>B: Thymeleaf HTML
+      ```
+
+      ### Write workflow
+
+      ```mermaid
+      sequenceDiagram
+          autonumber
+          participant B as Browser
+          participant C as NoteController
+          participant S as SeriesNoteService
+          participant E as EurostatRepository
+          participant H as H2
+          B->>C: POST /notes
+          C->>S: create(form)
+          S->>E: existsByPeriod(period)
+          E-->>S: true / false
+          alt period missing
+              S-->>C: validation error
+              C-->>B: form + error
+          else period exists
+              S->>H: INSERT note
+              alt duplicate period
+                  H-->>S: unique violation
+                  S-->>C: duplicate error
+                  C-->>B: form + error
+              else inserted
+                  H-->>S: generated id
+                  S-->>C: saved note
+                  C-->>B: 302 redirect to /notes
+              end
+          end
+      ```
+
+      ### Store-selection decision
+
+      ```mermaid
+      flowchart TD
+          A["CRUD over Eurostat"] --> B{"Can Zetaris write<br/>Eurostat rows?"}
+          B -->|No| C["Pick a writable store"]
+          B -->|Yes| D["Provision a writable source<br/>in Zetaris"]
+          C --> H2["H2 file DB"]
+          C --> PG["Postgres / MySQL"]
+          D --> Z["App uses Zetaris JDBC only"]
+          H2 --> N["Notes keyed to a Eurostat period"]
+          PG --> N
+          Z --> N
+      ```
+
+      Added as Q11 and §4.6 in the plan; markdown lint still reports 0 issues.
+
+      Do you want to keep H2, or switch to Postgres / a writable Zetaris source? If you keep H2, I still need the driver JAR path and approval of A1–A9.

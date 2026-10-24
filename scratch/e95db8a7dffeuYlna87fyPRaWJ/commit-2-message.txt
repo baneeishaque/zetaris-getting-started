@@ -1,0 +1,18 @@
+feat(eurostat): add Zetaris-backed CRUD example
+
+- Add an Angular 22 example under examples/eurostat-crud that
+  stores saved-series metadata in the browser and reads the PL/T
+  observations from the registered Zetaris views.
+- Keep the example Zetaris-only; it does not call the public
+  Eurostat API.
+- Add a connection page that keeps the API key in sessionStorage
+  and a dev proxy that keeps browser requests same-origin.
+- Add list, form, detail, and settings routes, an SVG trend
+  chart, unit tests, build configuration, and usage notes.
+- Document the Zetaris CORS limitation and the production
+  reverse-proxy and credential-boundary requirements.
+- Add both examples to AGENTS.md, default ZETARIS_ORG_ID
+  to 1 in the root .env.example, and add an app-local
+  .env.example for the dev proxy. Document copying that local
+  template to the gitignored .env.local.
+- Verify 27 unit tests and the production build before commit.

@@ -1,0 +1,42 @@
+
+> eurostat-crud@0.0.0 start
+> ng serve --host 127.0.0.1 --port 4200
+
+❯ Building...
+✔ Building...
+Initial chunk files | Names         | Raw size
+main.js             | main          | 87.74 kB | 
+styles.css          | styles        |  8.56 kB | 
+
+                    | Initial total | 96.30 kB
+
+Application bundle generation complete. [2.933 seconds] - 2026-10-23T20:01:50.088Z
+
+Watch mode enabled. Watching for file changes...
+NOTE: Raw file sizes do not reflect development server per-request transformations.
+  ➜  Local:   http://127.0.0.1:4200/
+fatal error: all goroutines are asleep - deadlock!
+
+goroutine 1 [chan receive]:
+github.com/evanw/esbuild/internal/helpers.(*ThreadSafeWaitGroup).Wait(...)
+	github.com/evanw/esbuild/internal/helpers/waitgroup.go:36
+main.runService.func2()
+	github.com/evanw/esbuild/cmd/esbuild/service.go:114 +0x53
+main.runService(0x1)
+	github.com/evanw/esbuild/cmd/esbuild/service.go:160 +0x637
+main.main()
+	github.com/evanw/esbuild/cmd/esbuild/main.go:252 +0xb16
+
+goroutine 19 [chan receive]:
+main.runService.func1()
+	github.com/evanw/esbuild/cmd/esbuild/service.go:98 +0x45
+created by main.runService in goroutine 1
+	github.com/evanw/esbuild/cmd/esbuild/service.go:97 +0x1ce
+
+goroutine 20 [chan receive]:
+main.(*serviceType).sendRequest(0x1204be38cff0, {0xa13ca0, 0x1204be5f2120})
+	github.com/evanw/esbuild/cmd/esbuild/service.go:192 +0x12b
+main.runService.func3()
+	github.com/evanw/esbuild/cmd/esbuild/service.go:125 +0x3e
+created by main.runService in goroutine 1
+	github.com/evanw/esbuild/cmd/esbuild/service.go:122 +0x2c7

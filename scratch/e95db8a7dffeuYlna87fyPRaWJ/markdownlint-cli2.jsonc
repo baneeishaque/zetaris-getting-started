@@ -1,0 +1,22 @@
+{
+    // 120-character limit; code blocks and tables are exempt.
+    "config": {
+        "MD013": {
+            "line_length": 120,
+            "code_blocks": false,
+            "tables": false,
+        },
+        "MD007": {
+            "indent": 2,
+        },
+        "MD029": {
+            "style": "ordered",
+        },
+        "MD046": {
+            "style": "fenced",
+        },
+        "MD033": {
+            "allowed_elements": ["br"],
+        },
+    },
+}

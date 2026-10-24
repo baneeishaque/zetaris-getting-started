@@ -1,0 +1,8 @@
+docs(plans): add sanitized Zetaris planning records
+
+- Copy the Angular, Java, and Zetaris-setup plans and tasks into
+  docs/plans with session IDs and host-specific paths removed.
+- Keep the Java and Zetaris-setup v1 plans under docs/plans/archive.
+- Flatten local markdown links so the records do not depend on
+  ai-suite-only artifacts.
+- Exclude unrelated ai-suite plans and local scratch artifacts.

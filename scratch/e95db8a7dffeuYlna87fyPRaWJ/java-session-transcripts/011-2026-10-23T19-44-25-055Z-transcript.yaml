@@ -1,0 +1,15 @@
+user:
+  text: ~/lab-data has zetaris jdbc jar
+assistant:
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: |-
+      I need the **exact filename**, not just the directory — the Zetaris repo rules forbid searching for the JAR. On this host `~/lab-data` is `/home/ext_root/lab-data`.
+
+      Please send the full path, for example:
+
+      ```text
+      /home/ext_root/lab-data/<subdir>/<driver-name>.jar
+      ```
+
+      I updated Q3 in the plan to record the `~/lab-data` hint. Once you provide the path and confirm A1–A9 (H2 annotation CRUD design), I’ll run Phase 1.

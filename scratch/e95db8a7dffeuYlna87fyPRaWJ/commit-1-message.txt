@@ -1,0 +1,14 @@
+docs(eurostat): add verified data-source dossier
+
+- Add the une_rt_m dossier covering the dataset profile, API
+  contract, data dictionary, quality checks, Zetaris views,
+  operations, and licensing.
+- Record the verified PL/T slice: 356 rows from 1997-01 to
+  2026-08, with 2026-09 present but empty.
+- Link the dossier from the root README and REST source catalog.
+- Add the repository markdownlint config used by the dossier.
+- Rewrap the AGENTS.md intro to the new 120-character limit.
+- Keep the 2026-09-19 onboarding SQL comments as a historical
+  baseline; the license correction is documentation-only.
+- Replace local absolute paths in runbook commands with
+  /path/to/zetaris-getting-started so the docs are portable.

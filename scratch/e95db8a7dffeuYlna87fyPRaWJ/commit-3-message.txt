@@ -1,0 +1,15 @@
+feat(eurostat): add Java JDBC CRUD example
+
+- Add a Spring Boot 4 / Thymeleaf example under
+  examples/eurostat-crud-java that reads the PL/T Eurostat
+  observations through the Zetaris Lightning JDBC driver.
+- Keep Eurostat read-only and store demo notes in memory; there
+  is no H2 or persistence layer.
+- Vendor the filtered 2.4.3.1 driver in lib/ as a Maven file
+  repository and add a refresh script for the Zetaris-supplied
+  JAR.
+- Add the app-local .env.example, run script, templates, tests,
+  and setup notes; document copying the template to the
+  gitignored .env.local.
+- Verify 20 unit/MVC tests locally; the live JDBC integration
+  test passed in the originating session.

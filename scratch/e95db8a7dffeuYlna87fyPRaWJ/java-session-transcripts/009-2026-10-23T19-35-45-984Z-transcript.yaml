@@ -1,0 +1,88 @@
+user:
+  text: Continue
+assistant:
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n\n\n"
+  - response: |-
+      Plan v1 is written and lint-clean (`markdownlint-cli2`: 0 issues).
+
+      **Artifacts**
+
+      - Plan: `docs/implementation-plans/2026-10-23_e95d21195ffeZqxeyL3fMHbTW4_onboarding-dry-run-with-rest-sql-checks-fork-1_implementation-plan_v1.md` (1,645 lines)
+      - Task: `docs/2026-10-23_e95d21195ffeZqxeyL3fMHbTW4_onboarding-dry-run-with-rest-sql-checks-fork-1_task.md`
+
+      **Core design decision**
+
+      Eurostat is read-only through Zetaris, so true CRUD cannot target the Eurostat rows. The plan implements:
+
+      - Eurostat observations and metadata: read-only JDBC `SELECT`s against `EUROSTAT_REST`.
+      - CRUD: app-owned H2 `series_notes` rows keyed to Eurostat periods, with create/read/update/delete, duplicate prevention, and period-existence validation.
+
+      If you want writable Eurostat data end-to-end, that requires provisioning a separate writable source and a v2 plan.
+
+      **Proposed stack**
+
+      Spring Boot `4.1.2`, Java `21` release on JDK `27`, Maven, Thymeleaf, Spring JDBC, H2, loopback-only on port `8090`. Application location: `zetaris-getting-started/examples/eurostat-crud-java/`. Estimated 4–5 hours, ~40 files.
+
+      The plan contains 10 phases (0–9), exact commands, dual-DataSource wiring, literal SQL, tests, a verification matrix, state-dependent gates, risks, rollback, and security rules. No implementation has started.
+
+      **Blocking inputs**
+
+      1. **Driver JAR path** — `ZETARIS_JDBC_JAR` is empty. Provide the absolute path; I will not search for it.
+      2. **Approval** of A1–A9:
+         - A1: H2 annotation CRUD with read-only Eurostat over JDBC
+         - A2: app location above
+         - A3: driver path
+         - A4: stack above
+         - A5: port `8090`
+         - A6: no auth, loopback only
+         - A7: `com.example:eurostat-crud:0.1.0-SNAPSHOT`
+         - A8: artifacts stay in `ai-suite/docs/`
+         - A9: no Zetaris object creation, alteration, or deletion
+
+      Reply with:
+
+      ```text
+      Approved A1-A9. Driver JAR: /absolute/path/to/zetaris-jdbc.jar
+      ```
+
+      Separate security note: `.env.example` currently contains non-empty credential values. I did not use or reproduce them; worth reviewing independently.

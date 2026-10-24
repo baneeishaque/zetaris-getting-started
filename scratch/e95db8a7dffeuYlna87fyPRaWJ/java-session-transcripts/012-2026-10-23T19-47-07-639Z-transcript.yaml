@@ -1,0 +1,73 @@
+user:
+  text: please xhack the fodler - you will get the file - it is on folder root. can we remove h2 db? we need a simple app to demonstarte zetaris jdbc
+assistant:
+  - response: "\n\n"
+  - response: "\n\n"
+  - response: "\n\n"
+  - agent: compaction
+    response: |-
+      ## Objective
+      - Plan (no implementation yet) a simple Java web CRUD app whose Eurostat reads use the Zetaris Lightning JDBC interface, following `ai-agent-planning-rules.md` strictly with maximum detail and an approval gate.
+      - v1 plan is written and linted; implementation has not started. Awaiting the H2-vs-alternative store decision, the JDBC driver JAR path, and approval of A1–A9.
+
+      ## Important Details
+      - Latest user question: why a second database (H2) is needed, plus high-level workflow diagrams. Answer: Eurostat is read-only through Zetaris; H2 stores only app-owned notes keyed to Eurostat periods, not a copy of Eurostat.
+      - Alternatives explained: external Postgres/MySQL, or a writable source registered in Zetaris. Both require more setup; a writable Zetaris source needs administrator provisioning and would require a v2 plan.
+      - Plan artifact: `/home/ext_root/lab-data/ai-suite/docs/implementation-plans/2026-10-23_e95d21195ffeZqxeyL3fMHbTW4_onboarding-dry-run-with-rest-sql-checks-fork-1_implementation-plan_v1.md`; title `# [Create a Simple Java Web CRUD App over the Eurostat Lightning Database via JDBC] (v1)`; ~1,600+ lines; status `DRAFT — awaiting user approval`.
+      - Task artifact: `/home/ext_root/lab-data/ai-suite/docs/2026-10-23_e95d21195ffeZqxeyL3fMHbTW4_onboarding-dry-run-with-rest-sql-checks-fork-1_task.md`; items 1–3 `[x]`, item 4 `[/]`, items 5–13 `[ ]`.
+      - Plan structure: Rule Compliance Reference; §0 verbatim enquiry; Q&A Q1–Q11; §4.6 workflow diagrams; §5 file tree; §6 SQL/schema; §7 config; §8 phases 0–9; §9 surface scan; §10 protocol gates; §11 verification matrix; §12 risks; §13 rollback; §14 security; §15 estimate 4–5 hours; §16 approval gate; §17 execution protocol; §18 references.
+      - Q11 added with status `Explained — see §4.6`; Change History row `[2026-10-23 19:42]`; §4.6 contains mermaid diagrams for two-store ownership, read workflow, write workflow, and store-selection decision.
+      - Markdown lint command: `cd /home/ext_root/lab-data/ai-suite && markdownlint-cli2 'docs/...plan...' 'docs/...task...'`; final result `Summary: 0 issues in 0 files`.
+      - Zetaris facts: `EUROSTAT_REST` id `917`; `eurostat.une_rt_m_pl_series_table` columns `period` string and `unemployment_rate_pct` double, 356 rows; metadata columns `dataset_label`, `dataset_source`, `last_updated` (`2026-10-21T11:00:00+0200`); snapshot columns `rate_1997_01`, `rate_2025_07`, `rate_2026_07`; Eurostat API parity 356.
+      - Zetaris constraints: REST/Lightning tables are read-only; no documented `INSERT`/`UPDATE`/`DELETE` for data; `CREATE LIGHTNING DATABASE` and `CREATE SCHEMASTORE CONTAINER` are Administrators-only; app must issue only `SELECT` against Zetaris.
+      - JDBC: URL `jdbc:zetaris:lightning@localhost:10000`; driver class `com.zetaris.lightning.jdbc.LightningDriver`; port 10000 open; `.env.local` has URL/username/password set; `ZETARIS_JDBC_JAR` is empty; never print secrets; do not search for the JAR, ask the user.
+      - Stack: Spring Boot `4.1.2`; Java release `21` on installed JDK `27`; Maven `3.10.0`; `spring-boot-starter-webmvc` (includes Tomcat), `-thymeleaf`, `-jdbc`, `-validation`, H2 (version Boot-managed), Zetaris driver with `runtime` scope.
+      - App location: `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud-java/`; coordinates `com.example:eurostat-crud:0.1.0-SNAPSHOT`; package `com.example.eurostatcrud`; port `8090`; bind `127.0.0.1`; no auth; no Zetaris mutation.
+      - Data design: H2 `series_notes` stores `period`, `note_text`, `tag`, `rating`, `pinned`, `created_at`, `updated_at`; unique `period`; check constraints; CRUD service validates period exists in Eurostat and rejects duplicates.
+      - Wiring: explicit primary Hikari H2 `DataSource` plus `SimpleDriverDataSource` for Zetaris via reflection; `h2JdbcTemplate` primary and `zetarisJdbcTemplate`; Boot auto-config backs off; `ZetarisProperties` registered via `@ConfigurationPropertiesScan`.
+      - Config: `app.h2.url` defaults to `jdbc:h2:file:./data/eurostat-crud`, optional `APP_H2_URL` override; `application-test.yml` uses `jdbc:h2:mem:eurostat-crud-test;DB_CLOSE_DELAY=-1`; tests use `@ActiveProfiles("test")`.
+      - Tests: `EurostatCrudApplicationTests`, `SeriesNoteRepositoryTest`, `NoteControllerTest` with `@MockitoBean EurostatRepository`; `EurostatJdbcIT` gated by `@EnabledIfEnvironmentVariable(named = "ZETARIS_JDBC_URL", matches = ".+")`; failsafe runs `*IT`; commands `mvn -q test`, `mvn -q verify`.
+      - Phase 8 verification uses `APP_H2_URL='jdbc:h2:mem:eurostat-crud-verify;DB_CLOSE_DELAY=-1'`; run log/PID resolved via `resolve-scratch-path.py --repo /home/ext_root/lab-data/ai-suite --purpose eurostat-crud-run`; no `/tmp`.
+      - Driver install: `mvn install:install-file -Dfile="$ZETARIS_JDBC_JAR" -DgroupId=com.zetaris -DartifactId=lightning-jdbc -Dversion=0.0.0-local -Dpackaging=jar`; wrapped by `scripts/install-zetaris-driver.sh`.
+      - Ports/toolchain: 8080 and 8081 in use; 8090 free; disk ~50G; OpenJDK 27; Maven 3.10.0; mise 2026.10.3; no Gradle.
+      - Security observation: `.env.example` contains non-empty credential values; flagged to the user; values were not reproduced or used. `.env.local` only; no secrets in plan/README/logs; H2 console disabled; loopback-only.
+      - Artifact/session: session `ses_e95d21195ffeZqxeyL3fMHbTW4`; title `Onboarding dry-run with REST SQL checks (fork #1)`; slug `onboarding-dry-run-with-rest-sql-checks-fork-1`; session script warned multiple in-flight sessions.
+      - Approval gate: A1 H2 notes CRUD + read-only Eurostat; A2 location; A3 driver JAR; A4 stack; A5 port 8090; A6 no auth/loopback; A7 coordinates; A8 artifacts stay in `ai-suite/docs/`; A9 no Zetaris mutation. Q9 no commit confirmed by rule.
+      - Reply format: `Approved A1-A9. Driver JAR: /absolute/path/to/zetaris-jdbc.jar`.
+      - No commit, push, or PR is planned; no unrequested follow-up actions.
+      - If H2 is rejected: stop and produce a v2 plan for external Postgres/MySQL or a writable source registered in Zetaris; admin provisioning required.
+
+      ## Work State
+      ### Completed
+      - v1 implementation plan written, expanded to 1,600+ lines, and linted to `0 issues`; task file created and updated.
+      - Q11 and §4.6 workflow diagrams added after the user’s H2 question; final chat answer explained the two-store design and asked whether to keep H2 or switch.
+      - Pre-plan context verified: Eurostat onboarding 356 rows; toolchain, ports, JDBC class/URL, `.env.local` key presence, and Zetaris read-only limits.
+      - Markdown issues fixed: table pipe inside regex, `MD036` pseudo-headings, `/tmp` paths replaced with session scratch paths.
+
+      ### Active
+      - Awaiting user decision on H2 vs Postgres/writable Zetaris source, the driver JAR path, and A1–A9 approval.
+      - Task item 4 is in progress; plan remains `DRAFT`; no application code has been written.
+
+      ### Blocked
+      - `ZETARIS_JDBC_JAR` is empty; no build/run can start without the absolute JAR path.
+      - Approval not yet given.
+      - If the user chooses a writable Zetaris source, administrator provisioning is required and the plan must become v2.
+
+      ## Next Move
+      1. Wait for the user’s store decision, driver JAR path, and approval; do not implement.
+      2. If H2 is approved: mark task item 4 `[x]`, then start Phase 1 preflight (manifest check, `SELECT 1`, prepared-statement probe, schema metadata, REST/JDBC parity, port check).
+      3. If the user chooses Postgres or a writable Zetaris source: stop and create a v2 plan instead of deviating.
+
+      ## Relevant Files
+      - `/home/ext_root/lab-data/ai-suite/docs/implementation-plans/2026-10-23_e95d21195ffeZqxeyL3fMHbTW4_onboarding-dry-run-with-rest-sql-checks-fork-1_implementation-plan_v1.md`: current detailed plan.
+      - `/home/ext_root/lab-data/ai-suite/docs/2026-10-23_e95d21195ffeZqxeyL3fMHbTW4_onboarding-dry-run-with-rest-sql-checks-fork-1_task.md`: live checklist.
+      - `/home/ext_root/lab-data/ai-suite/ai-agent-rules/ai-agent-planning-rules.md`: mandatory planning format/process.
+      - `/home/ext_root/lab-data/ai-suite/ai-agent-rules/markdown-generation-rules-additions.md`: markdown lint guidance.
+      - `/home/ext_root/lab-data/zetaris-getting-started/AGENTS.md`: connection, dry-run, verification, and JAR rules.
+      - `/home/ext_root/lab-data/zetaris-getting-started/.env.local`: JDBC URL/user/password; `ZETARIS_JDBC_JAR` empty.
+      - `/home/ext_root/lab-data/zetaris-getting-started/scripts/preflight.py`: read-only health check.
+      - `/home/ext_root/lab-data/zetaris-getting-started/scripts/run_sql.py`: REST SQL runner for parity checks.
+      - `/home/ext_root/lab-data/zetaris-getting-started/scripts/zetaris_sql.py`: `RestChannel`, `load_env`, JDBC constants.
+      - `/home/ext_root/lab-data/zetaris-getting-started/open_data/rest_apis/sql/non_rate_limited/07_eurostat_create.sql`: Eurostat DDL and view definitions.
+      - `/home/ext_root/lab-data/zetaris-getting-started/examples/eurostat-crud-java/`: planned application home.
+      - `/home/ext_root/lab-data/ai-suite/.agents/skills/general/file/scratch-artifact-naming/scripts/resolve-scratch-path.py`: session scratch path resolver used by Phase 8.
